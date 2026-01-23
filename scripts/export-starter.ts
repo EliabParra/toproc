@@ -33,7 +33,6 @@ function createPathFilter({ repoRoot }: { repoRoot: string }) {
     const ignoredPrefixes = [
         path.join(repoRoot, 'node_modules') + path.sep,
         path.join(repoRoot, '.git') + path.sep,
-        path.join(repoRoot, '.vscode') + path.sep,
         path.join(repoRoot, 'BO') + path.sep,
         path.join(repoRoot, 'docs', 'api') + path.sep,
         path.join(repoRoot, '.tmp-starterpack') + path.sep,
@@ -76,10 +75,18 @@ async function main() {
         'docs',
         'public',
         'test',
-        '.env.example',
+        // .env will be created from .env or .env.example content below
         '.gitignore',
         'package.json',
         'jsdoc.json',
+        'tsconfig.json',
+        'tsconfig.build.json',
+        'tsconfig.build.ts.json',
+        '.vscode',
+        '.editorconfig',
+        '.prettierrc.json',
+        '.prettierignore',
+        'README.md',
     ]
 
     for (const rel of allowList) {
@@ -98,6 +105,9 @@ async function main() {
             // Optional file/folder does not exist in some setups.
         }
     }
+
+    // Create .env in the starter output from either .env or .env.example
+    await writeEnvFile(repoRoot, outDir)
 
     // Create an empty BO folder so developers have a clear place to start.
     const boDir = path.join(outDir, 'BO')
@@ -119,6 +129,36 @@ async function main() {
     )
 
     console.log('[export-starter] done')
+}
+
+async function writeEnvFile(repoRoot: string, outDir: string) {
+    const envPath = path.join(repoRoot, '.env')
+    const envExamplePath = path.join(repoRoot, '.env.example')
+    const destEnvPath = path.join(outDir, '.env')
+
+    try {
+        if (await exists(envPath)) {
+            await fs.copyFile(envPath, destEnvPath)
+            return
+        }
+    } catch {}
+
+    try {
+        if (await exists(envExamplePath)) {
+            const content = await fs.readFile(envExamplePath, 'utf8')
+            await fs.writeFile(destEnvPath, content)
+            return
+        }
+    } catch {}
+}
+
+async function exists(p: string) {
+    try {
+        await fs.stat(p)
+        return true
+    } catch {
+        return false
+    }
 }
 
 main().catch((err) => {
