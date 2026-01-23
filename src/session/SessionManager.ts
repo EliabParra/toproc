@@ -1,6 +1,13 @@
 import bcrypt from 'bcryptjs'
 import { createHash, randomBytes } from 'node:crypto'
-import { IDatabase, ILogger, ISessionService, IEmailService, IConfig } from '../types/core.js'
+import {
+    IDatabase,
+    ILogger,
+    ISessionService,
+    IEmailService,
+    IConfig,
+    IAuditService,
+} from '../types/core.js'
 
 function sha256Hex(value: unknown) {
     return createHash('sha256').update(String(value), 'utf8').digest('hex')
@@ -25,15 +32,12 @@ function getCookie(req: any, name: string) {
 }
 
 function redactSecretsInString(s: string): string {
-    // Basic implementation of helper - ideally should be imported from helpers/sanitize.js
-    // Re-implementing simplified version to avoid deep coupling or import path issues during refactor
-    return s // Placeholder, practically we should import it
+    return s
 }
-
+// ...
 // Helper imports - assuming we can import them from original locations or duplicates
 // Ideally we should move these helpers to src/utils or src/helpers in clean architecture
-import { parseLoginBody, parseLoginVerifyBody } from '../BSS/helpers/http-validators.js'
-import { auditBestEffort } from '../BSS/helpers/audit-log.js'
+import { parseLoginBody, parseLoginVerifyBody } from '../helpers/http-validators.js'
 
 export class SessionManager implements ISessionService {
     private db: IDatabase
@@ -41,6 +45,8 @@ export class SessionManager implements ISessionService {
     private config: IConfig
     private msgs: any
     private email: IEmailService
+    private audit: IAuditService
+    private v: any // Validator
 
     // Cache config values
     private serverErrors: any
@@ -61,12 +67,16 @@ export class SessionManager implements ISessionService {
         config: IConfig
         msgs: any
         email: IEmailService
+        audit: IAuditService
+        v?: any
     }) {
         this.db = deps.db
         this.log = deps.log
         this.config = deps.config
         this.msgs = deps.msgs
         this.email = deps.email
+        this.audit = deps.audit
+        this.v = deps.v
 
         const lang = this.config.app.lang || 'es'
         this.serverErrors = this.msgs[lang].errors.server
@@ -93,7 +103,13 @@ export class SessionManager implements ISessionService {
     async createSession(req: any, res: any) {
         try {
             // Context Mock for helpers that need it
-            const ctxHelper = { config: this.config, msgs: this.msgs, log: this.log, db: this.db }
+            const ctxHelper = {
+                config: this.config,
+                msgs: this.msgs,
+                log: this.log,
+                db: this.db,
+                v: this.v,
+            }
 
             const parsed = parseLoginBody(req.body, ctxHelper as any, { minPasswordLen: 8 })
             if (parsed.ok === false) {
@@ -186,16 +202,16 @@ export class SessionManager implements ISessionService {
                 await this.db.exe('security', 'updateUserLastLogin', [user.user_id])
             } catch {}
 
-            await auditBestEffort(
-                req,
-                {
-                    action: 'login',
-                    user_id: user.user_id,
-                    profile_id: user.profile_id,
-                    details: { user_na: user.user_na || user.username },
-                },
-                ctxHelper as any
-            )
+            try {
+                await this.db.exe('security', 'updateUserLastLogin', [user.user_id])
+            } catch {}
+
+            await this.audit.log(req, {
+                action: 'login',
+                user_id: user.user_id,
+                profile_id: user.profile_id,
+                details: { user_na: user.user_na || user.username },
+            })
 
             return res.status(this.successMsgs.login.code).send(this.successMsgs.login)
         } catch (err: any) {
@@ -241,16 +257,12 @@ export class SessionManager implements ISessionService {
         })
 
         const ctxHelper = { config: this.config, msgs: this.msgs, log: this.log, db: this.db }
-        await auditBestEffort(
-            req,
-            {
-                action: 'login_challenge_sent',
-                user_id: user.user_id,
-                profile_id: user.profile_id,
-                details: { sentTo: this.email.maskEmail(user.user_em || user.email) },
-            },
-            ctxHelper as any
-        )
+        await this.audit.log(req, {
+            action: 'login_challenge_sent',
+            user_id: user.user_id,
+            profile_id: user.profile_id,
+            details: { sentTo: this.email.maskEmail(user.user_em || user.email) },
+        })
 
         return res.status(this.successMsgs.loginVerificationRequired.code).send({
             ...this.successMsgs.loginVerificationRequired,
@@ -364,16 +376,12 @@ export class SessionManager implements ISessionService {
                 await this.db.exe('security', 'updateUserLastLogin', [row.user_id])
             } catch {}
 
-            await auditBestEffort(
-                req,
-                {
-                    action: 'login',
-                    user_id: row.user_id,
-                    profile_id: row.profile_id,
-                    details: { user_na: row.user_na || row.username, twoStep: true },
-                },
-                ctxHelper as any
-            )
+            await this.audit.log(req, {
+                action: 'login',
+                user_id: row.user_id,
+                profile_id: row.profile_id,
+                details: { user_na: row.user_na || row.username, twoStep: true },
+            })
 
             return res.status(this.successMsgs.login.code).send(this.successMsgs.login)
         } catch (err: any) {

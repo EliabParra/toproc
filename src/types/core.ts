@@ -83,3 +83,18 @@ export interface IEmailService {
 export interface IContainer {
     resolve<T>(key: string): T
 }
+
+export interface IAuditService {
+    log(
+        req: any,
+        args: {
+            action: string
+            object_na?: string | null
+            method_na?: string | null
+            tx?: unknown
+            user_id?: number | null
+            profile_id?: number | null
+            details?: Record<string, unknown>
+        }
+    ): Promise<void>
+}

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import request from 'supertest'
 
-import Dispatcher from '../src/BSS/Dispatcher.js'
+import { createTestDispatcher } from './_helpers/service-factory.mjs'
 import { createCsrfProtection, createCsrfTokenHandler } from '../src/express/middleware/csrf.js'
 
 import { withGlobals } from './_helpers/global-state.mjs'
@@ -162,7 +162,7 @@ test('2-step login is required on new device and can be verified', async () => {
             msgs: globalThis.msgs,
         })
 
-        const dispatcher = new Dispatcher()
+        const dispatcher = createTestDispatcher(globalThis)
 
         // Custom routes for test (avoid calling init())
         dispatcher.app.get('/csrf', csrfTokenHandler)

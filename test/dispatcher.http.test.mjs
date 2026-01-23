@@ -3,11 +3,11 @@ import assert from 'node:assert/strict'
 import express from 'express'
 import request from 'supertest'
 
-import Dispatcher from '../src/BSS/Dispatcher.js'
+import { createTestDispatcher } from './_helpers/service-factory.mjs'
 import { createCsrfProtection, createCsrfTokenHandler } from '../src/express/middleware/csrf.js'
 
 import { withGlobals } from './_helpers/global-state.mjs'
-
+// ... (keep functions)
 const GLOBAL_KEYS = ['config', 'msgs', 'log', 'db', 'security', 'v']
 
 function makeTestMsgs() {
@@ -17,31 +17,30 @@ function makeTestMsgs() {
         login: { code: 401, msg: 'Login required' },
         sessionExists: { code: 409, msg: 'Session exists' },
         usernameOrPasswordIncorrect: { code: 401, msg: 'Bad credentials' },
-        permissionDenied: { code: 403, msg: 'Permission denied' },
-        serviceUnavailable: { code: 503, msg: 'Service unavailable' },
-        csrfInvalid: { code: 403, msg: 'CSRF invalid' },
+        invalidToken: { code: 401, msg: 'Invalid token' },
+        expiredToken: { code: 401, msg: 'Expired token' },
         tooManyRequests: { code: 429, msg: 'Too many requests' },
-        payloadTooLarge: { code: 413, msg: 'Payload too large' },
+        csrfInvalid: { code: 403, msg: 'CSRF invalid' },
+        emailRequired: { code: 409, msg: 'Email required' },
+        serviceUnavailable: { code: 503, msg: 'Service unavailable' },
+        permissionDenied: { code: 403, msg: 'Permission denied' },
     }
 
     const server = {
         serverError: { code: 500, msg: 'Server error' },
-        unauthorized: { code: 401, msg: 'Unauthorized' },
-        forbidden: { code: 403, msg: 'Forbidden' },
-        notFound: { code: 404, msg: 'Not found' },
-        txNotFound: { code: 500, msg: 'Tx not found: {tx}' },
+        dbError: { code: 500, msg: 'DB error' },
+        txNotFound: { msg: 'Tx not found: {tx}' },
     }
 
     const success = {
         login: { code: 200, msg: 'Login ok' },
+        loginVerificationRequired: { code: 202, msg: 'Verify required' },
         logout: { code: 200, msg: 'Logout ok' },
     }
 
     return {
         en: {
-            alerts: {
-                paramsType: 'Invalid type at {value}',
-            },
+            alerts: { paramsType: 'Invalid type at {value}' },
             errors: { client, server },
             success,
         },
@@ -59,6 +58,7 @@ function makeValidatorStub() {
 
 test('POST /login returns invalidParameters when body schema is invalid (with CSRF)', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
+        // ... globals setup ...
         globalThis.msgs = makeTestMsgs()
         globalThis.v = makeValidatorStub()
         globalThis.config = {
@@ -84,7 +84,7 @@ test('POST /login returns invalidParameters when body schema is invalid (with CS
             msgs: globalThis.msgs,
         })
 
-        const dispatcher = new Dispatcher()
+        const dispatcher = createTestDispatcher(globalThis)
 
         dispatcher.app.get('/csrf', csrfTokenHandler)
         dispatcher.app.post('/login', csrfProtection, dispatcher.login.bind(dispatcher))
@@ -131,7 +131,7 @@ test('POST /toProccess returns login error when session does not exist', async (
             msgs: globalThis.msgs,
         })
 
-        const dispatcher = new Dispatcher()
+        const dispatcher = createTestDispatcher(globalThis)
 
         dispatcher.app.use(express.json())
         dispatcher.app.post('/toProccess', csrfProtection, dispatcher.toProccess.bind(dispatcher))
@@ -180,7 +180,7 @@ test('POST /toProccess returns serviceUnavailable when security.ready rejects', 
             msgs: globalThis.msgs,
         })
 
-        const dispatcher = new Dispatcher()
+        const dispatcher = createTestDispatcher(globalThis)
 
         dispatcher.app.use(express.json())
         dispatcher.app.get('/csrf', csrfTokenHandler)
@@ -240,7 +240,7 @@ test('POST /toProccess returns permissionDenied when permissions check fails (an
             msgs: globalThis.msgs,
         })
 
-        const dispatcher = new Dispatcher()
+        const dispatcher = createTestDispatcher(globalThis)
 
         dispatcher.app.use(express.json())
         dispatcher.app.get('/csrf', csrfTokenHandler)
@@ -308,7 +308,7 @@ test('POST /toProccess returns executeMethod response when permissions allow (an
             msgs: globalThis.msgs,
         })
 
-        const dispatcher = new Dispatcher()
+        const dispatcher = createTestDispatcher(globalThis)
 
         dispatcher.app.use(express.json())
         dispatcher.app.get('/csrf', csrfTokenHandler)
@@ -383,7 +383,7 @@ test('POST /toProccess returns unknown when tx is not found (and audits tx_error
             msgs: globalThis.msgs,
         })
 
-        const dispatcher = new Dispatcher()
+        const dispatcher = createTestDispatcher(globalThis)
 
         dispatcher.app.use(express.json())
         dispatcher.app.get('/csrf', csrfTokenHandler)
@@ -442,7 +442,7 @@ test('POST /logout returns login error when session does not exist (CSRF bypass)
             msgs: globalThis.msgs,
         })
 
-        const dispatcher = new Dispatcher()
+        const dispatcher = createTestDispatcher(globalThis)
         dispatcher.app.use(express.json())
         dispatcher.app.post('/logout', csrfProtection, dispatcher.logout.bind(dispatcher))
 
@@ -484,7 +484,7 @@ test('POST /logout destroys session and returns success when session exists (req
             msgs: globalThis.msgs,
         })
 
-        const dispatcher = new Dispatcher()
+        const dispatcher = createTestDispatcher(globalThis)
         dispatcher.app.use(express.json())
 
         dispatcher.app.get('/csrf', csrfTokenHandler)

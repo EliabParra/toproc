@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import request from 'supertest'
 import bcrypt from 'bcryptjs'
 
-import Dispatcher from '../src/BSS/Dispatcher.js'
+import { createTestDispatcher } from './_helpers/service-factory.mjs'
 import { createCsrfProtection, createCsrfTokenHandler } from '../src/express/middleware/csrf.js'
 
 import { withGlobals } from './_helpers/global-state.mjs'
@@ -300,7 +300,7 @@ test('register requires email verification before login', async () => {
             msgs: globalThis.msgs,
         })
 
-        const dispatcher = new Dispatcher()
+        const dispatcher = createTestDispatcher(globalThis)
 
         dispatcher.app.get('/csrf', csrfTokenHandler)
         dispatcher.app.post('/toProccess', csrfProtection, dispatcher.toProccess.bind(dispatcher))

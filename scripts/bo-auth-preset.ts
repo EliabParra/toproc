@@ -458,7 +458,7 @@ export function templateAuthBO() {
 import { createHash, randomBytes } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 
-import EmailService from '../../src/BSS/EmailService.js'
+import { EmailService } from '../../src/email/EmailService.js'
 import { AuthErrorHandler } from './AuthErrorHandler.js'
 import { AuthValidate } from './AuthValidate.js'
 import { AuthRepository } from './Auth.js'
@@ -477,7 +477,7 @@ const successMsgs = require('./messages/authSuccessMsgs.json')[config.app.lang] 
     string
 >
 
-const email = new EmailService()
+const email = new EmailService({ log: (globalThis as any).log, config: (globalThis as any).config })
 
 function sha256Hex(value: string): string {
     return createHash('sha256').update(value, 'utf8').digest('hex')

@@ -4,7 +4,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import Security from '../src/BSS/Security.js'
+import { SecurityService } from '../src/security/SecurityService.js'
 import { withGlobals } from './_helpers/global-state.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -47,7 +47,7 @@ test('Security.init loads permissions + tx map and sets isReady', async () => {
             },
         }
 
-        const security = new Security()
+        const security = new SecurityService(globalThis)
         await security.ready
 
         assert.equal(security.isReady, true)
@@ -86,7 +86,7 @@ test('Security.init captures initError and rejects ready when DB fails', async (
             },
         }
 
-        const security = new Security()
+        const security = new SecurityService(globalThis)
 
         let err
         try {
@@ -98,7 +98,7 @@ test('Security.init captures initError and rejects ready when DB fails', async (
         assert.ok(err)
         assert.equal(security.isReady, false)
         assert.ok(security.initError)
-        assert.ok(logs.some((l) => String(l?.msg ?? '').includes('Security.init')))
+        assert.ok(logs.some((l) => String(l?.msg ?? '').includes('SecurityService.init')))
     })
 })
 
@@ -138,7 +138,7 @@ test('Security.executeMethod dynamically imports BO and caches the instance', as
                 },
             }
 
-            const security = new Security()
+            const security = new SecurityService(globalThis)
             await security.ready
 
             const r1 = await security.executeMethod({
@@ -180,7 +180,7 @@ test('Security.executeMethod returns serverError and logs when BO import fails',
             },
         }
 
-        const security = new Security()
+        const security = new SecurityService(globalThis)
         await security.ready
 
         const r = await security.executeMethod({
@@ -189,6 +189,6 @@ test('Security.executeMethod returns serverError and logs when BO import fails',
             params: {},
         })
         assert.deepEqual(r, globalThis.msgs.en.errors.server.serverError)
-        assert.ok(logs.some((l) => String(l?.msg ?? '').includes('Security.executeMethod')))
+        assert.ok(logs.some((l) => String(l?.msg ?? '').includes('SecurityService.executeMethod')))
     })
 })

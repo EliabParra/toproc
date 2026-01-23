@@ -1,5 +1,12 @@
 import express from 'express'
-import { IConfig, ILogger, ISecurityService, ISessionService } from '../types/core.js'
+import {
+    IConfig,
+    ILogger,
+    ISecurityService,
+    ISessionService,
+    IAuditService,
+    IDatabase,
+} from '../types/core.js'
 import { registerFrontendHosting } from '../frontend-adapters/index.js'
 
 // Middleware imports (legacy paths, assume they still work or need minor adjustment)
@@ -24,10 +31,9 @@ import {
     parseLoginBody,
     parseLogoutBody,
     parseToProccessBody,
-} from '../BSS/helpers/http-validators.js'
+} from '../helpers/http-validators.js'
 
-import { auditBestEffort } from '../BSS/helpers/audit-log.js'
-import { sendInvalidParameters } from '../BSS/helpers/http-responses.js'
+import { sendInvalidParameters } from '../helpers/http-responses.js'
 import { redactSecretsInString } from '../helpers/sanitize.js'
 
 export class DispatcherService {
@@ -41,6 +47,8 @@ export class DispatcherService {
     private security: ISecurityService
     private session: ISessionService
     private msgs: any
+    private audit: IAuditService
+    private db: IDatabase
 
     // Helper state
     private serverErrors: any
@@ -59,12 +67,16 @@ export class DispatcherService {
         security: ISecurityService
         session: ISessionService
         msgs: any
+        audit: IAuditService
+        db: IDatabase
     }) {
         this.config = deps.config
         this.log = deps.log
         this.security = deps.security
         this.session = deps.session
         this.msgs = deps.msgs
+        this.audit = deps.audit
+        this.db = deps.db
 
         this.app = express()
         this.server = null
@@ -127,7 +139,7 @@ export class DispatcherService {
         // Let's import it:
         const { applySessionMiddleware } =
             await import('../express/session/apply-session-middleware.js')
-        applySessionMiddleware(this.app)
+        applySessionMiddleware(this.app, { config: this.config, log: this.log, db: this.db })
 
         // Pass a "session" object that mimics old Session if needed by frontend adapters?
         // registerFrontendHosting(app, { session: this.session, ... })
@@ -246,18 +258,14 @@ export class DispatcherService {
             }
 
             if (!this.security.getPermissions(data as any)) {
-                await auditBestEffort(
-                    req,
-                    {
-                        action: 'tx_denied',
-                        object_na: data.object_na,
-                        method_na: data.method_na,
-                        tx,
-                        profile_id: effectiveProfileId,
-                        details: { reason: 'permissionDenied' },
-                    },
-                    ctxMock as any
-                )
+                await this.audit.log(req, {
+                    action: 'tx_denied',
+                    object_na: data.object_na,
+                    method_na: data.method_na,
+                    tx,
+                    profile_id: effectiveProfileId,
+                    details: { reason: 'permissionDenied' },
+                })
 
                 return res
                     .status(this.clientErrors.permissionDenied.code)
@@ -282,18 +290,14 @@ export class DispatcherService {
 
             const response = await this.security.executeMethod(data)
 
-            await auditBestEffort(
-                req,
-                {
-                    action: 'tx_exec',
-                    object_na: data.object_na,
-                    method_na: data.method_na,
-                    tx,
-                    profile_id: effectiveProfileId,
-                    details: { responseCode: response?.code },
-                },
-                ctxMock as any
-            )
+            await this.audit.log(req, {
+                action: 'tx_exec',
+                object_na: data.object_na,
+                method_na: data.method_na,
+                tx,
+                profile_id: effectiveProfileId,
+                details: { responseCode: response?.code },
+            })
 
             res.status(response.code).send(response)
         } catch (err: any) {
@@ -308,18 +312,14 @@ export class DispatcherService {
 
             const ctxMock = { config: this.config, msgs: this.msgs, log: this.log }
 
-            await auditBestEffort(
-                req,
-                {
-                    action: 'tx_error',
-                    object_na: txData?.object_na,
-                    method_na: txData?.method_na,
-                    tx,
-                    profile_id: effectiveProfileId,
-                    details: { error: String(err?.message || err) },
-                },
-                ctxMock as any
-            )
+            await this.audit.log(req, {
+                action: 'tx_error',
+                object_na: txData?.object_na,
+                method_na: txData?.method_na,
+                tx,
+                profile_id: effectiveProfileId,
+                details: { error: String(err?.message || err) },
+            })
 
             this.log.show({
                 type: this.log.TYPE_ERROR,
@@ -411,7 +411,7 @@ export class DispatcherService {
                 )
             }
             if (this.session.sessionExists(req)) {
-                await auditBestEffort(req, { action: 'logout', details: {} }, ctxMock as any)
+                await this.audit.log(req, { action: 'logout', details: {} })
 
                 this.session.destroySession(req)
                 return res.status(this.successMsgs.logout.code).send(this.successMsgs.logout)

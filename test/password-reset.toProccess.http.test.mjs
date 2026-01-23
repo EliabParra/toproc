@@ -6,7 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs/promises'
 
-import Dispatcher from '../src/BSS/Dispatcher.js'
+import { createTestDispatcher } from './_helpers/service-factory.mjs'
 import { createCsrfProtection } from '../src/express/middleware/csrf.js'
 
 import { withGlobals } from './_helpers/global-state.mjs'
@@ -323,7 +323,7 @@ test('password reset works via /toProccess without session (public profile)', as
             },
         }
 
-        const dispatcher = new Dispatcher()
+        const dispatcher = createTestDispatcher(globalThis)
         dispatcher.app.post(
             '/toProccess',
             dispatcher.toProccessRateLimiter,

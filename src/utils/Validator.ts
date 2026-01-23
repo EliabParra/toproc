@@ -1,6 +1,8 @@
-type ValidatorStatus = { result?: boolean; alerts?: string[]; [k: string]: unknown }
+import { IConfig } from '../types/core.js'
 
-type ParamObject = {
+export type ValidatorStatus = { result?: boolean; alerts?: string[]; [k: string]: unknown }
+
+export type ParamObject = {
     value?: unknown
     label?: string
     min?: number
@@ -9,36 +11,55 @@ type ParamObject = {
 }
 
 type ValidatorMessages = Record<string, string>
-type ValidationParam = unknown | ParamObject
+export type ValidationParam = unknown | ParamObject
 
 function isParamObject(value: unknown): value is ParamObject {
     return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
+/**
+ * Validator utility for validating request parameters and inputs.
+ * Supports various types (int, string, email, etc.) and generates localized alerts/messages.
+ */
 export default class Validator {
-    status: ValidatorStatus
-    alerts: string[]
-    msgs: ValidatorMessages
+    public status: ValidatorStatus = {}
+    public alerts: string[] = []
 
-    constructor(config: AppConfig, msgs: any) {
+    /**
+     * Localized messages for validation errors.
+     * Derived from config.messages.json[lang].alerts
+     */
+    public msgs: ValidatorMessages
+
+    constructor(config: IConfig, msgs: Record<string, any>) {
         this.status = {}
         this.alerts = []
-        const cfg = config as { app?: { lang?: unknown } } | undefined
-        const lang = String(cfg?.app?.lang ?? 'en')
-        const allMsgs = msgs as Record<string, unknown>
-        const langMsgs = allMsgs?.[lang]
+
+        const lang = String(config.app.lang ?? 'en')
+        const allMsgs = msgs ?? {}
+        const langMsgs = allMsgs[lang]
+
+        // Extract 'alerts' object from language specific messages
+        // Expect structure: { en: { alerts: { ... } } }
         const alerts =
             langMsgs && typeof langMsgs === 'object' && 'alerts' in langMsgs
                 ? (langMsgs as { alerts?: unknown }).alerts
                 : undefined
+
         this.msgs = (alerts && typeof alerts === 'object' ? alerts : {}) as ValidatorMessages
     }
 
-    getStatus() {
+    /**
+     * Get current status object (result of validateAll)
+     */
+    getStatus(): ValidatorStatus {
         return this.status
     }
 
-    getAlerts() {
+    /**
+     * Get accumulated alerts
+     */
+    getAlerts(): string[] {
         return this.alerts
     }
 
@@ -67,12 +88,18 @@ export default class Validator {
         return param
     }
 
+    /**
+     * Formatting helper for error messages. Replaces {value}, {min}, {max}.
+     */
     getMessage(type: string, param: ValidationParam): string {
         const value = this.formatValue(type, param)
+        const msgTemplate = this.msgs[type] ?? ''
+
         switch (type) {
             case 'length': {
                 const min = isParamObject(param) ? param.min : undefined
                 const max = isParamObject(param) ? param.max : undefined
+
                 if (min != null && max != null) {
                     return (this.msgs.lengthRange ?? '')
                         .replace('{value}', String(value))
@@ -89,17 +116,18 @@ export default class Validator {
                         .replace('{value}', String(value))
                         .replace('{max}', String(max))
                 }
+                // Fallback to range [0, MaxSafeInteger] conceptually
                 return (this.msgs.lengthRange ?? '')
                     .replace('{value}', String(value))
                     .replace('{min}', '0')
                     .replace('{max}', String(Number.MAX_SAFE_INTEGER))
             }
             default: {
-                let msg = (this.msgs[type] ?? '').replace('{value}', String(value))
-                if (isParamObject(param) && param.min != null)
-                    msg = msg.replace('{min}', String(param.min))
-                if (isParamObject(param) && param.max != null)
-                    msg = msg.replace('{max}', String(param.max))
+                let msg = msgTemplate.replace('{value}', String(value))
+                if (isParamObject(param)) {
+                    if (param.min != null) msg = msg.replace('{min}', String(param.min))
+                    if (param.max != null) msg = msg.replace('{max}', String(param.max))
+                }
                 return msg
             }
         }
@@ -146,6 +174,7 @@ export default class Validator {
         const value = this.extractValue(param)
         if (typeof value === 'string' && value.length >= minNum && value.length <= maxNum)
             return true
+
         this.alerts = [
             this.getMessage('lengthRange', param)
                 .replace('{min}', String(minNum))
@@ -156,12 +185,10 @@ export default class Validator {
 
     validateEmail(param: ValidationParam): boolean {
         const value = this.extractValue(param)
-        if (
-            /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/.test(
-                String(value)
-            )
-        )
-            return true
+        // Simple regex, but effective for basic checking
+        const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/
+        if (typeof value === 'string' && emailRegex.test(value)) return true
+
         this.alerts = [this.getMessage('email', param)]
         return false
     }
@@ -226,6 +253,9 @@ export default class Validator {
         return false
     }
 
+    /**
+     * Dispatcher method to validate based on type string.
+     */
     validate(value: ValidationParam, type: string): boolean {
         switch (type) {
             case 'int':
@@ -261,6 +291,11 @@ export default class Validator {
         }
     }
 
+    /**
+     * Batch validation for multiple parameters against types.
+     * @param params Array of values to validate
+     * @param types Array of type strings
+     */
     validateAll(params: unknown, types: unknown): boolean {
         let flag = true
         const paramsArr = Array.isArray(params) ? params : []
@@ -271,7 +306,8 @@ export default class Validator {
             this.status = { result: false, alerts: ['Parámetros o tipos inválidos'] }
             return false
         }
-        const normalizedTypes = typesArr.map((t) => String(t).toLowerCase())
+
+        const normalizedTypes = (typesArr as any[]).map((t) => String(t).toLowerCase())
 
         for (let i = 0; i < paramsArr.length; i++) {
             if (!this.validateString(normalizedTypes[i])) {
@@ -285,8 +321,9 @@ export default class Validator {
         this.alerts = sts
             .map((s, i) => {
                 if (!s) return this.getMessage(normalizedTypes[i], paramsArr[i])
+                return undefined
             })
-            .filter((a) => a !== undefined)
+            .filter((a): a is string => a !== undefined)
 
         this.status = {
             result: flag,

@@ -4,6 +4,16 @@ import { SecurityService } from './security/SecurityService.js'
 import { SessionManager } from './session/SessionManager.js'
 import { EmailService } from './email/EmailService.js'
 import { DispatcherService } from './dispatcher/DispatcherService.js'
+import { AuditService } from './audit/AuditService.js'
+import { AppLogger } from './logger/AppLogger.js'
+
+// 0. Initialize Logger & Audit
+const audit = new AuditService({ db: container.resolve('db') })
+container.register('audit', audit)
+
+// Overwrite legacy log with new AppLogger
+const appLogger = new AppLogger({ config: container.resolve('config') })
+container.register('log', appLogger)
 
 // 1. Initialize Email Service
 const email = new EmailService({
@@ -19,6 +29,8 @@ const session = new SessionManager({
     config: container.resolve('config'),
     msgs: container.resolve('msgs'),
     email: email,
+    audit: audit,
+    v: container.resolve('v'),
 })
 container.register('session', session)
 
@@ -41,6 +53,8 @@ const dispatcher = new DispatcherService({
     security: security,
     session: session,
     msgs: container.resolve('msgs'),
+    audit: audit,
+    db: container.resolve('db'),
 })
 
 // Wait for async inits

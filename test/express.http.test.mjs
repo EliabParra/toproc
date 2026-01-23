@@ -490,7 +490,11 @@ test('applySessionMiddleware maps cookie.sameSite boolean=true to Lax', async ()
             }
 
             const app = express()
-            applySessionMiddleware(app)
+            applySessionMiddleware(app, {
+                config: globalThis.config,
+                log: globalThis.log,
+                db: globalThis.db || {},
+            })
             app.get('/set', (req, res) => {
                 req.session.t = 1
                 res.status(200).send({ ok: true })
@@ -522,7 +526,11 @@ test('applySessionMiddleware maps cookie.sameSite boolean=false to Strict', asyn
             }
 
             const app = express()
-            applySessionMiddleware(app)
+            applySessionMiddleware(app, {
+                config: globalThis.config,
+                log: globalThis.log,
+                db: globalThis.db || {},
+            })
             app.get('/set', (req, res) => {
                 req.session.t = 1
                 res.status(200).send({ ok: true })
@@ -557,7 +565,11 @@ test('applySessionMiddleware sets trust proxy when cookie.secure=true (and allow
             // Express default is `false`. The middleware only sets trust proxy when it is null/undefined.
             app.set('trust proxy', null)
 
-            applySessionMiddleware(app)
+            applySessionMiddleware(app, {
+                config: globalThis.config,
+                log: globalThis.log,
+                db: globalThis.db || {},
+            })
             app.get('/set', (req, res) => {
                 req.session.t = 1
                 res.status(200).send({ ok: true })

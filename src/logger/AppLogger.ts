@@ -1,4 +1,5 @@
 import 'colors'
+import { ILogger, IConfig } from '../types/core.js'
 
 type LogEvent = {
     type: unknown
@@ -6,20 +7,17 @@ type LogEvent = {
     ctx?: unknown
 }
 
-export default class Log {
-    TYPE_ERROR: number
-    TYPE_INFO: number
-    TYPE_DEBUG: number
-    TYPE_WARNING: number
+export class AppLogger implements ILogger {
+    TYPE_ERROR = 0
+    TYPE_INFO = 1
+    TYPE_DEBUG = 2
+    TYPE_WARNING = 3
 
-    activation: any
-    format: unknown
+    private activation: any
+    private format: unknown
 
-    constructor(config: AppConfig) {
-        this.TYPE_ERROR = 0
-        this.TYPE_INFO = 1
-        this.TYPE_DEBUG = 2
-        this.TYPE_WARNING = 3
+    constructor(deps: { config: IConfig }) {
+        const config = deps.config
         this.activation = (config as any).log.activation
         this.format = (config as any)?.log?.format ?? 'text'
     }

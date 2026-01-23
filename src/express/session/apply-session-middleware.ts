@@ -1,10 +1,15 @@
 import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
+import { IConfig, ILogger, IDatabase } from '../../types/core.js'
 
-export function applySessionMiddleware(app: any) {
+export function applySessionMiddleware(
+    app: any,
+    deps: { config: IConfig; log: ILogger; db: IDatabase }
+) {
+    const { config, log, db } = deps
     const PgSession = connectPgSimple(session)
 
-    const sessionConfig: any = JSON.parse(JSON.stringify((config as any).session ?? {}))
+    const sessionConfig: any = JSON.parse(JSON.stringify(config.session ?? {}))
     sessionConfig.cookie = sessionConfig.cookie ?? {}
 
     if (sessionConfig.cookie.httpOnly == null) sessionConfig.cookie.httpOnly = true
@@ -19,7 +24,7 @@ export function applySessionMiddleware(app: any) {
 
     if (sessionConfig.cookie.sameSite === 'none' && sessionConfig.cookie.secure !== true) {
         log.show({
-            type: (log as any).TYPE_WARNING,
+            type: log.TYPE_WARNING,
             msg: 'Session cookie sameSite="none" without secure=true. Browsers will reject this cookie in most cases.',
         })
     }
@@ -44,7 +49,9 @@ export function applySessionMiddleware(app: any) {
         const pruneIntervalSeconds = sessionConfig.store?.pruneIntervalSeconds ?? 300
 
         sessionConfig.store = new PgSession({
-            pool: (db as any).pool,
+            // @ts-ignore - IDatabase abstraction vs generic Pool expectation
+            pool: (db as any).pool, // Assuming IDatabase implementation exposes pool or we pass raw pool?
+            // DBComponent has 'pool' (pg.Pool).
             tableName,
             ...(schemaName ? { schemaName } : {}),
             ...(ttlSeconds != null ? { ttl: ttlSeconds } : {}),

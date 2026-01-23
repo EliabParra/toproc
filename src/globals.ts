@@ -201,12 +201,14 @@ if (process.env.QUERIES_EXTRA_PATH) {
 
 g.queries = queries
 g.msgs = g.require('./config/messages.json')
-const { default: Validator } = await import('./BSS/Validator.js')
-const { default: Log } = await import('./BSS/Log.js')
-const { default: DBComponent } = await import('./BSS/DBComponent.js')
+const { default: Validator } = await import('./utils/Validator.js')
+// const { default: Log } = await import('./BSS/Log.js') // REPLACED
+import { AppLogger } from './logger/AppLogger.js'
+const { default: DBComponent } = await import('./db/DBComponent.js')
 
 g.v = new Validator(g.config, g.msgs)
-g.log = new Log(g.config)
+// g.log = new Log(g.config)
+g.log = new AppLogger({ config: g.config })
 g.db = new DBComponent({ config: g.config, msgs: g.msgs, queries: g.queries, log: g.log })
 
 // Auto-register legacy globals into the new DI Container
