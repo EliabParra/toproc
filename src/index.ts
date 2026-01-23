@@ -1,17 +1,58 @@
-import './globals.js'
-import Security from './BSS/Security.js'
-import Dispatcher from './BSS/Dispatcher.js'
-import { createAppContext } from './context/app-context.js'
+import './globals.js' // Populates container with foundation (db, log, config, etc.)
+import { container } from './core/Container.js'
+import { SecurityService } from './security/SecurityService.js'
+import { SessionManager } from './session/SessionManager.js'
+import { EmailService } from './email/EmailService.js'
+import { DispatcherService } from './dispatcher/DispatcherService.js'
 
-// Security is created only for the server runtime.
-// This keeps CLI scripts (that import globals) from doing DB work on import.
-;(globalThis as unknown as { security: unknown }).security = new Security(createAppContext())
+// 1. Initialize Email Service
+const email = new EmailService({
+    config: container.resolve('config'),
+    log: container.resolve('log'),
+})
+container.register('email', email)
 
-const dispatcher = new Dispatcher()
+// 2. Initialize Session Manager
+const session = new SessionManager({
+    db: container.resolve('db'),
+    log: container.resolve('log'),
+    config: container.resolve('config'),
+    msgs: container.resolve('msgs'),
+    email: email,
+})
+container.register('session', session)
+
+// 3. Initialize Security Service
+const security = new SecurityService({
+    db: container.resolve('db'),
+    log: container.resolve('log'),
+    config: container.resolve('config'),
+    msgs: container.resolve('msgs'),
+})
+container.register('security', security)
+
+// Bridge legacy global security
+;(globalThis as unknown as { security: unknown }).security = security
+
+// 4. Initialize Dispatcher
+const dispatcher = new DispatcherService({
+    config: container.resolve('config'),
+    log: container.resolve('log'),
+    security: security,
+    session: session,
+    msgs: container.resolve('msgs'),
+})
+
+// Wait for async inits
+await security.ready
 await dispatcher.init()
+
 dispatcher.serverOn()
 
+// Shutdown handling
 let shuttingDown = false
+const log = container.resolve<any>('log') // Resolve logger for shutdown messages
+
 async function shutdown(signal: string) {
     if (shuttingDown) return
     shuttingDown = true

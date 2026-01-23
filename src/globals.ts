@@ -209,6 +209,16 @@ g.v = new Validator(g.config, g.msgs)
 g.log = new Log(g.config)
 g.db = new DBComponent({ config: g.config, msgs: g.msgs, queries: g.queries, log: g.log })
 
+// Auto-register legacy globals into the new DI Container
+// This bridges the gap during refactoring
+import { container } from './core/Container.js'
+container.register('config', g.config)
+container.register('msgs', g.msgs)
+container.register('queries', g.queries)
+container.register('v', g.v)
+container.register('log', g.log)
+container.register('db', g.db)
+
 // NOTE:
 // Do NOT instantiate Security here.
 // Security's constructor triggers async init which queries the DB.
