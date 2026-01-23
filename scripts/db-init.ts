@@ -13,6 +13,26 @@ import { errorMessage } from '../src/helpers/error.js'
 import { getAuthPresetFiles } from './bo-auth-preset.js'
 
 const require = createRequire(import.meta.url)
+import 'colors'
+
+const style = {
+    header: (t: string) => t.cyan.bold,
+    cmd: (t: string) => t.yellow,
+    opt: (t: string) => t.green,
+    err: (t: string) => t.red.bold,
+    success: (t: string) => t.green.bold,
+    info: (t: string) => t.blue,
+    dim: (t: string) => t.gray,
+}
+
+const symbols = {
+    check: '✅',
+    cross: '❌',
+    info: 'ℹ️',
+    warn: '⚠️',
+    ques: '❓',
+    arrow: '➜',
+}
 
 type DbInitOptValue = string | boolean
 type DbInitOpts = Record<string, DbInitOptValue>
@@ -68,50 +88,50 @@ function normalizeTableName(value: unknown): string | undefined {
 
 function printHelp() {
     console.log(`
-DB Init CLI
+${style.header('DB Init CLI')} ${style.dim('v1.0')}
 
-Usage:
-  npm run db:init
+${style.header('Usage:')}
+  ${style.cmd('npm run db:init')}
     node --import tsx scripts/db-init.ts [options]
 
-Options:
-  --apply                 Apply changes to the DB (default in TTY)
-  --print                 Print SQL only (no DB changes)
-  --yes                   Non-interactive (assume yes for prompts)
+${style.header('Options:')}
+  ${style.opt('--apply')}                 Apply changes to the DB (default in TTY)
+  ${style.opt('--print')}                 Print SQL only (no DB changes)
+  ${style.opt('--yes')}                   Non-interactive (assume yes for prompts)
 
-    --sessionSchema <name>  Session table schema (default: security)
-    --sessionTable <name>   Session table name (default: sessions)
+    ${style.opt('--sessionSchema')} <name>  Session table schema (default: security)
+    ${style.opt('--sessionTable')} <name>   Session table name (default: sessions)
 
-    --includeEmail          Add optional security.users.email column
-  --seedAdmin             Create/update an admin user + profile (default in TTY)
-  --adminUser <name>      Admin username (default: admin)
-  --adminPassword <pw>    Admin password (will be bcrypt-hashed)
-  --profileId <id>        Profile id to link to admin (default: 1)
+    ${style.opt('--includeEmail')}          Add optional security.users.email column
+  ${style.opt('--seedAdmin')}             Create/update an admin user + profile (default in TTY)
+  ${style.opt('--adminUser')} <name>      Admin username (default: admin)
+  ${style.opt('--adminPassword')} <pw>    Admin password (will be bcrypt-hashed)
+  ${style.opt('--profileId')} <id>        Profile id to link to admin (default: 1)
 
-    --seedProfiles           If no profiles exist, seed minimal profiles
+    ${style.opt('--seedProfiles')}           If no profiles exist, seed minimal profiles
                                                      (public + session) (default in TTY)
-    --publicProfileId <id>   Public (anonymous) profile id (default: 2)
-    --sessionProfileId <id>  Session (authenticated) profile id (default: 1)
+    ${style.opt('--publicProfileId')} <id>   Public (anonymous) profile id (default: 2)
+    ${style.opt('--sessionProfileId')} <id>  Session (authenticated) profile id (default: 1)
 
-    --seedPublicAuthPerms    When registering BOs, also grant public profile permissions
+    ${style.opt('--seedPublicAuthPerms')}    When registering BOs, also grant public profile permissions
                                                      for Auth public methods (register + email verification + password reset)
 
-    --registerBo            Auto-register BO methods into security.methods (default in TTY)
-	--txStart <n>           Starting tx for new methods (default: max(tx)+1)
+    ${style.opt('--registerBo')}            Auto-register BO methods into security.methods (default in TTY)
+    ${style.opt('--txStart')} <n>           Starting tx for new methods (default: max(tx)+1)
 
-Auth (optional module):
-    --auth                  Create auth support tables (password reset + OTP)
-    --authUsername           Keep username as a supported identifier (default: true)
+${style.header('Auth (optional module):')}
+    ${style.opt('--auth')}                  Create auth support tables (password reset + OTP)
+    ${style.opt('--authUsername')}           Keep username as a supported identifier (default: true)
                                                      When false, username becomes optional (nullable).
-    --authLoginId <value>    Login identifier: email|username (default: email)
-    --authLogin2StepNewDevice  Require email verification on login from a new device
+    ${style.opt('--authLoginId')} <value>    Login identifier: email|username (default: email)
+    ${style.opt('--authLogin2StepNewDevice')}  Require email verification on login from a new device
 
-Auth BO (optional generation):
-    --authBo                Generate Auth BO preset files under ./BO/Auth
-    --authBoForce           Overwrite Auth BO preset files if they already exist
-    --authBoSkip            Never generate/prompt for Auth BO preset files
+${style.header('Auth BO (optional generation):')}
+    ${style.opt('--authBo')}                Generate Auth BO preset files under ./BO/Auth
+    ${style.opt('--authBoForce')}           Overwrite Auth BO preset files if they already exist
+    ${style.opt('--authBoSkip')}            Never generate/prompt for Auth BO preset files
 
-Environment equivalents:
+${style.header('Environment equivalents:')}
     AUTH_ENABLE=1            Same as --auth
     AUTH_USERNAME=1|0        Same as --authUsername
     AUTH_LOGIN_ID=email|username
@@ -127,7 +147,7 @@ Environment equivalents:
 
     AUTH_SEED_PUBLIC_AUTH_PERMS=1|0
 
-DB connection:
+${style.header('DB connection:')}
   Uses DATABASE_URL when set; otherwise PG* vars; otherwise src/config/config.json.
 `)
 }
@@ -763,8 +783,9 @@ async function registerBOs(
 }
 
 async function promptYesNo(rl: any, question: string, defaultYes = false) {
-    const suffix = defaultYes ? ' [Y/n] ' : ' [y/N] '
-    const ans = String(await rl.question(question + suffix))
+    const suffix = defaultYes ? ' [Y/n] '.dim : ' [y/N] '.dim
+    const q = `${symbols.ques} ${question.white.bold}${suffix}`
+    const ans = String(await rl.question(q))
         .trim()
         .toLowerCase()
     if (!ans) return defaultYes
@@ -774,20 +795,27 @@ async function promptYesNo(rl: any, question: string, defaultYes = false) {
 async function promptChoice(rl: any, question: string, choices: unknown[], defaultValue: unknown) {
     const normalized = choices.map((c: unknown) => String(c).trim().toLowerCase())
     const def = defaultValue != null ? String(defaultValue).trim().toLowerCase() : undefined
-    const suffix = def != null ? ` (${def}) ` : ' '
+    const suffix = def != null ? ` (${def})`.dim + ' ' : ' '
+    const options = choices
+        .map((c) => (c === def ? String(c).green.underline : String(c).cyan))
+        .join(style.dim('|'))
 
     while (true) {
-        const ans = String(await rl.question(`${question} (${normalized.join('|')})${suffix}`))
+        const q = `${symbols.ques} ${question.white.bold} ${style.dim('[')}${options}${style.dim(']')}${suffix}${symbols.arrow} `
+        const ans = String(await rl.question(q))
             .trim()
             .toLowerCase()
         const value = ans.length > 0 ? ans : def
         if (value && normalized.includes(value)) return value
-        console.log(`Please choose one of: ${normalized.join(', ')}`)
+        console.log(
+            `${symbols.warn} ${'Invalid choice. Please choose one of:'.red} ${normalized.join(', ')}`
+        )
     }
 }
 async function promptText(rl: any, question: string, defaultValue: string) {
-    const suffix = defaultValue != null ? ` (${defaultValue}) ` : ' '
-    const ans = String(await rl.question(question + suffix)).trim()
+    const suffix = defaultValue != null ? ` (${defaultValue})`.dim + ' ' : ' '
+    const q = `${symbols.ques} ${question.white.bold}${suffix}${symbols.arrow} `
+    const ans = String(await rl.question(q)).trim()
     return ans.length > 0 ? ans : defaultValue
 }
 

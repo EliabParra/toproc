@@ -21,12 +21,35 @@ import {
 
 const repoRoot = process.cwd()
 
+import 'colors'
+
+// Basic styling helpers
+const style = {
+    header: (t: string) => t.cyan.bold,
+    cmd: (t: string) => t.yellow,
+    opt: (t: string) => t.green,
+    err: (t: string) => t.red.bold,
+    success: (t: string) => t.green.bold,
+    info: (t: string) => t.blue,
+    dim: (t: string) => t.gray,
+}
+
+const symbols = {
+    check: '✅',
+    cross: '❌',
+    info: 'ℹ️',
+    warn: '⚠️',
+    ques: '❓',
+    arrow: '➜',
+}
+
 type BoOptValue = string | boolean
 type BoOpts = Record<string, BoOptValue>
 
 async function promptYesNo(rl: any, question: string, defaultYes = false) {
-    const suffix = defaultYes ? ' [Y/n] ' : ' [y/N] '
-    const ans = String(await rl.question(question + suffix))
+    const suffix = defaultYes ? ' [Y/n] '.dim : ' [y/N] '.dim
+    const q = `${symbols.ques} ${question.white.bold}${suffix}`
+    const ans = String(await rl.question(q))
         .trim()
         .toLowerCase()
     if (!ans) return defaultYes
@@ -36,21 +59,28 @@ async function promptYesNo(rl: any, question: string, defaultYes = false) {
 async function promptChoice(rl: any, question: string, choices: string[], defaultValue: string) {
     const normalized = choices.map((c) => String(c).trim().toLowerCase())
     const def = defaultValue != null ? String(defaultValue).trim().toLowerCase() : undefined
-    const suffix = def != null ? ` (${def}) ` : ' '
+    const suffix = def != null ? ` (${def})`.dim + ' ' : ' '
+    const options = choices
+        .map((c) => (c === def ? c.green.underline : c.cyan))
+        .join(style.dim('|'))
 
     while (true) {
-        const ans = String(await rl.question(`${question} (${normalized.join('|')})${suffix}`))
+        const q = `${symbols.ques} ${question.white.bold} ${style.dim('[')}${options}${style.dim(']')}${suffix}${symbols.arrow} `
+        const ans = String(await rl.question(q))
             .trim()
             .toLowerCase()
         const value = ans.length > 0 ? ans : def
         if (value && normalized.includes(value)) return value
-        console.log(`Please choose one of: ${normalized.join(', ')}`)
+        console.log(
+            `${symbols.warn} ${'Invalid choice. Please choose one of:'.red} ${normalized.join(', ')}`
+        )
     }
 }
 
 async function promptText(rl: any, question: string, defaultValue: string) {
-    const suffix = defaultValue != null ? ` (${defaultValue}) ` : ' '
-    const ans = String(await rl.question(question + suffix)).trim()
+    const suffix = defaultValue != null ? ` (${defaultValue})`.dim + ' ' : ' '
+    const q = `${symbols.ques} ${question.white.bold}${suffix}${symbols.arrow} `
+    const ans = String(await rl.question(q)).trim()
     return ans.length > 0 ? ans : defaultValue
 }
 
@@ -78,38 +108,38 @@ function isMainModule() {
 
 function printHelp() {
     console.log(`
-BO CLI
+${style.header('BO CLI Helper')} ${style.dim('v1.0')}
 
-Usage:
-  npm run bo -- <command> [args] [options]
+${style.header('Usage:')}
+  ${style.cmd('npm run bo')} -- <command> [args] [options]
 
-Commands:
-  new  <ObjectName>            Create BO folder + files
-        auth                         Create Auth BO preset (register/email verification/password reset)
-    sync [ObjectName]            Read BO methods and upsert to DB (tx mapping)
-                                                            Use --all to sync all BOs under /BO
-  list                         List objects/methods/tx from DB
-  perms                        Grant/revoke permissions (interactive)
-  perms --profile <id> --allow Object.method[,Object.method]
-  perms --profile <id> --deny  Object.method[,Object.method]
+${style.header('Commands:')}
+  ${style.cmd('new')}  <ObjectName>           ${style.dim('Create BO folder + files')}
+        ${style.opt('auth')}                        Create Auth BO preset (register/email verification/password reset)
+  ${style.cmd('sync')} [ObjectName]           ${style.dim('Read BO methods and upsert to DB (tx mapping)')}
+                              Use ${style.opt('--all')} to sync all BOs under /BO
+  ${style.cmd('list')}                        ${style.dim('List objects/methods/tx from DB')}
+  ${style.cmd('perms')}                       ${style.dim('Grant/revoke permissions (interactive)')}
+  ${style.cmd('perms')} --profile <id> --allow Object.method[,Object.method]
+  ${style.cmd('perms')} --profile <id> --deny  Object.method[,Object.method]
 
-Options:
-    --yes                        Non-interactive (disable prompts)
-  --methods <m1,m2,...>         Methods to scaffold (new)
-  --crud                        Scaffold CRUD-style methods (default)
-  --force                       Overwrite existing files (new)
-  --db                          Also upsert object/method/tx in DB (new)
-  --tx <n1,n2,...>              Explicit tx per method (new/sync)
-  --txStart <n>                 Starting tx if auto-assigning
-  --dry                         Print what would change, do nothing
-    --all                         Sync all BOs (sync)
-    --prune                       Delete stale DB methods (in DB but not in code) (sync)
+${style.header('Options:')}
+  ${style.opt('--yes')}                       Non-interactive (disable prompts)
+  ${style.opt('--methods')} <m1,m2,...>       Methods to scaffold (new)
+  ${style.opt('--crud')}                      Scaffold CRUD-style methods (default)
+  ${style.opt('--force')}                     Overwrite existing files (new)
+  ${style.opt('--db')}                        Also upsert object/method/tx in DB (new)
+  ${style.opt('--tx')} <n1,n2,...>            Explicit tx per method (new/sync)
+  ${style.opt('--txStart')} <n>               Starting tx if auto-assigning
+  ${style.opt('--dry')}                       Print what would change, do nothing
+  ${style.opt('--all')}                       Sync all BOs (sync)
+  ${style.opt('--prune')}                     Delete stale DB methods (in DB but not in code) (sync)
 
-Notes:
+${style.header('Notes:')}
 - After changing tx/perms in DB, restart the server (Security cache loads on startup).
 - Requires DATABASE_URL / PG* env vars or config.json DB settings.
 
-Interactive mode:
+${style.header('Interactive mode:')}
 - Run without args in a TTY to choose commands/options.
 `)
 }
