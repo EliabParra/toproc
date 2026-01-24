@@ -57,7 +57,7 @@ export class DispatcherService {
 
     private loginRateLimiter: any
     privatetoProccessRateLimiter: any
-    private authPasswordResetRateLimiter: any
+    public authPasswordResetRateLimiter: any
     private csrfTokenHandler: any
     private csrfProtection: any
 
@@ -120,7 +120,7 @@ export class DispatcherService {
 
     // Helper to get rate limiter (lazy load or just property)
     // Actually createToProccessRateLimiter returns a middleware.
-    private get toProccessRateLimiter() {
+    public get toProccessRateLimiter() {
         if (!this.privatetoProccessRateLimiter) {
             this.privatetoProccessRateLimiter = createToProccessRateLimiter(this.clientErrors)
         }
@@ -270,22 +270,6 @@ export class DispatcherService {
                 return res
                     .status(this.clientErrors.permissionDenied.code)
                     .send(this.clientErrors.permissionDenied)
-            }
-
-            if (txData?.object_na === 'Auth' && txData?.method_na === 'verifyLoginChallenge') {
-                const paramsObj =
-                    effectiveParams &&
-                    typeof effectiveParams === 'object' &&
-                    !Array.isArray(effectiveParams)
-                        ? effectiveParams
-                        : null
-                if (!paramsObj) {
-                    return res
-                        .status(this.clientErrors.invalidParameters.code)
-                        .send(this.clientErrors.invalidParameters)
-                }
-                ;(req as any).body = paramsObj
-                return await this.session.verifyLoginChallenge(req, res)
             }
 
             const response = await this.security.executeMethod(data)

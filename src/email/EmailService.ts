@@ -1,29 +1,5 @@
 import nodemailer from 'nodemailer'
-import { ILogger, IConfig, IEmailService } from '../types/core.js'
-
-type EmailConfig = {
-    mode?: string
-    from?: string
-    logIncludeSecrets?: boolean
-    smtpHost?: string
-    smtpPort?: number
-    smtpSecure?: boolean
-    smtpUser?: string
-    smtpPass?: string
-}
-
-type LoginEmailArgs = { to: string; token: string; code: string; appName?: unknown }
-type EmailResult = { ok: boolean; mode: string }
-
-function isConfiguredForSmtp(emailCfg: EmailConfig) {
-    return Boolean(
-        emailCfg &&
-        typeof emailCfg.smtpHost === 'string' &&
-        emailCfg.smtpHost.length > 0 &&
-        Number.isInteger(emailCfg.smtpPort) &&
-        Number(emailCfg.smtpPort) > 0
-    )
-}
+import { IEmailService, IConfig, ILogger } from '../types/core.js'
 
 function maskEmail(email: string) {
     const s = String(email ?? '').trim()
@@ -35,22 +11,43 @@ function maskEmail(email: string) {
     return `${head}***@${domain}`
 }
 
-function buildTransport(emailCfg: EmailConfig) {
+type EmailConfig = {
+    mode?: string // 'log' | 'smtp'
+    from?: string
+    logIncludeSecrets?: boolean // If true, logs tokens/codes
+    smtp?: {
+        host: string
+        port: number
+        secure?: boolean
+        auth?: {
+            user: string
+            pass: string
+        }
+    }
+}
+
+function isConfiguredForSmtp(cfg: EmailConfig) {
+    if (cfg.mode !== 'smtp') return false
+    return Boolean(cfg.smtp?.host && cfg.smtp?.port)
+}
+
+function buildTransport(cfg: EmailConfig) {
     return nodemailer.createTransport({
-        host: emailCfg.smtpHost,
-        port: emailCfg.smtpPort,
-        secure: Boolean(emailCfg.smtpSecure),
-        auth:
-            emailCfg.smtpUser && emailCfg.smtpPass
-                ? { user: emailCfg.smtpUser, pass: emailCfg.smtpPass }
-                : undefined,
+        host: cfg.smtp!.host,
+        port: cfg.smtp!.port,
+        secure: cfg.smtp!.secure ?? false,
+        auth: cfg.smtp!.auth
+            ? {
+                  user: cfg.smtp!.auth.user,
+                  pass: cfg.smtp!.auth.pass,
+              }
+            : undefined,
     })
 }
 
 export class EmailService implements IEmailService {
-    private log: ILogger
-    private config: IConfig
-
+    log: ILogger
+    config: IConfig
     cfg: EmailConfig
     mode: string
     from: string
@@ -79,59 +76,87 @@ export class EmailService implements IEmailService {
         return maskEmail(email)
     }
 
-    async sendLoginChallenge({ to, token, code, appName }: LoginEmailArgs): Promise<EmailResult> {
-        const subject = `${String(appName ?? 'App')} - Verificación de inicio de sesión`
-        const text = `Tu inicio de sesión requiere verificación.\n\nToken: ${token}\nCódigo: ${code}\n\nSi no fuiste tú, ignora este mensaje.`
-
-        if (this.mode !== 'smtp' || !this._transport) {
-            this.log.show({
-                type: this.log.TYPE_INFO,
-                msg: `[Email:${this.mode}] Would send login challenge to=${to} subject=${subject}`,
-                ctx: this.logIncludeSecrets ? { to, subject, token, code } : { to, subject },
-            })
-            return { ok: true, mode: this.mode }
-        }
-
-        await this._transport.sendMail({ from: this.from, to, subject, text })
-        return { ok: true, mode: 'smtp' }
+    async sendLoginChallenge(params: {
+        to: string
+        token: string
+        code: string
+        appName?: unknown
+    }) {
+        return this._send({
+            to: params.to,
+            subject: `${params.appName || 'App'}: Verify your login`,
+            text: `Your login verification code is: ${params.code}`,
+            token: params.token,
+            code: params.code,
+        })
     }
 
-    async sendPasswordReset({ to, token, code, appName }: LoginEmailArgs): Promise<EmailResult> {
-        const subject = `${String(appName ?? 'App')} - Restablecer contraseña`
-        const text = `Solicitud para restablecer contraseña.\n\nToken: ${token}\nCódigo: ${code}\n\nSi no fuiste tú, ignora este mensaje.`
-
-        if (this.mode !== 'smtp' || !this._transport) {
-            this.log.show({
-                type: this.log.TYPE_INFO,
-                msg: `[Email:${this.mode}] Would send password reset to=${to} subject=${subject}`,
-                ctx: this.logIncludeSecrets ? { to, subject, token, code } : { to, subject },
-            })
-            return { ok: true, mode: this.mode }
-        }
-
-        await this._transport.sendMail({ from: this.from, to, subject, text })
-        return { ok: true, mode: 'smtp' }
+    async sendPasswordReset(params: {
+        to: string
+        token: string
+        code: string
+        appName?: unknown
+    }) {
+        return this._send({
+            to: params.to,
+            subject: `${params.appName || 'App'}: Password Reset`,
+            text: `Use this code to reset your password: ${params.code}`,
+            token: params.token,
+            code: params.code,
+        })
     }
 
-    async sendEmailVerification({
+    async sendEmailVerification(params: {
+        to: string
+        token: string
+        code: string
+        appName?: unknown
+    }) {
+        return this._send({
+            to: params.to,
+            subject: `${params.appName || 'App'}: Verify your email`,
+            text: `Your email verification code is: ${params.code}`,
+            token: params.token,
+            code: params.code,
+        })
+    }
+
+    async _send({
         to,
+        subject,
+        text,
         token,
         code,
-        appName,
-    }: LoginEmailArgs): Promise<EmailResult> {
-        const subject = `${String(appName ?? 'App')} - Verificar email`
-        const text = `Verificación de email requerida.\n\nToken: ${token}\nCódigo: ${code}\n\nSi no fuiste tú, ignora este mensaje.`
-
+    }: {
+        to: string
+        subject: string
+        text: string
+        token?: string
+        code?: string
+    }) {
         if (this.mode !== 'smtp' || !this._transport) {
             this.log.show({
                 type: this.log.TYPE_INFO,
-                msg: `[Email:${this.mode}] Would send email verification to=${to} subject=${subject}`,
+                msg: `[Email:${this.mode}] Would send email to=${to} subject="${subject}"`,
                 ctx: this.logIncludeSecrets ? { to, subject, token, code } : { to, subject },
             })
             return { ok: true, mode: this.mode }
         }
 
-        await this._transport.sendMail({ from: this.from, to, subject, text })
-        return { ok: true, mode: 'smtp' }
+        try {
+            await this._transport.sendMail({
+                from: this.from,
+                to,
+                subject,
+                text,
+            })
+            return { ok: true, mode: 'smtp' }
+        } catch (err: any) {
+            this.log.show({
+                type: this.log.TYPE_ERROR,
+                msg: `EmailService SMTP error: ${err?.message || err}`,
+            })
+            return { ok: false, mode: 'smtp' }
+        }
     }
 }

@@ -245,11 +245,6 @@ end $$;`,
         alter table security.user_device rename to user_devices;
     end if;
 end $$;`,
-        `do $$ begin
-    if to_regclass('security.login_challenge') is not null and to_regclass('security.login_challenges') is null then
-        alter table security.login_challenge rename to login_challenges;
-    end if;
-end $$;`,
 
         // Columns (users)
         `do $$ begin
@@ -350,12 +345,6 @@ end $$;`,
     if exists (select 1 from information_schema.columns where table_schema='security' and table_name='user_devices' and column_name='device_id')
          and not exists (select 1 from information_schema.columns where table_schema='security' and table_name='user_devices' and column_name='user_device_id') then
         alter table security.user_devices rename column device_id to user_device_id;
-    end if;
-end $$;`,
-        `do $$ begin
-    if exists (select 1 from information_schema.columns where table_schema='security' and table_name='login_challenges' and column_name='challenge_id')
-         and not exists (select 1 from information_schema.columns where table_schema='security' and table_name='login_challenges' and column_name='login_challenge_id') then
-        alter table security.login_challenges rename column challenge_id to login_challenge_id;
     end if;
 end $$;`,
     ]
@@ -635,7 +624,7 @@ async function grantPublicAuthRegisterPerms(
     client: any,
     { publicProfileId }: { publicProfileId: number }
 ) {
-    const methods = ['register', 'requestEmailVerification', 'verifyEmail', 'verifyLoginChallenge']
+    const methods = ['register', 'requestEmailVerification', 'verifyEmail']
     const objectName = 'Auth'
 
     // Ensure profile exists (does not overwrite name if already set).
@@ -658,33 +647,6 @@ async function grantPublicAuthRegisterPerms(
         `Granted ${granted}/${methods.length} public permission(s) to profile_id=${publicProfileId} for Auth registration/email verification methods.`
     )
     return { granted }
-}
-
-async function ensureAuthVerifyLoginChallengeTx(client: any) {
-    // This method is implemented by Session (needs req/res to set cookies), but we still want
-    // a tx mapping so it can be invoked consistently via /toProccess.
-    const rObj = await client.query(
-        'insert into security.objects (object_name) values ($1) on conflict (object_name) do update set object_name = excluded.object_name returning object_id',
-        ['Auth']
-    )
-    const objectId = Number(rObj.rows?.[0]?.object_id)
-    if (!Number.isFinite(objectId) || objectId <= 0)
-        throw new Error('Failed to ensure Auth object_id')
-
-    const existing = await client.query(
-        'select tx from security.methods where object_id = $1 and method_name = $2',
-        [objectId, 'verifyLoginChallenge']
-    )
-    if (existing.rows?.[0]?.tx) return Number(existing.rows[0].tx)
-
-    const nextTx = await getNextTxFromDb(client)
-    if (!Number.isInteger(nextTx) || nextTx <= 0) throw new Error('Failed to compute next tx')
-
-    await client.query(
-        'insert into security.methods (object_id, method_name, tx) values ($1, $2, $3) on conflict (object_id, method_name) do nothing',
-        [objectId, 'verifyLoginChallenge', nextTx]
-    )
-    return nextTx
 }
 
 function printProfileEnvTips({
@@ -1238,9 +1200,6 @@ async function main() {
                 profileId,
                 txStart: txStart ?? null,
             })
-
-            // Ensure tx exists for login challenge verification routed via /toProccess.
-            await ensureAuthVerifyLoginChallengeTx(client)
 
             // Optional: grant public profile permissions for Auth public methods.
             // This keeps unauthenticated /toProccess scoped to these methods only.

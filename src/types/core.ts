@@ -54,7 +54,6 @@ export interface ISessionService {
     sessionExists(req: any): boolean
     createSession(req: any, res: any): Promise<any>
     destroySession(req: any): void
-    verifyLoginChallenge(req: any, res: any): Promise<any>
 }
 
 export interface IEmailService {

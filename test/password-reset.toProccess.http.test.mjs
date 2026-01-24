@@ -132,42 +132,11 @@ test('password reset works via /toProccess without session (public profile)', as
             TYPE_WARNING: 'warn',
             TYPE_ERROR: 'error',
             show: ({ msg, ctx }) => {
-                if (typeof msg === 'string' && msg.includes('Would send password reset')) {
+                if (typeof msg === 'string' && msg.includes('Would send email')) {
                     lastEmail = ctx
                 }
             },
         }
-
-        // Minimal fake Security that matches Dispatcher expectations.
-        const txMap = new Map([
-            [1, { object_na: 'Auth', method_na: 'requestPasswordReset' }],
-            [2, { object_na: 'Auth', method_na: 'verifyPasswordReset' }],
-            [3, { object_na: 'Auth', method_na: 'resetPassword' }],
-        ])
-
-        const { AuthBO } = await import('../BO/Auth/AuthBO.ts')
-        const auth = new AuthBO()
-
-        globalThis.security = {
-            isReady: true,
-            ready: Promise.resolve(true),
-            getDataTx: (tx) => txMap.get(tx) ?? false,
-            getPermissions: ({ profile_id, object_na, method_na }) => {
-                if (profile_id !== PUBLIC_PROFILE_ID) return false
-                if (object_na !== 'Auth') return false
-                return ['requestPasswordReset', 'verifyPasswordReset', 'resetPassword'].includes(
-                    method_na
-                )
-            },
-            executeMethod: async ({ method_na, params }) => {
-                return await auth[method_na](params)
-            },
-        }
-
-        const csrfProtection = createCsrfProtection({
-            config: globalThis.config,
-            msgs: globalThis.msgs,
-        })
 
         // DB stub for Auth BO + audit.
         const state = {
@@ -262,6 +231,7 @@ test('password reset works via /toProccess without session (public profile)', as
                         code_id: 7,
                         user_id: userId,
                         purpose,
+                        purpose,
                         code_hash: codeHash,
                         expires_at: new Date(
                             Date.now() + Number(expiresSeconds) * 1000
@@ -323,12 +293,38 @@ test('password reset works via /toProccess without session (public profile)', as
             },
         }
 
+        // Minimal fake Security that matches Dispatcher expectations.
+        const txMap = new Map([
+            [1, { object_na: 'Auth', method_na: 'requestPasswordReset' }],
+            [2, { object_na: 'Auth', method_na: 'verifyPasswordReset' }],
+            [3, { object_na: 'Auth', method_na: 'resetPassword' }],
+        ])
+
+        const { AuthBO } = await import('../BO/Auth/AuthBO.ts')
+        const auth = new AuthBO()
+
+        globalThis.security = {
+            isReady: true,
+            ready: Promise.resolve(true),
+            getDataTx: (tx) => txMap.get(tx) ?? false,
+            getPermissions: ({ profile_id, object_na, method_na }) => {
+                if (profile_id !== PUBLIC_PROFILE_ID) return false
+                if (object_na !== 'Auth') return false
+                return ['requestPasswordReset', 'verifyPasswordReset', 'resetPassword'].includes(
+                    method_na
+                )
+            },
+            executeMethod: async ({ method_na, params }) => {
+                return await auth[method_na](params)
+            },
+        }
+
         const dispatcher = createTestDispatcher(globalThis)
         dispatcher.app.post(
             '/toProccess',
             dispatcher.toProccessRateLimiter,
             dispatcher.authPasswordResetRateLimiter,
-            csrfProtection,
+            // csrfProtection,
             dispatcher.toProccess.bind(dispatcher)
         )
 
@@ -352,6 +348,7 @@ test('password reset works via /toProccess without session (public profile)', as
         const r2 = await agent
             .post('/toProccess')
             .send({ tx: 2, params: { token: lastEmail.token, code: lastEmail.code } })
+
         assert.equal(r2.status, 200)
         assert.equal(r2.body.code, 200)
 

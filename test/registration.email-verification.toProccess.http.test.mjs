@@ -110,33 +110,9 @@ test('register requires email verification before login', async () => {
             TYPE_WARNING: 'warn',
             TYPE_ERROR: 'error',
             show: ({ msg, ctx }) => {
-                if (typeof msg === 'string' && msg.includes('Would send email verification')) {
+                if (typeof msg === 'string' && msg.includes('Would send email')) {
                     lastEmail = ctx
                 }
-            },
-        }
-
-        // Minimal Security that maps tx -> Auth method and allows public permissions.
-        const txMap = new Map([
-            [10, { object_na: 'Auth', method_na: 'register' }],
-            [11, { object_na: 'Auth', method_na: 'requestEmailVerification' }],
-            [12, { object_na: 'Auth', method_na: 'verifyEmail' }],
-        ])
-
-        const { AuthBO } = await import('../BO/Auth/AuthBO.ts')
-        const auth = new AuthBO()
-
-        globalThis.security = {
-            isReady: true,
-            ready: Promise.resolve(true),
-            getDataTx: (tx) => txMap.get(tx) ?? false,
-            getPermissions: ({ profile_id, object_na, method_na }) => {
-                if (profile_id !== PUBLIC_PROFILE_ID) return false
-                if (object_na !== 'Auth') return false
-                return ['register', 'requestEmailVerification', 'verifyEmail'].includes(method_na)
-            },
-            executeMethod: async ({ method_na, params }) => {
-                return await auth[method_na](params)
             },
         }
 
@@ -288,6 +264,30 @@ test('register requires email verification before login', async () => {
                 }
 
                 return { rows: [] }
+            },
+        }
+
+        // Minimal Security that maps tx -> Auth method and allows public permissions.
+        const txMap = new Map([
+            [10, { object_na: 'Auth', method_na: 'register' }],
+            [11, { object_na: 'Auth', method_na: 'requestEmailVerification' }],
+            [12, { object_na: 'Auth', method_na: 'verifyEmail' }],
+        ])
+
+        const { AuthBO } = await import('../BO/Auth/AuthBO.ts')
+        const auth = new AuthBO()
+
+        globalThis.security = {
+            isReady: true,
+            ready: Promise.resolve(true),
+            getDataTx: (tx) => txMap.get(tx) ?? false,
+            getPermissions: ({ profile_id, object_na, method_na }) => {
+                if (profile_id !== PUBLIC_PROFILE_ID) return false
+                if (object_na !== 'Auth') return false
+                return ['register', 'requestEmailVerification', 'verifyEmail'].includes(method_na)
+            },
+            executeMethod: async ({ method_na, params }) => {
+                return await auth[method_na](params)
             },
         }
 
