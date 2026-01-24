@@ -11,7 +11,6 @@ export class TestRefactor extends BusinessObject {
     // En sync se ignoran y no se registran en DB.
     // Ejemplo: async _helper() { ... }
 
-
     async get(params: any): Promise<ApiResponse> {
         try {
             // TODO: verify permissions if needed, or inputs.
