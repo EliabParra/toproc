@@ -17,7 +17,7 @@
         "dev": "nodemon --watch src --watch BO --watch public --ext js,ts,json,html,css --signal SIGINT --exec \"node --import tsx src/index.ts\"",
         "db:init": "node --import tsx scripts/db-init/index.ts",
         "hashpw": "tsx scripts/hash-password.ts",
-        "bo": "tsx scripts/bo.ts",
+        "bo": "node --import tsx scripts/bo/index.ts",
         "export:starter": "tsx scripts/export-starter.ts"
     },
     "type": "module",
