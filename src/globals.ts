@@ -12,6 +12,7 @@ const g = globalThis as unknown as {
     log?: any
     db?: any
     i18n?: any
+    validator?: any
 }
 
 g.require = createRequire(import.meta.url)
@@ -51,6 +52,7 @@ if (process.env.QUERIES_EXTRA_PATH) {
     const extraPath = resolveRepoRelative(process.env.QUERIES_EXTRA_PATH)
     if (extraPath) queries = mergeQueries(queries, g.require(extraPath))
 }
+g.queries = queries
 
 import { I18nService } from './core/i18n/I18nService.js'
 
@@ -64,12 +66,15 @@ g.i18n = i18n
 // Legacy g.msgs needed to be { es: { ... }, en: { ... } } because DBComponent uses msgs[lang].
 g.msgs = i18n.getLegacyObject()
 
-const { default: Validator } = await import('./utils/Validator.js')
+import { AppValidator } from './core/validation/AppValidator.js'
+g.validator = new AppValidator(i18n)
+
+const { default: LegacyValidator } = await import('./utils/Validator.js')
 // const { default: Log } = await import('./BSS/Log.js') // REPLACED
 import { AppLogger } from './logger/AppLogger.js'
 const { default: DBComponent } = await import('./db/DBComponent.js')
 
-g.v = new Validator(g.config, g.msgs)
+g.v = new LegacyValidator(g.config, g.msgs)
 // g.log = new Log(g.config)
 g.log = new AppLogger({ config: g.config })
 g.db = new DBComponent({ config: g.config, msgs: g.msgs, queries: g.queries, log: g.log })
@@ -81,6 +86,7 @@ container.register('config', g.config)
 container.register('msgs', g.msgs)
 container.register('queries', g.queries)
 container.register('v', g.v)
+container.register('validator', g.validator)
 container.register('log', g.log)
 container.register('db', g.db)
 
