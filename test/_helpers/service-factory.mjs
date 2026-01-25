@@ -1,4 +1,4 @@
-import { DispatcherService } from '../../src/dispatcher/DispatcherService.js'
+import { Dispatcher } from '../../src/api/dispatcher/Dispatcher.js'
 import { SessionManager } from '../../src/session/SessionManager.js'
 import { AuditService } from '../../src/audit/AuditService.js'
 import { applySessionMiddleware } from '../../src/express/session/apply-session-middleware.js'
@@ -29,7 +29,7 @@ export function createTestDispatcher(globals) {
         v: globals.v,
     })
 
-    const dispatcher = new DispatcherService({
+    const dispatcher = new Dispatcher({
         config: globals.config,
         log: globals.log,
         security: globals.security,

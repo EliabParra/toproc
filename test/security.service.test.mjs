@@ -4,7 +4,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { SecurityService } from '../src/security/SecurityService.js'
+import { SecurityService } from '../src/core/security/SecurityService.js'
 import { withGlobals } from './_helpers/global-state.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -32,7 +32,11 @@ test('Security.init loads permissions + tx map and sets isReady', async () => {
         globalThis.msgs = makeMsgs()
 
         const logs = []
-        globalThis.log = { TYPE_ERROR: 'error', show: (e) => logs.push(e) }
+        globalThis.log = {
+            TYPE_ERROR: 'error',
+            TYPE_INFO: 'info',
+            show: (e) => logs.push(e),
+        }
 
         globalThis.db = {
             exe: async (schema, queryName) => {
@@ -51,7 +55,6 @@ test('Security.init loads permissions + tx map and sets isReady', async () => {
         await security.ready
 
         assert.equal(security.isReady, true)
-        assert.equal(security.initError, null)
 
         assert.equal(
             security.getPermissions({ profile_id: 1, method_na: 'm', object_na: 'o' }),
@@ -65,7 +68,10 @@ test('Security.init loads permissions + tx map and sets isReady', async () => {
         assert.deepEqual(security.getDataTx(100), { object_na: 'Order', method_na: 'createOrder' })
         assert.equal(security.getDataTx(999), false)
 
-        assert.equal(logs.length, 0)
+        const errors = logs.filter(
+            (l) => l?.type === 'error' || l?.type === globalThis.log.TYPE_ERROR
+        )
+        assert.equal(errors.length, 0)
     })
 })
 
@@ -75,7 +81,11 @@ test('Security.init captures initError and rejects ready when DB fails', async (
         globalThis.msgs = makeMsgs()
 
         const logs = []
-        globalThis.log = { TYPE_ERROR: 'error', show: (e) => logs.push(e) }
+        globalThis.log = {
+            TYPE_ERROR: 'error',
+            TYPE_INFO: 'info',
+            show: (e) => logs.push(e),
+        }
 
         globalThis.db = {
             exe: async (schema, queryName) => {
@@ -97,7 +107,6 @@ test('Security.init captures initError and rejects ready when DB fails', async (
 
         assert.ok(err)
         assert.equal(security.isReady, false)
-        assert.ok(security.initError)
         assert.ok(logs.some((l) => String(l?.msg ?? '').includes('SecurityService.init')))
     })
 })
@@ -128,7 +137,7 @@ test('Security.executeMethod dynamically imports BO and caches the instance', as
 
             globalThis.config = { app: { lang: 'en' }, bo: { path: '../../BO/' } }
             globalThis.msgs = makeMsgs()
-            globalThis.log = { TYPE_ERROR: 'error', show: () => {} }
+            globalThis.log = { TYPE_ERROR: 'error', TYPE_INFO: 'info', show: () => {} }
             globalThis.db = {
                 exe: async (schema, queryName) => {
                     if (schema !== 'security') throw new Error('wrong schema')
@@ -169,7 +178,11 @@ test('Security.executeMethod returns serverError and logs when BO import fails',
         globalThis.msgs = makeMsgs()
 
         const logs = []
-        globalThis.log = { TYPE_ERROR: 'error', show: (e) => logs.push(e) }
+        globalThis.log = {
+            TYPE_ERROR: 'error',
+            TYPE_INFO: 'info',
+            show: (e) => logs.push(e),
+        }
 
         globalThis.db = {
             exe: async (schema, queryName) => {

@@ -13,8 +13,8 @@ async function main() {
     await import(new URL('../dist/src/helpers/sanitize.js', import.meta.url) as any)
     await import(new URL('../dist/src/helpers/http-responses.js', import.meta.url) as any)
 
-    await import(new URL('../dist/src/dispatcher/DispatcherService.js', import.meta.url) as any)
-    await import(new URL('../dist/src/security/SecurityService.js', import.meta.url) as any)
+    await import(new URL('../dist/src/api/dispatcher/Dispatcher.js', import.meta.url) as any)
+    await import(new URL('../dist/src/core/security/SecurityService.js', import.meta.url) as any)
     await import(new URL('../dist/src/session/SessionManager.js', import.meta.url) as any)
 
     console.log('dist smoke: ok')

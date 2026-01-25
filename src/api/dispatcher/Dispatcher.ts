@@ -6,37 +6,37 @@ import {
     ISessionService,
     IAuditService,
     IDatabase,
-} from '../types/core.js'
-import { registerFrontendHosting } from '../frontend-adapters/index.js'
+} from '../../types/core.js'
+import { registerFrontendHosting } from '../../frontend-adapters/index.js'
 
 // Middleware imports (legacy paths, assume they still work or need minor adjustment)
-import { applyHelmet } from '../express/middleware/helmet.js'
-import { applyRequestId } from '../express/middleware/request-id.js'
-import { applyRequestLogger } from '../express/middleware/request-logger.js'
-import { applyCorsIfEnabled } from '../express/middleware/cors.js'
-import { applyBodyParsers } from '../express/middleware/body-parsers.js'
-import { jsonBodySyntaxErrorHandler } from '../express/middleware/json-syntax-error.js'
-import { createCsrfProtection, createCsrfTokenHandler } from '../express/middleware/csrf.js'
+import { applyHelmet } from '../../express/middleware/helmet.js'
+import { applyRequestId } from '../../express/middleware/request-id.js'
+import { applyRequestLogger } from '../../express/middleware/request-logger.js'
+import { applyCorsIfEnabled } from '../../express/middleware/cors.js'
+import { applyBodyParsers } from '../../express/middleware/body-parsers.js'
+import { jsonBodySyntaxErrorHandler } from '../../express/middleware/json-syntax-error.js'
+import { createCsrfProtection, createCsrfTokenHandler } from '../../express/middleware/csrf.js'
 import {
     createLoginRateLimiter,
     createToProccessRateLimiter,
     createAuthPasswordResetRateLimiter,
-} from '../express/rate-limit/limiters.js'
-import { createHealthHandler } from '../express/handlers/health.js'
-import { createReadyHandler } from '../express/handlers/ready.js'
-import { createFinalErrorHandler } from '../express/middleware/final-error-handler.js'
+} from '../../express/rate-limit/limiters.js'
+import { createHealthHandler } from '../../express/handlers/health.js'
+import { createReadyHandler } from '../../express/handlers/ready.js'
+import { createFinalErrorHandler } from '../../express/middleware/final-error-handler.js'
 
 import {
     isPlainObject,
     parseLoginBody,
     parseLogoutBody,
     parseToProccessBody,
-} from '../helpers/http-validators.js'
+} from '../../helpers/http-validators.js'
 
-import { sendInvalidParameters } from '../helpers/http-responses.js'
-import { redactSecretsInString } from '../helpers/sanitize.js'
+import { sendInvalidParameters } from '../../helpers/http-responses.js'
+import { redactSecretsInString } from '../../helpers/sanitize.js'
 
-export class DispatcherService {
+export class Dispatcher {
     public app: any
     public server: any
     public initialized: boolean
@@ -138,7 +138,7 @@ export class DispatcherService {
 
         // Let's import it:
         const { applySessionMiddleware } =
-            await import('../express/session/apply-session-middleware.js')
+            await import('../../express/session/apply-session-middleware.js')
         applySessionMiddleware(this.app, { config: this.config, log: this.log, db: this.db })
 
         // Pass a "session" object that mimics old Session if needed by frontend adapters?

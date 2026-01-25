@@ -1,9 +1,9 @@
 import './globals.js' // Populates container with foundation (db, log, config, etc.)
 import { container } from './core/Container.js'
-import { SecurityService } from './security/SecurityService.js'
+import { SecurityService } from './core/security/SecurityService.js'
 import { SessionManager } from './session/SessionManager.js'
 import { EmailService } from './email/EmailService.js'
-import { DispatcherService } from './dispatcher/DispatcherService.js'
+import { Dispatcher } from './api/dispatcher/Dispatcher.js'
 import { AuditService } from './audit/AuditService.js'
 import { AppLogger } from './logger/AppLogger.js'
 
@@ -47,7 +47,7 @@ container.register('security', security)
 ;(globalThis as unknown as { security: unknown }).security = security
 
 // 4. Initialize Dispatcher
-const dispatcher = new DispatcherService({
+const dispatcher = new Dispatcher({
     config: container.resolve('config'),
     log: container.resolve('log'),
     security: security,
