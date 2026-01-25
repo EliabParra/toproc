@@ -12,6 +12,7 @@
         "test:watch": "node --import tsx --import ./test/setup.mjs --test --watch",
         "test:coverage": "c8 --reporter=text --reporter=text-summary --reporter=lcov node --import tsx --import ./test/setup.mjs --test",
         "build": "tsx scripts/build-dist.ts",
+        "config:check": "node --import tsx scripts/config/check.ts",
         "verify": "npm run typecheck && npm run build && tsx scripts/smoke-dist.ts && npm test",
         "start": "node --import tsx src/index.ts",
         "dev": "nodemon --watch src --watch BO --watch public --ext js,ts,json,html,css --signal SIGINT --exec \"node --import tsx src/index.ts\"",
@@ -33,7 +34,8 @@
         "helmet": "^8.1.0",
         "nodemailer": "^7.0.12",
         "nodemon": "^3.1.11",
-        "pg": "^8.16.3"
+        "pg": "^8.16.3",
+        "zod": "^4.3.6"
     },
     "devDependencies": {
         "@types/bcryptjs": "^2.4.6",

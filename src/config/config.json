@@ -51,7 +51,6 @@
     "auth": {
         "loginId": "email",
         "login2StepNewDevice": false,
-        "publicProfileId": null,
         "sessionProfileId": 1,
         "requireEmailVerification": true,
         "deviceCookieName": "device_token",
