@@ -19,11 +19,19 @@ export class AppValidator {
 
         // ZodError issues is the source of truth for safeParse
         const issues = (result.error as any).issues || (result.error as any).errors || []
-        const errors: ValidationError[] = issues.map((err: any) => ({
-            path: err.path.join('.'),
-            message: err.message,
-            code: err.code,
-        }))
+        const errors: ValidationError[] = issues.map((err: any) => {
+            let p = ''
+            try {
+                if (Array.isArray(err.path)) p = err.path.join('.')
+                else if (typeof err.path === 'string') p = err.path
+            } catch {}
+
+            return {
+                path: p,
+                message: err.message || 'Error',
+                code: err.code,
+            }
+        })
 
         return { valid: false, errors }
     }
@@ -33,40 +41,35 @@ export class AppValidator {
         z.setErrorMap((issue: any, ctx: any) => {
             const i = issue as any
             let message = ctx?.defaultError || i.message || 'Invalid input'
+            const pathStr = i.path?.join('.') || ''
 
             // Map Zod issues to I18n keys
 
             if (i.code === z.ZodIssueCode.invalid_type) {
                 if (i.received === 'undefined' || i.received === 'null') {
-                    message = this.i18n.t('alerts.notEmpty', { value: i.path.join('.') })
+                    message = this.i18n.t('alerts.notEmpty', { value: pathStr })
                 } else {
                     if (
                         ['string', 'number', 'boolean', 'array', 'object', 'date'].includes(
                             i.expected
                         )
                     ) {
-                        message = this.i18n.t(`alerts.${i.expected}`, { value: i.path.join('.') })
+                        message = this.i18n.t(`alerts.${i.expected}`, { value: pathStr })
                     }
                 }
             }
 
             // Handle email validation checks
             if (i.code === 'invalid_format' && i.format === 'email') {
-                message = this.i18n.t('alerts.email', { value: i.path.join('.') })
+                message = this.i18n.t('alerts.email', { value: pathStr })
             }
 
             if (i.code === z.ZodIssueCode.too_small && i.type === 'string') {
-                message = this.i18n.t('alerts.lengthMin', {
-                    value: i.path.join('.'),
-                    min: i.minimum,
-                })
+                message = this.i18n.t('alerts.lengthMin', { value: pathStr, min: i.minimum })
             }
 
             if (i.code === z.ZodIssueCode.too_big && i.type === 'string') {
-                message = this.i18n.t('alerts.lengthMax', {
-                    value: i.path.join('.'),
-                    max: i.maximum,
-                })
+                message = this.i18n.t('alerts.lengthMax', { value: pathStr, max: i.maximum })
             }
 
             return { message }

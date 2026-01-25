@@ -13,6 +13,7 @@ const g = globalThis as unknown as {
     db?: any
     i18n?: any
     validator?: any
+    features?: any
 }
 
 g.require = createRequire(import.meta.url)
@@ -66,15 +67,34 @@ g.i18n = i18n
 // Legacy g.msgs needed to be { es: { ... }, en: { ... } } because DBComponent uses msgs[lang].
 g.msgs = i18n.getLegacyObject()
 
+// Feature Flags
+import { FeatureFlags, Feature } from './core/flags/FeatureFlags.js'
+g.features = new FeatureFlags(g.config)
+container.register('features', g.features)
+
 import { AppValidator } from './core/validation/AppValidator.js'
+import { LegacyValidatorAdapter } from './core/validation/integration/LegacyValidatorAdapter.js'
+
 g.validator = new AppValidator(i18n)
 
-const { default: LegacyValidator } = await import('./utils/Validator.js')
+// Choose Legacy Validator implementation based on Feature Flag
+// If USE_NEW_VALIDATOR is true, use the Adapter (Zod backend).
+// Else use the old implementation (imported below).
+// Note: We can import both, but only instantiate one for g.v
+// However, to be safe during transition, let's load legacy class too.
+
+const { default: LegacyValidatorImpl } = await import('./utils/Validator.js')
+
+if (g.features.isEnabled(Feature.USE_NEW_VALIDATOR)) {
+    g.v = new LegacyValidatorAdapter(g.validator)
+} else {
+    g.v = new LegacyValidatorImpl(g.config, g.msgs)
+}
+
 // const { default: Log } = await import('./BSS/Log.js') // REPLACED
 import { AppLogger } from './logger/AppLogger.js'
 const { default: DBComponent } = await import('./db/DBComponent.js')
 
-g.v = new LegacyValidator(g.config, g.msgs)
 // g.log = new Log(g.config)
 g.log = new AppLogger({ config: g.config })
 g.db = new DBComponent({ config: g.config, msgs: g.msgs, queries: g.queries, log: g.log })
