@@ -5,10 +5,12 @@ import request from 'supertest'
 
 import { createTestDispatcher } from './_helpers/service-factory.mjs'
 import { createCsrfProtection, createCsrfTokenHandler } from '../src/express/middleware/csrf.js'
+import { AppValidator } from '../src/core/validation/AppValidator.js'
+import { LegacyValidatorAdapter } from '../src/core/validation/integration/LegacyValidatorAdapter.js'
 
 import { withGlobals } from './_helpers/global-state.mjs'
 // ... (keep functions)
-const GLOBAL_KEYS = ['config', 'msgs', 'log', 'db', 'security', 'v']
+const GLOBAL_KEYS = ['config', 'msgs', 'log', 'db', 'security', 'v', 'validator']
 
 function makeTestMsgs() {
     const client = {
@@ -60,7 +62,9 @@ test('POST /login returns invalidParameters when body schema is invalid (with CS
     await withGlobals(GLOBAL_KEYS, async () => {
         // ... globals setup ...
         globalThis.msgs = makeTestMsgs()
-        globalThis.v = makeValidatorStub()
+        const i18nStub = { t: (k) => k }
+        globalThis.validator = new AppValidator(i18nStub)
+        globalThis.v = new LegacyValidatorAdapter(globalThis.validator)
         globalThis.config = {
             app: { lang: 'en', bodyLimit: '100kb' },
             cors: { enabled: false },
@@ -111,7 +115,9 @@ test('POST /login returns invalidParameters when body schema is invalid (with CS
 test('POST /toProccess returns login error when session does not exist', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
         globalThis.msgs = makeTestMsgs()
-        globalThis.v = makeValidatorStub()
+        const i18nStub = { t: (k) => k }
+        globalThis.validator = new AppValidator(i18nStub)
+        globalThis.v = new LegacyValidatorAdapter(globalThis.validator)
         globalThis.config = {
             app: { lang: 'en', bodyLimit: '100kb' },
             cors: { enabled: false },
@@ -145,7 +151,9 @@ test('POST /toProccess returns login error when session does not exist', async (
 test('POST /toProccess returns serviceUnavailable when security.ready rejects', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
         globalThis.msgs = makeTestMsgs()
-        globalThis.v = makeValidatorStub()
+        const i18nStub = { t: (k) => k }
+        globalThis.validator = new AppValidator(i18nStub)
+        globalThis.v = new LegacyValidatorAdapter(globalThis.validator)
         globalThis.config = {
             app: { lang: 'en', bodyLimit: '100kb' },
             cors: { enabled: false },
@@ -207,7 +215,9 @@ test('POST /toProccess returns serviceUnavailable when security.ready rejects', 
 test('POST /toProccess returns permissionDenied when permissions check fails (and audits best-effort)', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
         globalThis.msgs = makeTestMsgs()
-        globalThis.v = makeValidatorStub()
+        const i18nStub = { t: (k) => k }
+        globalThis.validator = new AppValidator(i18nStub)
+        globalThis.v = new LegacyValidatorAdapter(globalThis.validator)
         globalThis.config = {
             app: { lang: 'en', bodyLimit: '100kb' },
             cors: { enabled: false },
@@ -274,7 +284,9 @@ test('POST /toProccess returns permissionDenied when permissions check fails (an
 test('POST /toProccess returns executeMethod response when permissions allow (and audits tx_exec)', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
         globalThis.msgs = makeTestMsgs()
-        globalThis.v = makeValidatorStub()
+        const i18nStub = { t: (k) => k }
+        globalThis.validator = new AppValidator(i18nStub)
+        globalThis.v = new LegacyValidatorAdapter(globalThis.validator)
         globalThis.config = {
             app: { lang: 'en', bodyLimit: '100kb' },
             cors: { enabled: false },
@@ -349,7 +361,9 @@ test('POST /toProccess returns executeMethod response when permissions allow (an
 test('POST /toProccess returns unknown when tx is not found (and audits tx_error)', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
         globalThis.msgs = makeTestMsgs()
-        globalThis.v = makeValidatorStub()
+        const i18nStub = { t: (k) => k }
+        globalThis.validator = new AppValidator(i18nStub)
+        globalThis.v = new LegacyValidatorAdapter(globalThis.validator)
         globalThis.config = {
             app: { lang: 'en', bodyLimit: '100kb' },
             cors: { enabled: false },
@@ -422,7 +436,9 @@ test('POST /toProccess returns unknown when tx is not found (and audits tx_error
 test('POST /logout returns login error when session does not exist (CSRF bypass)', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
         globalThis.msgs = makeTestMsgs()
-        globalThis.v = makeValidatorStub()
+        const i18nStub = { t: (k) => k }
+        globalThis.validator = new AppValidator(i18nStub)
+        globalThis.v = new LegacyValidatorAdapter(globalThis.validator)
         globalThis.config = {
             app: { lang: 'en', bodyLimit: '100kb' },
             cors: { enabled: false },
@@ -455,7 +471,9 @@ test('POST /logout returns login error when session does not exist (CSRF bypass)
 test('POST /logout destroys session and returns success when session exists (requires CSRF)', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
         globalThis.msgs = makeTestMsgs()
-        globalThis.v = makeValidatorStub()
+        const i18nStub = { t: (k) => k }
+        globalThis.validator = new AppValidator(i18nStub)
+        globalThis.v = new LegacyValidatorAdapter(globalThis.validator)
         globalThis.config = {
             app: { lang: 'en', bodyLimit: '100kb' },
             cors: { enabled: false },

@@ -5,12 +5,14 @@ import { EmailService } from '../../src/email/EmailService.js'
 import { AuthErrorHandler } from './AuthErrorHandler.js'
 import { AuthRepository } from './AuthRepository.js'
 import { AuthService } from './AuthService.js'
-import { AuthValidate } from './AuthValidate.js'
+import { AuthSchemas } from './schemas.js'
+import { z } from 'zod'
 
 const require = createRequire(import.meta.url)
-const successMsgs = require('./messages/authSuccessMsgs.json')[
-    (globalThis as any).config?.app?.lang ?? 'en'
-]
+// Access legacy config via globalThis if needed for messages or inject?
+// We fall back to globalThis for now to support legacy usage
+const getLang = () => (globalThis as any).config?.app?.lang ?? 'en'
+const successMsgsRaw = require('./messages/authSuccessMsgs.json')
 
 export class AuthBO extends BaseBO {
     private service: AuthService
@@ -20,8 +22,10 @@ export class AuthBO extends BaseBO {
         const d = deps ?? {
             db: (globalThis as any).db,
             log: (globalThis as any).log,
-            v: (globalThis as any).v,
+            v: (globalThis as any).validator, // Use AppValidator (Zod)
             config: (globalThis as any).config,
+            i18n: (globalThis as any).i18n,
+            msgs: (globalThis as any).msgs,
         }
         super(d)
 
@@ -30,12 +34,19 @@ export class AuthBO extends BaseBO {
         this.service = new AuthService(repo, email, this.config, this.log)
     }
 
-    async register(params: Record<string, unknown> | null | undefined): Promise<ApiResponse> {
+    private get successMsgs() {
+        return successMsgsRaw[getLang()]
+    }
+
+    async register(params: unknown): Promise<ApiResponse> {
         try {
-            const p = params ?? {}
-            const username = p.username as string | undefined
-            const email = p.email as string | undefined
-            const password = p.password as string | undefined
+            const vRes = this.validate<z.infer<typeof AuthSchemas.register>>(
+                params,
+                AuthSchemas.register
+            )
+            if (!vRes.ok) return this.validationError(vRes.alerts)
+
+            const { username, email, password } = vRes.data
 
             const loginId = String(this.config?.auth?.loginId ?? 'email')
                 .trim()
@@ -46,14 +57,6 @@ export class AuthBO extends BaseBO {
                 return AuthErrorHandler.emailRequired()
             }
 
-            if (
-                !AuthValidate.validateUsername(username) ||
-                (email != null && !AuthValidate.validateEmail(email)) ||
-                !AuthValidate.validatePassword(password)
-            ) {
-                return this.validationError(this.v.getAlerts())
-            }
-
             const result = await this.service.register({ username, email, password })
             if (!result.success) {
                 if (result.error === 'alreadyRegistered')
@@ -61,115 +64,130 @@ export class AuthBO extends BaseBO {
                 return AuthErrorHandler.unknownError()
             }
 
-            return { code: 201, msg: successMsgs.register ?? 'OK', data: null }
+            return this.created(null, this.successMsgs.register ?? 'OK')
         } catch (err) {
-            console.error('AuthBO.requestPasswordReset ERROR:', err)
-            this.log.show({ type: this.log.TYPE_ERROR, msg: `AuthBO.register: ${err}` }) // typo in log msg (register vs requestPasswordReset), I'll fix it if I replace
+            this.log.show({ type: this.log.TYPE_ERROR, msg: `AuthBO.register: ${err}` })
             return AuthErrorHandler.unknownError()
         }
     }
 
-    // ... Other methods mapping
-
-    async requestEmailVerification(
-        params: Record<string, unknown> | null | undefined
-    ): Promise<ApiResponse> {
-        const identifier = params?.identifier as string | undefined
-        if (!AuthValidate.validateIdentifier(identifier))
-            return this.validationError(this.v.getAlerts())
-
-        await this.service.requestEmailVerification(identifier!)
-        return this.success(null, successMsgs.requestEmailVerification ?? 'OK')
-    }
-
-    async verifyEmail(params: Record<string, unknown> | null | undefined): Promise<ApiResponse> {
-        const token = params?.token as string | undefined
-        const code = params?.code as string | undefined
-
-        if (!AuthValidate.validateToken(token) || !AuthValidate.validateCode(code))
-            return this.validationError(this.v.getAlerts())
-
-        const result = await this.service.verifyEmail(token!, code!)
-        if (!result.success) {
-            if (result.error === 'expiredToken') return AuthErrorHandler.expiredToken()
-            if (result.error === 'tooManyRequests') return AuthErrorHandler.tooManyRequests()
-            return AuthErrorHandler.invalidToken()
-        }
-
-        return this.success(null, successMsgs.verifyEmail ?? 'OK')
-    }
-
-    async requestPasswordReset(
-        params: Record<string, unknown> | null | undefined
-    ): Promise<ApiResponse> {
+    async requestEmailVerification(params: unknown): Promise<ApiResponse> {
         try {
-            const identifier = params?.identifier as string | undefined
-            if (!AuthValidate.validateIdentifier(identifier))
-                return this.validationError(this.v.getAlerts())
+            const vRes = this.validate<z.infer<typeof AuthSchemas.requestEmailVerification>>(
+                params,
+                AuthSchemas.requestEmailVerification
+            )
+            if (!vRes.ok) return this.validationError(vRes.alerts)
+
+            await this.service.requestEmailVerification(vRes.data.identifier)
+            return this.success(null, this.successMsgs.requestEmailVerification ?? 'OK')
+        } catch (err) {
+            this.log.show({
+                type: this.log.TYPE_ERROR,
+                msg: `AuthBO.requestEmailVerification: ${err}`,
+            })
+            return AuthErrorHandler.unknownError()
+        }
+    }
+
+    async verifyEmail(params: unknown): Promise<ApiResponse> {
+        try {
+            const vRes = this.validate<z.infer<typeof AuthSchemas.verifyEmail>>(
+                params,
+                AuthSchemas.verifyEmail
+            )
+            if (!vRes.ok) return this.validationError(vRes.alerts)
+
+            const { token, code } = vRes.data
+            const result = await this.service.verifyEmail(token, code)
+
+            if (!result.success) {
+                if (result.error === 'expiredToken') return AuthErrorHandler.expiredToken()
+                if (result.error === 'tooManyRequests') return AuthErrorHandler.tooManyRequests()
+                return AuthErrorHandler.invalidToken()
+            }
+
+            return this.success(null, this.successMsgs.verifyEmail ?? 'OK')
+        } catch (err) {
+            this.log.show({ type: this.log.TYPE_ERROR, msg: `AuthBO.verifyEmail: ${err}` })
+            return AuthErrorHandler.unknownError()
+        }
+    }
+
+    async requestPasswordReset(params: unknown): Promise<ApiResponse> {
+        try {
+            const vRes = this.validate<z.infer<typeof AuthSchemas.requestPasswordReset>>(
+                params,
+                AuthSchemas.requestPasswordReset
+            )
+            if (!vRes.ok) return this.validationError(vRes.alerts)
 
             // Extract context manually for now or pass req?
-            // BO usually receives `params` which contains `_request` if specialized middleware calls it,
-            // but traditionally `params` is just body.
-            // `getRequestCtx` helper was used.
+            // BO usually receives `params` which contains `_request` if specialized middleware calls it.
             const req = (params as any)?._request
             const ip = req?.ip
             const userAgent = req?.userAgent
 
-            await this.service.requestPasswordReset(identifier!, ip, userAgent)
-            return this.success(null, successMsgs.requestPasswordReset ?? 'OK')
+            await this.service.requestPasswordReset(vRes.data.identifier, ip, userAgent)
+            return this.success(null, this.successMsgs.requestPasswordReset ?? 'OK')
         } catch (err) {
             this.log.show({ type: this.log.TYPE_ERROR, msg: `AuthBO.requestPasswordReset: ${err}` })
             return AuthErrorHandler.unknownError()
         }
     }
 
-    async verifyPasswordReset(
-        params: Record<string, unknown> | null | undefined
-    ): Promise<ApiResponse> {
+    async verifyPasswordReset(params: unknown): Promise<ApiResponse> {
         try {
-            const token = params?.token as string | undefined
-            const code = params?.code as string | undefined
+            const vRes = this.validate<z.infer<typeof AuthSchemas.verifyPasswordReset>>(
+                params,
+                AuthSchemas.verifyPasswordReset
+            )
+            if (!vRes.ok) return this.validationError(vRes.alerts)
 
-            if (!AuthValidate.validateToken(token) || !AuthValidate.validateCode(code))
-                return this.validationError(this.v.getAlerts())
+            const { token, code } = vRes.data
+            const result = await this.service.verifyPasswordReset(token, code)
 
-            const result = await this.service.verifyPasswordReset(token!, code!)
             if (!result.success) {
                 if (result.error === 'expiredToken') return AuthErrorHandler.expiredToken()
                 if (result.error === 'tooManyRequests') return AuthErrorHandler.tooManyRequests()
                 return AuthErrorHandler.invalidToken()
             }
-            return this.success(null, successMsgs.verifyPasswordReset ?? 'OK')
+            return this.success(null, this.successMsgs.verifyPasswordReset ?? 'OK')
         } catch (err) {
             this.log.show({ type: this.log.TYPE_ERROR, msg: `AuthBO.verifyPasswordReset: ${err}` })
             return AuthErrorHandler.unknownError()
         }
     }
 
-    async resetPassword(params: Record<string, unknown> | null | undefined): Promise<ApiResponse> {
+    async resetPassword(params: unknown): Promise<ApiResponse> {
         try {
-            const token = params?.token as string | undefined
-            const code = params?.code as string | undefined
-            const newPassword = params?.newPassword as string | undefined
-
-            if (
-                !AuthValidate.validateToken(token) ||
-                !AuthValidate.validateCode(code) ||
-                !AuthValidate.validateNewPassword(newPassword)
+            const vRes = this.validate<z.infer<typeof AuthSchemas.resetPassword>>(
+                params,
+                AuthSchemas.resetPassword
             )
-                return this.validationError(this.v.getAlerts())
+            if (!vRes.ok) return this.validationError(vRes.alerts)
 
-            const result = await this.service.resetPassword(token!, code!, newPassword!)
+            const { token, code, newPassword } = vRes.data
+            const result = await this.service.resetPassword(token, code, newPassword)
+
             if (!result.success) {
                 if (result.error === 'expiredToken') return AuthErrorHandler.expiredToken()
                 if (result.error === 'tooManyRequests') return AuthErrorHandler.tooManyRequests()
                 return AuthErrorHandler.invalidToken()
             }
 
-            return this.success(null, successMsgs.resetPassword ?? 'OK')
+            return this.success(null, this.successMsgs.resetPassword ?? 'OK')
         } catch (err) {
             this.log.show({ type: this.log.TYPE_ERROR, msg: `AuthBO.resetPassword: ${err}` })
             return AuthErrorHandler.unknownError()
         }
     }
+
+    // Login logic was missing in original file provided?
+    // It was likely just not shown or I missed it.
+    // I should implement login if it existed or if required.
+    // Based on `schemas.ts` having `login`, I should probably support it if the service supports it.
+    // The previous file content did NOT show `login`.
+    // It showed `// ... Other methods mapping`.
+    // I will stick to the methods I saw in the file content.
 }

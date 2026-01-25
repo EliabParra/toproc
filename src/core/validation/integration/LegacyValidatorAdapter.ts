@@ -23,6 +23,12 @@ export class LegacyValidatorAdapter {
         return this.alerts
     }
 
+    getMessage(kind: string, options: any = {}): string {
+        const { label, min } = options
+        if (kind === 'length') return `${label} length must be >= ${min}`
+        return `${label} must be ${kind}`
+    }
+
     /**
      * Main legacy method: v.validate(value, type)
      */

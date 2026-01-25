@@ -6,6 +6,23 @@ export interface ILogger {
     show(params: { type: number; msg?: unknown; ctx?: unknown } | string): void
 }
 
+export interface IValidator {
+    validate<T>(
+        data: unknown,
+        schema: unknown
+    ): { valid: boolean; data?: T; errors?: { path: string; message: string }[] }
+    // Legacy support
+    getAlerts?(): string[]
+    // Legacy methods
+    validateString?(opts: any): boolean
+    validateLength?(opts: any, min: number, max: number): boolean
+    validateEmail?(opts: any): boolean
+}
+
+export interface II18nService {
+    t(key: string, props?: Record<string, unknown>): string
+}
+
 export interface IDatabase {
     exe(schema: string, query: string, params?: unknown): Promise<{ rows: any[]; rowCount: number }> // Simplified QueryResult
     exeRaw(sql: string, params?: unknown): Promise<{ rows: any[]; rowCount: number }>

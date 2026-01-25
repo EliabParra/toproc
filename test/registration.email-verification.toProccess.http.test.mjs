@@ -5,10 +5,12 @@ import bcrypt from 'bcryptjs'
 
 import { createTestDispatcher } from './_helpers/service-factory.mjs'
 import { createCsrfProtection, createCsrfTokenHandler } from '../src/express/middleware/csrf.js'
+import { AppValidator } from '../src/core/validation/AppValidator.js'
+import { LegacyValidatorAdapter } from '../src/core/validation/integration/LegacyValidatorAdapter.js'
 
 import { withGlobals } from './_helpers/global-state.mjs'
 
-const GLOBAL_KEYS = ['config', 'msgs', 'log', 'db', 'security', 'v']
+const GLOBAL_KEYS = ['config', 'msgs', 'log', 'db', 'security', 'v', 'validator']
 
 function makeTestMsgs() {
     const client = {
@@ -77,7 +79,10 @@ function makeValidatorStub() {
 test('register requires email verification before login', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
         globalThis.msgs = makeTestMsgs()
-        globalThis.v = makeValidatorStub()
+        globalThis.msgs = makeTestMsgs()
+        const i18nStub = { t: (k) => k }
+        globalThis.validator = new AppValidator(i18nStub)
+        globalThis.v = new LegacyValidatorAdapter(globalThis.validator)
 
         const PUBLIC_PROFILE_ID = 999
         const SESSION_PROFILE_ID = 1
