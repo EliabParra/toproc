@@ -3,8 +3,9 @@ import assert from 'node:assert/strict'
 
 import { templateBO } from '../scripts/bo.ts'
 
-test('bo.templateBO mentions underscore helpers convention', () => {
+test('bo.templateBO generates new architecture', () => {
     const out = templateBO('Order', ['getOrder'])
-    assert.match(out, /pueden iniciar con "_"/)
-    assert.match(out, /En sync se ignoran y no se registran en DB\./)
+    assert.match(out, /extends BaseBO/)
+    assert.match(out, /import { OrderSchemas } from '\.\/schemas\.js'/)
+    assert.match(out, /this\.validate<z\.infer<typeof OrderSchemas\.getOrder>>/)
 })

@@ -367,11 +367,22 @@ export class ${objectName}Service {
 export function templateBO(objectName: string, methods: string[]) {
     const methodBodies = methods
         .map((m) => {
-            return `    async ${m}(params: any): Promise<ApiResponse> {
+            const isCreate =
+                m.toLowerCase().includes('create') || m.toLowerCase().includes('register')
+            return `    async ${m}(params: unknown): Promise<ApiResponse> {
         try {
-            // TODO: Validate params
-            // const result = await this.service.${m}(params)
-            return this.success(null, successMsgs.${m} ?? 'OK')
+            const vRes = this.validate<z.infer<typeof ${objectName}Schemas.${m}>>(
+                params,
+                ${objectName}Schemas.${m}
+            )
+            if (!vRes.ok) return this.validationError(vRes.alerts)
+
+            // const { ...args } = vRes.data
+            // const result = await this.service.${m}(vRes.data)
+            
+            // if (!result.success) return this.error('Error')
+
+            return this.${isCreate ? 'created' : 'success'}(null, this.successMsgs.${m} ?? 'OK')
         } catch (err) {
             this.log.show({ type: this.log.TYPE_ERROR, msg: \`${objectName}BO.${m}: \${err}\` })
             return this.error('Unknown Error')
@@ -385,9 +396,13 @@ import { BaseBO, BODependencies } from '../../src/core/base/BaseBO.js'
 import { ApiResponse } from '../../src/core/response/ApiResponse.js'
 import { ${objectName}Repository } from './${objectName}Repository.js'
 import { ${objectName}Service } from './${objectName}Service.js'
+import { ${objectName}Schemas } from './schemas.js'
+import { z } from 'zod'
 
 const require = createRequire(import.meta.url)
-const successMsgs = require('./messages/${objectName.toLowerCase()}SuccessMsgs.json')[(globalThis as any).config?.app?.lang ?? 'en']
+// TODO: Typed messages
+const successMsgsRaw = require('./messages/${objectName.toLowerCase()}SuccessMsgs.json')
+const getLang = () => (globalThis as any).config?.app?.lang ?? 'en'
 
 export class ${objectName}BO extends BaseBO {
     private service: ${objectName}Service
@@ -396,7 +411,7 @@ export class ${objectName}BO extends BaseBO {
         const d = deps ?? {
             db: (globalThis as any).db,
             log: (globalThis as any).log,
-            v: (globalThis as any).v,
+            v: (globalThis as any).validator, // Native AppValidator (Zod)
             config: (globalThis as any).config,
         }
         super(d)
@@ -404,10 +419,9 @@ export class ${objectName}BO extends BaseBO {
         this.service = new ${objectName}Service(repo, this.log)
     }
 
-    // Los métodos auxiliares (helpers) que no se exponen como API
-    // pueden iniciar con "_" (guion bajo).
-    // En sync se ignoran y no se registran en DB.
-    // Ejemplo: async _helper() { ... }
+    private get successMsgs() {
+        return successMsgsRaw[getLang()]
+    }
 
 ${methodBodies}
 }
@@ -456,10 +470,19 @@ function templateAlertsLabels(objectName: string) {
     )
 }
 
-function templateValidate(objectName: string) {
-    return `
-export class ${objectName}Validate {
-    // TODO: implement validation logic
+function templateSchemas(objectName: string, methods: string[]) {
+    const methodSchemas = methods
+        .map((m) => {
+            return `    ${m}: z.object({
+        // TODO: define validation
+    }),`
+        })
+        .join('\n')
+
+    return `import { z } from 'zod'
+
+export const ${objectName}Schemas = {
+${methodSchemas}
 }
 `
 }
@@ -534,7 +557,7 @@ async function cmdNew(objectName: string, opts: any) {
         },
         // Also create skeletons for ErrorHandler and Validate if needed, or omit.
         // I included templateErrorHandler/Validate stubs above.
-        { p: path.join(baseDir, `${objectName}Validate.ts`), c: templateValidate(objectName) },
+        { p: path.join(baseDir, `schemas.ts`), c: templateSchemas(objectName, methods) },
         {
             p: path.join(baseDir, `${objectName}ErrorHandler.ts`),
             c: templateErrorHandler(objectName),
