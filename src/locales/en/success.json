@@ -1,0 +1,9 @@
+{
+    "login": { "msg": "Session started successfully", "code": 200 },
+    "loginVerificationRequired": { "msg": "Verification required: check your email", "code": 202 },
+    "logout": { "msg": "Session closed successfully", "code": 200 },
+    "register": { "msg": "User registered successfully", "code": 200 },
+    "update": { "msg": "Data updated successfully", "code": 200 },
+    "delete": { "msg": "Element deleted successfully", "code": 200 },
+    "create": { "msg": "Element created successfully", "code": 200 }
+}

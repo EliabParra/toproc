@@ -42,9 +42,11 @@ async function copyDirIfExists(
 ) {
     try {
         await fs.access(fromDir)
-    } catch {
+    } catch (e: any) {
+        console.log(`Skipping copyDir: ${fromDir} (not found)`)
         return
     }
+    console.log(`Copying ${fromDir} -> ${toDir}`)
     await fs.rm(toDir, { recursive: true, force: true })
     await fs.mkdir(path.dirname(toDir), { recursive: true })
     await fs.cp(fromDir, toDir, {
@@ -63,16 +65,24 @@ async function main() {
         path.join(distDir, 'package-lock.json')
     )
 
+    // Copy src/config (JSONs)
     await copyDirIfExists(path.join(repoRoot, 'src', 'config'), path.join(distDir, 'src', 'config'))
+
+    // Copy public
     await copyDirIfExists(path.join(repoRoot, 'public'), path.join(distDir, 'public'))
 
     // Copy BO assets (json, etc) but exclude TS sources.
-    // BO TS sources are compiled by tsc to dist/BO/*.js.
     await copyDirIfExists(path.join(repoRoot, 'BO'), path.join(distDir, 'BO'), {
         filter: (src) => !src.endsWith('.ts') && !src.endsWith('.d.ts'),
     })
 
-    // Compile TS sources to dist/ (includes src/ and BO/).
+    // Copy locales (New Phase 1.2 requirement)
+    await copyDirIfExists(
+        path.join(repoRoot, 'src', 'locales'),
+        path.join(distDir, 'src', 'locales')
+    )
+
+    // Compile TS sources to dist/
     await run(process.execPath, [resolveTscScript(), '-p', 'tsconfig.build.ts.json'])
 }
 

@@ -1,0 +1,18 @@
+{
+    "int": "\"{value}\" must be a positive integer",
+    "real": "\"{value}\" must be a real number",
+    "string": "\"{value}\" must be a string",
+    "invalidJson": "\"{value}\" must be valid JSON",
+    "paramsType": "\"{value}\" must be a string, number, or object",
+    "lengthRange": "\"{value}\" must be between {min} and {max} characters",
+    "lengthMin": "\"{value}\" must be at least {min} characters",
+    "lengthMax": "\"{value}\" must be at most {max} characters",
+    "email": "\"{value}\" must be a valid email address",
+    "notEmpty": "\"{value}\" cannot be empty",
+    "date": "\"{value}\" must be a valid date",
+    "boolean": "\"{value}\" must be a boolean",
+    "array": "\"{value}\" must be an array",
+    "arrayNotEmpty": "\"{value}\" must be an array not empty",
+    "object": "\"{value}\" must be an object",
+    "objectNotEmpty": "\"{value}\" must be an object not empty"
+}

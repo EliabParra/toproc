@@ -11,6 +11,7 @@ const g = globalThis as unknown as {
     v?: any
     log?: any
     db?: any
+    i18n?: any
 }
 
 g.require = createRequire(import.meta.url)
@@ -51,8 +52,18 @@ if (process.env.QUERIES_EXTRA_PATH) {
     if (extraPath) queries = mergeQueries(queries, g.require(extraPath))
 }
 
-g.queries = queries
-g.msgs = g.require('./config/messages.json')
+import { I18nService } from './core/i18n/I18nService.js'
+
+// g.msgs = g.require('./config/messages.json') // Legacy
+const i18n = new I18nService(g.config.app.lang)
+const localesPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'locales')
+i18n.loadLocale('es', path.join(localesPath, 'es'))
+i18n.loadLocale('en', path.join(localesPath, 'en'))
+
+g.i18n = i18n
+// Legacy g.msgs needed to be { es: { ... }, en: { ... } } because DBComponent uses msgs[lang].
+g.msgs = i18n.getLegacyObject()
+
 const { default: Validator } = await import('./utils/Validator.js')
 // const { default: Log } = await import('./BSS/Log.js') // REPLACED
 import { AppLogger } from './logger/AppLogger.js'
