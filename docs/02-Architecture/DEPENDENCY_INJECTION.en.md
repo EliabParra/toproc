@@ -1,53 +1,54 @@
-# Dependency Injection
+# Dependency Injection & Lazy Loading
 
-This is a fancy term for something very simple: **Don't cook your own food, order room service.**
-
-## What does it mean?
-
-Instead of your code "creating" the things it needs, the system "delivers" them ready to use.
-
-### Example Without Injection (Bad Idea)
-
-```typescript
-// Bad: The BO has to know how to connect to the DB
-class ProductBO {
-    constructor() {
-        this.db = new PostgresConnection('localhost', 'password') // Hardcoded!
-    }
-}
-```
-
-### Example With Injection (Our Architecture)
-
-```typescript
-// Good: The BO receives the DB already ready
-class ProductBO extends BaseBO {
-    constructor(container: IContainer) {
-        super(container) // Thanks for the DB!
-    }
-}
-```
+Technical explanation of how the framework manages memory and objects.
 
 ## The Container (`IContainer`)
 
-Imagine a magic toolbox that is passed from hand to hand. That box contains:
+This object is the "blood" of the system. It flows everywhere.
 
-- `db`: Data access.
-- `logger`: For logging.
-- `audit`: For auditing.
-- `config`: System configuration.
+```typescript
+export interface IContainer {
+    config: IConfig // Global config (loaded from .env)
+    log: ILogger // Logger instance
+    db: IDatabase // Active Postgres connection
+    audit: IAuditService // Audit service
+    // ... other core services
+}
+```
 
-When your BO wakes up, it receives this box. So your BO doesn't need to know _how_ the database connects, it just _uses_ it.
+The `Dispatcher` creates this container once (or reuses it) and passes it to `SecurityService`, which passes it to `BusinessObject`.
+
+**Benefit**:
+If tomorrow you want to add a "Push Notifications" service available to everyone, you just add it to the Container in `Dispatcher` and automatically all BOs have access to `this.container.push`.
 
 ## Lazy Loading
 
-The `Dispatcher` doesn't load all files at startup (that would be slow). It only loads the BO needed at that moment.
+Node.js is fast, but loading 5000 files at startup would make the server take minutes to boot (poor `npm run dev`).
 
-1. Request arrives for `tx: 101`.
-2. Dispatcher looks up `tx: 101` -> `AuthBO`.
-3. `import(AuthBO)`.
-4. `new AuthBO(container)`.
-5. Execute.
-6. Garbage Collection.
+To avoid this, we implement Lazy Loading in `TransactionExecutor`.
 
-This makes the system very lightweight and fast.
+### How it works (`TransactionExecutor.ts`)
+
+```typescript
+// Simplified pseudocode
+async execute(objectName, method, params) {
+    // 1. Build file path
+    const path = `./BO/${objectName}/${objectName}BO.js`;
+
+    // 2. DYNAMIC Import (disk is read only now)
+    const module = await import(path);
+    const BOClass = module[`${objectName}BO`];
+
+    // 3. Instantiate & Inject
+    const instance = new BOClass(this.container);
+
+    // 4. Execute
+    return instance[method](params);
+}
+```
+
+### Advantages
+
+1.  **Instant Boot**: Server starts in milliseconds, regardless of whether you have 10 or 1000 BOs.
+2.  **Error Isolation**: If a BO has a syntax error, it doesn't break the server until someone tries to use THAT specific BO.
+3.  **Less Memory**: Node.js can release memory from unused modules (depending on Garbage Collector).

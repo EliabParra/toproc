@@ -1,43 +1,43 @@
-# CLI Tools
+# CLI Tools (Summary)
 
-The framework includes scripts to make your life easier. Here we explain the most useful ones.
+ToProccess includes several scripts to automate your workflow.
 
-## BO Generator (`npm run bo`)
+## Deep Dive Tool Index
 
-Don't waste time hand-crafting folders and files.
+We have created exhaustive documentation for the most complex tools:
 
-### Create a new BO
+1.  **[BO Generator (npm run bo)](CLI_BO.en.md)**
+    Learn how to create modules, services, and repositories automatically with a single command.
 
-```bash
-npm run bo new Products
-```
+2.  **[DB Initializer (npm run db:init)](CLI_DB_INIT.en.md)**
+    Discover how to bootstrap your database, configure schemas, and troubleshoot connection issues.
 
-This creates `BO/Products` with all necessary files (`BO`, `Service`, `Repository`, `schemas`).
+---
 
-## Maintenance
+## Other Important Tools
 
-### Verify Code Health (`npm run verify`)
+### Health Check (`npm run verify`)
 
-Runs a series of checks to ensure your code is clean and type-safe.
+The quality guardian. Run it before every commit.
+
+**Execution Cycle**:
+
+1.  `clean`: Cleans residues.
+2.  `typecheck`: Validates strict TypeScript.
+3.  `build`: Compiles to JS.
+4.  `smoke-dist`: Tests that build starts.
+5.  `test`: Passes all unit tests.
 
 ```bash
 npm run verify
 ```
 
-Includes:
+### Technical Documentation Generator (`npm run docs:gen`)
 
-- Cache clean (`clean`)
-- Type check (`typecheck`)
-- Linter (`lint`)
-- Tests (`test`)
-- Test build (`build`)
-
-### Generate Documentation (`npm run docs:gen`)
-
-Reads your code and generates a website with technical documentation (JSDoc).
+If you write JSDoc comments in your code, this tool generates a navigable website.
 
 ```bash
 npm run docs:gen
 ```
 
-The result will be in `docs/api/index.html`.
+The result is saved in `docs/api/`. Useful for viewing class diagrams and method references for the entire framework.

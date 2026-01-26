@@ -10,7 +10,7 @@ _**ToProccess core**: tx-driven secure dispatch backend._
 [![Node.js (ESM)](https://img.shields.io/badge/Node.js-ESM-3c873a?style=for-the-badge)](#)
 [![Express](https://img.shields.io/badge/Express-5.x-000000?style=for-the-badge)](#)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-required-336791?style=for-the-badge)](#)
-[![Tests](https://img.shields.io/badge/Tests-node%20--test-2f6feb?style=for-the-badge)](#)
+[![Tests](https://img.shields.io/badge/Tests-255%20passing-2f6feb?style=for-the-badge)](#)
 [![CI](https://img.shields.io/github/actions/workflow/status/EliabParra/toproc/ci.yml?branch=master&style=for-the-badge)](https://github.com/EliabParra/toproc/actions/workflows/ci.yml)
 [![Licencia: MIT](https://img.shields.io/badge/License-MIT-2f6feb?style=for-the-badge)](LICENSE)
 
@@ -18,121 +18,130 @@ _**ToProccess core**: tx-driven secure dispatch backend._
 
 **English:** see [README.md](README.md)
 
-Toproc es una arquitectura backend developer-first construida alrededor del core **ToProccess**. Te da una base sólida (modelo de seguridad + tooling) sin forzarte a un framework completo.
+Toproc es una arquitectura backend moderna y **Transaction-Oriented**, diseñada para aplicaciones que requieren alta seguridad, trazabilidad granular y "Zero-Magic".
 
-## Highlights
+A diferencia de los frameworks MVC tradicionales, Toproc no expone recursos (Endpoints REST), sino **Intenciones de Negocio**.
 
-- Sesiones por cookie con store en Postgres + protección CSRF (diseñado para web apps).
-- Ejecución estilo RPC/transaccional vía `POST /toProccess` (`tx` → permisos → método BO).
-- Modelo de permisos en DB (schema `security`) con CLIs para init + BO sync + permisos.
-- Bases operativas incluidas: `/health`, `/ready`, request IDs, errores JSON consistentes.
-- Hosting de frontend opcional (`none`/`pages`/`spa`) con orden seguro.
-- Runtime TypeScript-first (ESM) con `strict: true` y un seam DI-friendly (`AppContext`).
+## ✨ Características Principales
 
-## Para quién es
+### 🛡️ Seguridad por Diseño (Transaction-Oriented)
 
-- Apps internas (B2B/admin) que necesitan sesiones por cookie + CSRF.
-- Equipos que quieren una base mantenible con puntos de extensión claros.
+- **Single Entry Point**: Todo el tráfico pasa por `POST /toProccess`.
+- **Deny by Default**: Si una Transacción (ej. `1001`) no está mapeada y autorizada en DB, no existe.
+- **Auditoría Granular**: Sabemos exactamente _quién_, _cuándo_ y _con qué_ parámetros intentó ejecutar cada acción.
 
-## TypeScript-first + DI (qué esperar)
+### 🧩 Arquitectura Robusta & DI
 
-- **TypeScript-first**: el source-of-truth es `src/**/*.ts` y el typecheck estricto es parte del quality gate.
-- **DI-friendly** (sin container pesado): los servicios de runtime viven en globals y también se agrupan en un `AppContext` creado por `createAppContext()`.
+- **TypeScript Strict**: Tipado estático en todo el ciclo de vida (Zod -> Service -> Repository).
+- **Inyección de Dependencias**: Los Business Objects (`BO`) reciben sus dependencias (`db`, `email`, `log`), facilitando el testing unitario.
+- **Zod Deep Integration**: Validación de entrada, tipado de `.env` y saneamiento automático.
 
-Empieza aquí:
+### 🔋 "Batteries Included"
 
-- Tipos + DI: [docs/es/14-types-y-di.md](docs/es/14-types-y-di.md)
+- **Auth Module Completo**: Login, Registro, Email Verification (OTP), Password Reset y CSRF Protection.
+- **Infraestructura Lista**: Sesiones en Postgres, Rate Limiting, CORS seguro y Logs estructurados (JSON/Text).
+- **CLI Tools**: Generadores de código (`npm run bo`), inicializadores de DB y scripts de mantenimiento.
 
-## Quickstart (10 minutos)
+---
 
-1. Instalar:
+## 🚀 Inicio Rápido
+
+### 1. Requisitos
+
+- Node.js 20+
+- PostgreSQL 14+
+
+### 2. Instalación
 
 ```bash
+git clone ...
 npm install
 ```
 
-2. Configurar environment:
+### 3. Configuración
 
-Copia `.env.example` a `.env` y configura Postgres (`DATABASE_URL` o `PG*`).
+Copia el archivo de ejemplo y ajusta tus credenciales de Postgres.
 
-3. Inicializar DB (requerido):
+```bash
+cp .env.example .env
+```
+
+> **Nota**: El sistema no arrancará si detecta una configuración inválida (Zod Validation).
+
+### 4. Inicialización
+
+Crea las tablas del sistema (`security`, `session`, `audit`).
 
 ```bash
 npm run db:init
 ```
 
-Docs (ES):
-
-- DB init CLI: [docs/es/10-db-init-cli.md](docs/es/10-db-init-cli.md)
-
-4. Ejecutar:
+### 5. Arrancar
 
 ```bash
 npm run dev
-# o
-npm start
 ```
 
-Endpoints útiles:
+---
 
-- `GET /health`
-- `GET /ready`
-- `GET /csrf`
-- `POST /login`
-- `POST /logout`
-- `POST /toProccess`
+## 📚 Documentación Maestra (ES)
 
-## Idea central (BO + tx)
+### 🚀 01. Primeros Pasos
 
-- Tu lógica de negocio vive en módulos BO bajo `BO/<ObjectName>/<ObjectName>BO.js`.
-- `security.methods` mapea `tx` → `(object_name, method_name)`.
-- `security.permission_methods` controla qué perfiles pueden ejecutar qué métodos.
+- [Introducción y Estructura](docs/00-Introduction/OVERVIEW.es.md)
+- [Instalación y Setup](docs/01-Getting-Started/INSTALLATION.es.md)
+- [Configuración de Entorno (.env)](docs/01-Getting-Started/ENVIRONMENT.es.md)
+- [Tu Primer Business Object](docs/05-Guides/CREATING_BOS.es.md)
+- [CLI Tools (db:init, bo)](docs/01-Getting-Started/CLI_TOOLS.es.md)
 
-Scaffold de BO:
+### 🏛️ 02. Arquitectura
 
-```bash
-npm run bo -- new Order
-```
+- [Sistema de Seguridad y Permisos](docs/02-Architecture/SECURITY_SYSTEM.es.md)
+- [El Dispatcher (Core)](docs/02-Architecture/DISPATCHER_CORE.es.md)
+- [Inyección de Dependencias](docs/02-Architecture/DEPENDENCY_INJECTION.es.md)
+- [Gestión de Sesiones](docs/02-Architecture/SESSIONS.es.md)
 
-Sync de métodos BO a DB (mapeo tx):
+### 🧠 03. Conceptos Core
 
-```bash
-npm run bo -- sync Order --txStart 100
-```
+- [Module de Autenticación (Auth)](docs/03-Core-Concepts/AUTH_MODULE.es.md)
+- [Sistema de Validación (Zod)](docs/03-Core-Concepts/VALIDATION_SYSTEM.es.md)
+- [Estrategia de Errores](docs/03-Core-Concepts/EXCEPTION_STRATEGY.es.md)
+- [Business Objects (BaseBO)](docs/03-Core-Concepts/BUSINESS_OBJECTS.es.md)
 
-## Documentación (ES)
+### 🏗️ 04. Infraestructura
 
-Empieza aquí:
+- [Capa de Base de Datos (Pg)](docs/04-Infrastructure/DATABASE_LAYER.es.md)
+- [Sistema de Logging & Auditoría](docs/04-Infrastructure/LOGGING_SYSTEM.es.md)
+- [Servicio de Email](docs/04-Infrastructure/EMAIL_SERVICE.es.md)
 
-- Índice ES: [docs/es/00-index.md](docs/es/00-index.md)
-- Auth (ES): [docs/es/13-autenticacion.md](docs/es/13-autenticacion.md)
-- Tutorial Frontend (ES): [docs/es/11-frontend-clients-and-requests.md](docs/es/11-frontend-clients-and-requests.md)
+### 🔌 06. API Reference
 
-## Scripts
+- [Estándar de Mensajería](docs/06-API-Reference/API_REFERENCE.es.md)
+- [Endpoints y Códigos HTTP](docs/06-API-Reference/API_REFERENCE.es.md)
 
-| Script                                             | Descripción                                          |
-| -------------------------------------------------- | ---------------------------------------------------- |
-| `npm start`                                        | Levanta el API server                                |
-| `npm test`                                         | Tests DB-safe (Node test runner)                     |
-| `npm run dev`                                      | Levanta con `nodemon`                                |
-| `npm run format`                                   | Formatea el repo (Prettier)                          |
-| `npm run format:check`                             | Verifica formato (ideal para CI)                     |
-| `npm run test:watch`                               | Corre tests en modo watch                            |
-| `npm run test:coverage`                            | Genera cobertura (c8)                                |
-| `npm run verify`                                   | Quality gate: typecheck + build + dist smoke + tests |
-| `npm run db:init`                                  | Inicializa schema `security` (idempotente)           |
-| `npm run bo -- <command>`                          | CLI BO (scaffold, sync tx, permisos)                 |
-| `npm run hashpw -- "<plainPassword>" [saltRounds]` | Genera hashes bcrypt                                 |
-| `npm run export:starter`                           | Export limpio                                        |
+### 🎨 07. Frontend Adapters
 
-Nota de cobertura: `c8` está configurado para enfocarse en lógica de runtime (`src/**/*.ts`) y excluye wiring/entrypoints (p. ej. `src/index.ts`) y docs/scripts/BO.
+- [Patrón de Adaptador (General)](docs/07-Frontend-Adapters/ADAPTER_PATTERN.es.md)
+- [Guía React (Hooks)](docs/07-Frontend-Adapters/REACT_GUIDE.es.md)
+- [Guía Angular (Service)](docs/07-Frontend-Adapters/ANGULAR_GUIDE.es.md)
+- [Guía Vue (Composable)](docs/07-Frontend-Adapters/VUE_GUIDE.es.md)
 
-## BO/ (tu dominio)
+---
 
-La carpeta `BO/` se mantiene **vacía por diseño**.
+## 🛠️ Scripts Disponibles
 
-- Agrega tus BOs en `BO/<ObjectName>/<ObjectName>BO.js`.
-- Scaffold rápido: `npm run bo -- new ObjectName`.
+| Script                 | Descripción                                      |
+| :--------------------- | :----------------------------------------------- |
+| `npm run dev`          | Modo desarrollo con `nodemon` (Hot Reload).      |
+| `npm start`            | Modo producción (Ejecuta `dist/index.js`).       |
+| `npm run verify`       | **Quality Gate**: Typecheck + Build + Tests.     |
+| `npm run db:init`      | Crea/Restablece el esquema de base de datos.     |
+| `npm run config:check` | Valida el archivo `.env` sin arrancar el server. |
+| `npm run bo <cmd>`     | CLI para crear BOs: `new`, `sync`, `list`.       |
+| `npm run docs:gen`     | Genera documentación API (TypeDoc).              |
+| `npm run hashpw`       | Utilidad para hashear passwords manualmente.     |
+
+---
 
 ## Licencia
 

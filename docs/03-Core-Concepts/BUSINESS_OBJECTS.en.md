@@ -1,63 +1,94 @@
-# Business Objects (BOs)
+# Business Objects (BO): Business Anatomy
 
-A **Business Object** (BO) is an independent module that groups everything needed for a business feature (e.g., `Users`, `Products`, `Sales`).
+The Business Object (BO) is the supreme class in our architecture. It's where your code "does things".
 
 ## Anatomy of a BO
 
-To keep things organized, we divide the BO into 3 internal layers:
-
-```mermaid
-graph TD
-    API[Dispatcher] --> Controller[BO (Controller)]
-    Controller --> Service[Service (Logic)]
-    Service --> Repo[Repository (Data)]
-    Repo --> DB[(Database)]
-
-    classDef bo fill:#f9f,stroke:#333;
-    class Controller,Service,Repo bo;
-```
-
-### 1. The Controller (`XBO.ts`)
-
-The "public face" of the module.
-
-- **Responsibility**: Receive data, validate (`validate`), call the service, and respond (`ok`/`error`).
-- **Never**: Does direct SQL queries or complex logic.
-- **Analogy**: The restaurant waiter. Takes your order, checks if you ordered something valid, and passes it to the kitchen.
-
-### 2. The Service (`XService.ts`)
-
-The "brain" or "kitchen".
-
-- **Responsibility**: Business rules. Calculate prices, check stock, send emails.
-- **Never**: Speaks HTTP (req/res) or writes direct SQL.
-- **Analogy**: The chef. Knows how to cook the dish, but doesn't care who ordered it.
-
-### 3. The Repository (`XRepository.ts`)
-
-The "warehouse".
-
-- **Responsibility**: Talk to the database (SQL). `SELECT`, `INSERT`, `UPDATE`.
-- **Never**: Makes business decisions. Just saves and retrieves data.
-- **Analogy**: The pantry manager. Give me 3 eggs and 1kg of flour.
-
-## Code Example
+Every BO must inherit from `BaseBO`. This gives it superpowers (access to DB, Logger, Config, etc.) without manually importing them.
 
 ```typescript
-// UserController (BO)
-async createUser(data) {
-    if (!this.valid(data)) return this.error('Invalid data');
-    return this.service.create(data);
-}
+import { BaseBO, BODependencies } from '../../core/base/BaseBO'
+import { UserSchema } from './schemas'
 
-// UserService
-async create(user) {
-    if (user.age < 18) throw new Error('Too young');
-    return this.repo.save(user);
-}
+export class UserBO extends BaseBO {
+    constructor(deps: BODependencies) {
+        // By calling super(deps), we perform automatic dependency injection
+        super(deps)
+    }
 
-// UserRepository
-async save(user) {
-    return this.db.query('INSERT INTO users...', [user.name]);
+    // This method will become a Transaction (e.g. tx: 101)
+    async createUser(params: unknown) {
+        // ... logic ...
+    }
 }
+```
+
+## Injected Tools (`this`)
+
+Inside a BO, you have immediate access to:
+
+| Property      | Type           | Description             | Usage Example            |
+| :------------ | :------------- | :---------------------- | :----------------------- |
+| `this.db`     | `IDatabase`    | Direct Postgres access. | `await this.db.exe(...)` |
+| `this.log`    | `ILogger`      | Structured logger.      | `this.log.info('Hello')` |
+| `this.config` | `IConfig`      | Typed env variables.    | `this.config.app.port`   |
+| `this.v`      | `AppValidator` | Zod Validator.          | `this.validate(...)`     |
+| `this.i18n`   | `I18nService`  | Translations.           | `this.i18n.t('hello')`   |
+
+## Standardized Response Pattern
+
+Never, under any circumstance, write `res.send(...)` inside a BO.
+A BO doesn't know HTTP exists. Instead, the BO **returns** a uniform response object.
+
+### 1. `this.success(data, msg?)`
+
+Returns code `200`. Use for successful GET, PUT, DELETE.
+
+```typescript
+return this.success({ id: 5 }, 'User Found')
+// Output: { ok: true, data: { id: 5 }, msg: 'User Found' }
+```
+
+### 2. `this.created(data, msg?)`
+
+Returns code `201`. Use only for POST (Creation).
+
+```typescript
+return this.created({ id: 6 })
+// Output: { ok: true, data: { id: 6 }, code: 201 }
+```
+
+### 3. `this.error(msg, code, alerts?)`
+
+Returns controlled errors.
+
+```typescript
+return this.error('User inactive', 403)
+```
+
+### 4. `this.validationError(alerts)`
+
+Returns code `400` automatically.
+
+```typescript
+return this.validationError(['Email is invalid'])
+```
+
+---
+
+## Services and Repositories
+
+To keep BO clean (Clean Code), responsibilities should be separated:
+
+- **BO**: Only Validates and Orchestrates.
+- **Service**: Contains complex logic (if/else, calculations).
+- **Repository**: Only touches SQL.
+
+```typescript
+// BO
+const data = this.validate(params, schema).data;
+this.service.calculateTax(data);
+
+// Service
+calculateTax(data) { return data.price * 1.16; }
 ```

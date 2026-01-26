@@ -1,36 +1,53 @@
-# Testing
+# Guía de Testing: Tests Nativos
 
-Dormir tranquilo es fácil si tienes tests.
+Usamos el **Node.js Test Runner** nativo (`node:test`). Es rápido, simple y no requiere instalar Jest o Mocha.
 
-## Tipos de Test
+## Estructura de un Test
 
-1.  **Test Unitarios**: Prueban una sola pieza (e.g., solo el Servicio sin base de datos real).
-2.  **Test de Integración**: Prueban todo junto (e.g., llamando al endpoint HTTP y viendo que se guarde en DB).
-
-## Correr Tests
-
-```bash
-npm test
-```
-
-## Escribiendo un Test (Ejemplo)
-
-Usamos **Mocha** y **Chai** (o similar según configuración).
+Crea un archivo `BO/Coupons/test/CouponsService.test.ts`.
 
 ```typescript
-import { expect } from 'chai'
-import { TicketsService } from '../src/BO/Tickets/TicketsService'
+import { describe, it, before, mock } from 'node:test' // Nativo!
+import assert from 'node:assert/strict'
 
-describe('Tickets Service', () => {
-    it('debería rechazar palabras groseras', async () => {
-        const service = new TicketsService(mockContainer)
+import { CouponsService } from '../CouponsService'
 
-        try {
-            await service.create({ title: 'palabra grosera' })
-            throw new Error('Debió fallar')
-        } catch (e) {
-            expect(e.message).to.equal('Lenguaje inapropiado')
+describe('Coupons Logic', () => {
+    let service: CouponsService
+    let mockRepo: any
+
+    before(() => {
+        // 1. Crear Mock (Simulación) del Repositorio
+        // No queremos tocar la DB real
+        mockRepo = {
+            findByCode: mock.fn(),
+            create: mock.fn(),
         }
+        service = new CouponsService(mockRepo)
+    })
+
+    it('debería rechazar cupones duplicados', async () => {
+        // Simulamos que findByCode devuelve algo (existe)
+        mockRepo.findByCode.mock.mockImplementation(() => Promise.resolve({ id: 1 }))
+
+        await assert.rejects(async () => await service.create({ code: 'TEST' }), {
+            message: 'El cupón ya existe',
+        })
+    })
+
+    it('debería crear si no existe', async () => {
+        // Simulamos que no existe (null)
+        mockRepo.findByCode.mock.mockImplementation(() => Promise.resolve(null))
+        mockRepo.create.mock.mockImplementation(() => Promise.resolve({ id: 99 }))
+
+        const res = await service.create({ code: 'NEW' })
+        assert.equal(res.id, 99)
     })
 })
 ```
+
+## Comandos
+
+- **Todos los tests**: `npm test`
+- **Solo un archivo**: `node --import tsx --test BO/Coupons/test/CouponsService.test.ts`
+- **Con Cobertura**: `npm run test:coverage` (te dice qué % de código está probado).

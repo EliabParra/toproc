@@ -65,8 +65,6 @@ export class TransactionExecutor {
     /**
      * Resuelve la ruta base absoluta para un Business Object.
      * Usa config.bo.path relativo al CWD.
-     *
-     * @private
      * @param objectName - Nombre del objeto (e.g. "User")
      * @returns {string} Ruta absoluta sin extensión
      */

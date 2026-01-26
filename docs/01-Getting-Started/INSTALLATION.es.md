@@ -1,41 +1,90 @@
-# Instalación (Installation)
+# Guía de Instalación Definitiva (Ultimate Installation Guide)
 
-Sigue estos pasos para preparar tu entorno de desarrollo.
+> **Tiempo estimado**: 10 a 15 minutos.
+> **Nivel**: Principiante.
 
-## 1. Requisitos Previos
+Esta guía asume que estás empezando desde cero, quizás con una computadora nueva.
 
-Antes de empezar, asegúrate de tener instalado:
+## 1. Requisitos del Sistema
 
-1.  **Node.js** (Versión 20 o superior)
-    - [Descargar Node.js](https://nodejs.org/)
-    - Verifica con: `node -v`
+Antes de copiar una sola línea de código, verifica esto.
 
-2.  **PostgreSQL** (Versión 14 o superior)
-    - [Descargar PostgreSQL](https://www.postgresql.org/download/)
-    - Asegúrate de tener las credenciales (usuario/password) a mano.
+| Herramienta    | Versión Minima | Comando de Verificación | ¿Por qué la necesito?                                         |
+| :------------- | :------------- | :---------------------- | :------------------------------------------------------------ |
+| **Node.js**    | v20.x (LTS)    | `node -v`               | Es el motor que ejecuta nuestro código JavaScript/TypeScript. |
+| **npm**        | v10.x          | `npm -v`                | El gestor de paquetes que descarga las librerías.             |
+| **PostgreSQL** | v14.x          | `psql --version`        | Dónde guardaremos los datos (Usuarios, Transacciones).        |
+| **Git**        | v2.x           | `git --version`         | Para descargar este código y guardar el tuyo.                 |
 
-3.  **Git**
-    - [Descargar Git](https://git-scm.com/)
+### ¿Cómo instalar lo que me falta?
 
-## 2. Clonar el Repositorio
+#### Windows
 
-Abre tu terminal y ejecuta:
+Recomendamos usar el instalador oficial de [nodejs.org](https://nodejs.org/) y [postgresql.org](https://www.postgresql.org/).
+_Tip profesional_: Instala `pgAdmin` junto con Postgres para ver tus tablas visualmente.
+
+#### MacOS
+
+Si tienes Homebrew:
+
+```bash
+brew install node postgresql git
+```
+
+#### Linux (Ubuntu/Debian)
+
+```bash
+sudo apt update
+sudo apt install nodejs npm postgresql git
+```
+
+---
+
+## 2. Preparando el Código
+
+Ve a la carpeta donde guardas tus proyectos (ej. `C:\Users\TuUsuario\Dev` o `~/Dev`).
+
+### Clonar el Repositorio
 
 ```bash
 git clone <url-del-repositorio>
 cd nodejs-backend-architecture
 ```
 
-## 3. Instalar Dependencias
+### Entendiendo `npm install`
 
-Este proyecto usa `npm` para gestionar dependencias.
+Cuando ejecutas el siguiente comando, `npm` lee el archivo `package.json`.
 
 ```bash
 npm install
 ```
 
-> **Nota**: Si ves advertencias sobre vulnerabilidades, puedes ejecutar `npm audit fix`, pero ten cuidado de no romper versiones.
+**¿Qué está pasando?**
+
+1.  Descarga las dependencias de producción (`dependencies`): Express, Zod, PG.
+2.  Descarga las herramientas de desarrollo (`devDependencies`): TypeScript, TypeDoc, Prettier.
+3.  Crea la carpeta `node_modules`. **Nunca toques esa carpeta**.
+
+> **Problemas comunes**:
+>
+> - _Error de permisos_: Intenta abrir la terminal como Administrador (Windows) o usa `sudo` (Linux/Mac).
+> - _Python not found_: Ignóralo, es opcional para algunas compilaciones nativas.
+
+---
+
+## 3. Configuración de Base de Datos Local
+
+Para que el proyecto funcione en tu máquina, necesitas crear una base de datos vacía.
+
+1.  Abre `pgAdmin` o tu terminal SQL.
+2.  Ejecuta este comando SQL:
+    ```sql
+    CREATE DATABASE "toproc";
+    -- El nombre puede ser cualquiera, pero este usamos en los ejemplos.
+    ```
+3.  Asegúrate de saber tu usuario (usualmente `postgres`) y tu contraseña.
 
 ## Siguiente Paso
 
-Una vez instalado todo, procede a configurar las [Variables de Entorno](ENVIRONMENT.es.md).
+Ahora tienes el código y la base de datos lista. Pero, ¿cómo sabe el código conectarse a esa base de datos?
+Vamos a configurar el [Entorno y Variables (.env)](ENVIRONMENT.es.md).

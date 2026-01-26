@@ -1,56 +1,98 @@
-# Transaction Flow
+# The Transaction Journey (Detailed Flow)
 
-Every time someone clicks in your app, a fascinating journey begins. Here is the lifecycle of a request.
+Let's microscopically analyze what happens when you perform `POST /toProccess`.
 
-## Sequence Diagram
+## Complete Sequence Diagram
 
 ```mermaid
 sequenceDiagram
-    participant User as User
-    participant Express as Web Server
-    participant Dispatcher as Dispatcher (Core)
-    participant Security as Security
-    participant BO as Business Object
+    autonumber
+    participant Client
+    participant Express as Express (Middleware Chain)
+    participant RateLimit
+    participant Dispatcher
+    participant Security as SecurityService
+    participant Audit
+    participant BO as BusinessObject
 
-    User->>Express: POST /toProccess { tx: 101, data: ... }
-    Express->>Dispatcher: processRequest()
+    Note over Client,Express: 1. TCP Connection Handling
+    Client->>Express: POST /toProccess { tx: 101, ... }
 
-    Dispatcher->>Security: Have permission for tx 101?
+    Note over Express: Helmet (Secure Headers)<br>RequestId (Unique UUID)<br>BodyParser (JSON Parse)
 
-    alt No Permission
-        Security-->>Dispatcher: NO (Error 403)
-        Dispatcher-->>User: Error: Access Denied
-    else Has Permission
-        Security-->>Dispatcher: YES
-        Dispatcher->>BO: Instantiate corresponding BO
-        Dispatcher->>BO: execute(data)
-
-        BO->>BO: Validate Data (Zod)
-        BO->>BO: Execute Logic
-
-        BO-->>Dispatcher: Success Result
-        Dispatcher-->>User: JSON { ok: true, data: ... }
+    Express->>RateLimit: Check IP Limits
+    alt Limit Exceeded
+        RateLimit-->>Client: 429 Too Many Requests
     end
+
+    Express->>Dispatcher: toProccess(req, res)
+
+    Dispatcher->>Dispatcher: Validate JSON Syntax (Zod)
+
+    Note over Dispatcher,Security: 2. Core Orchestration
+    Dispatcher->>Security: isReady?
+    Dispatcher->>Security: getDataTx(101) -> resolve mapped BO
+
+    Dispatcher->>Security: getPermissions({ profile: 2, tx: 101 })
+    alt Access Denied
+        Security-->>Dispatcher: false
+        Dispatcher->>Audit: Log "tx_denied"
+        Dispatcher-->>Client: 403 Forbidden
+    end
+
+    Note over Dispatcher,BO: 3. Business Execution
+    Dispatcher->>Security: executeMethod(101)
+    Security->>BO: Lazy Load & Instantiate(Container)
+
+    BO->>BO: Validate Params (Zod Schema)
+    alt Invalid Params
+        BO-->>Security: Validation Error
+        Security-->>Dispatcher: Error Response
+        Dispatcher-->>Client: 400 Bad Request
+    end
+
+    BO->>BO: Run Business Logic (Service/Repo)
+
+    BO-->>Security: Success Result { data: ... }
+    Security-->>Dispatcher: Pass Result
+
+    Dispatcher->>Audit: Log "tx_exec" (Success)
+    Dispatcher-->>Client: 200 OK { ok: true, data: ... }
 ```
 
-## Step by Step
+## Step-by-Step Analysis
 
-1.  **Entry**:
-    Everything enters through a single endpoint: `/toProccess`. This simplifies error handling and security.
+### 1. The Middleware Chain (The Filter)
 
-2.  **Identification (`tx`)**:
-    The client sends a transaction code (`tx`). Example: `100` for Login, `200` for Create User.
+Before our "smart" code touches the request, Express passes through several filters:
 
-3.  **Security**:
-    Before executing anything, the system checks:
-    - Who is the user? (Session/Token)
-    - Does this user have permission to execute `tx: 100`?
+- **Helmet**: Adds anti-hacker headers (X-XSS-Protection, etc).
+- **Request ID**: Assigns a unique ID (e.g., `req-12345`) to track the request in logs.
+- **Request Logger**: Writes "INCOMING POST /toProccess" to console.
+- **Rate Limit**: If that IP performed 100 requests in 1 minute, it blocks here.
 
-4.  **Dispatch**:
-    If authorized, the `Dispatcher` looks up which code (BO) to run in its transaction map.
+### 2. The Dispatcher (The Coordinator)
 
-5.  **Execution**:
-    The Business Object "wakes up", validates data, and does its magic.
+Only when the request survives filters does it reach `Dispatcher.toProccess`.
 
-6.  **Response**:
-    The system always returns a standard JSON format.
+- **Structural Validation**: Checks JSON has `{ tx: number, params: object }`. If garbage is sent, it rejects before bothering the database.
+- **Active Wait**: If system is booting (`security.isReady == false`), it waits a few milliseconds before failing.
+
+### 3. Security & Audit
+
+- **Resolution**: Converts `tx: 101` into `AuthBO.login`.
+- **Permissions**: Consults in-memory matrix (loaded at start). Extremely fast (nanoseconds).
+- **Audit**: If you fail, it's recorded in `audit_log` with IP, user, and rejection reason.
+
+### 4. Business Execution
+
+The BO is instantiated on demand (Lazy Load).
+
+- Receives `Container` with open DB connection.
+- Validates data semantically (e.g., "Is email format valid?").
+- Executes task.
+
+### 5. Response
+
+The `Dispatcher` captures the result, wraps it in `{ ok: true, data: ... }`, and sends it.
+Finally, logs "OUTGOING 200 OK" and duration (e.g., `45ms`).

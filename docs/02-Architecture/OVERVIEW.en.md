@@ -1,52 +1,68 @@
-# Architecture Overview
+# Detailed Architecture (Overview)
 
-Our system follows a pragmatic version of **Clean Architecture**. The goal is to separate responsibilities so code remains maintainable.
+To understand how ToProccess scales, we use the **C4** model (Context, Containers, Components, Code). Here we will dive deep into the Component level.
 
-## Layer Diagram
+## Level 1: System Context
+
+Where does our system live in the world?
 
 ```mermaid
 graph TD
-    Client[Client] -->|HTTP| API[API Layer (Express)]
-    API -->|Dispatches| Core[Core Layer (Dispatcher/Security)]
-    Core -->|Executes| BO[Business Objects (Logic)]
-    BO -->|Uses| Infra[Infrastructure Layer (DB/Email)]
+    User[End User] -->|HTTPS| CDN[CDN / Load Balancer (Cloudflare)]
+    CDN -->|HTTPS| System[ToProccess API]
+    System -->|TCP| DB[(PostgreSQL)]
+    System -->|SMTP| Email[Email Provider (AWS SES/SendGrid)]
 
-    classDef client fill:#f9f,stroke:#333;
-    classDef api fill:#bbf,stroke:#333;
-    classDef core fill:#dfd,stroke:#333;
-    classDef bo fill:#fdd,stroke:#333;
-    classDef infra fill:#ddd,stroke:#333;
-
-    class Client client;
-    class API api;
-    class Core core;
-    class BO bo;
-    class Infra infra;
+    classDef system fill:#1168bd,stroke:#0b4884,color:white;
+    classDef external fill:#999,stroke:#666,color:white;
+    class System system;
+    class User,CDN,DB,Email external;
 ```
 
-## The 4 Main Layers
+## Level 2: Containers (Our API)
 
-1.  **API Layer (`src/api`, `src/express`)**:
-    - The "front door".
-    - Receives HTTP requests.
-    - Has NO business logic. Just "passes the ball" to Core.
+Inside the "ToProccess API" box, here is what we have:
 
-2.  **Core Layer (`src/core`)**:
-    - The "administrative brain".
-    - `SecurityService`: Checks permissions.
-    - `Dispatcher`: Decides who to call.
-    - Ensures NO ONE enters without permission.
+- **Technology**: Node.js v20+
+- **Web Framework**: Express.js 5 (Minimalist)
+- **Language**: Strict TypeScript
 
-3.  **Business Objects (`BO/`)**:
-    - YOUR code lives here.
-    - Contains all business logic (e.g., "How to create a product").
-    - Data Validation (Zod).
+This API is a "modular monolith". Everything runs in a single Node process, but internally it's separated as if they were logical microservices.
 
-4.  **Infrastructure Layer (`src/db`, `src/infra`)**:
-    - The "technical services".
-    - Database, Email, Logs.
-    - BOs use these services but don't know how they work internally.
+## Level 3: Components (The Heart)
 
-## Why this way?
+This is where our framework shines due to its modified Clean Architecture.
 
-If tomorrow we swap PostgreSQL for MySQL, we only touch the Infrastructure Layer. Your business logic (`BO/`) doesn't notice and doesn't break.
+```mermaid
+graph TD
+    subgraph "Web Layer (Express)"
+        Handler["/toProccess Handler"]
+        Middlewares["Middlewares (Helmet, RateLimit, CSRF)"]
+    end
+
+    subgraph "Core Layer (Framework)"
+        Dispatcher[Dispatcher]
+        Security[SecurityService]
+        Container[DI Container]
+    end
+
+    subgraph "Business Layer (Business Objects)"
+        AuthBO[AuthBO]
+        UserBO[UserBO]
+        ProductBO[ProductBO]
+    end
+
+    Handler --> Middlewares
+    Middlewares --> Dispatcher
+    Dispatcher -->|1. Resolve TX| Security
+    Security -->|2. Instantiate| Container
+    Container -->|3. Inject Deps| AuthBO
+```
+
+### Component Explanation
+
+1.  **Web Layer**: It's dumb. It only knows HTTP (req, res, headers). Its only job is to deliver the JSON package to the Dispatcher.
+2.  **Dispatcher**: The traffic director. Knows nothing about business, only knows how to route transactions (`tx`).
+3.  **SecurityService**: The armed guard. NO ONE executes anything unless this service gives the green light. Loads permissions from DB at startup.
+4.  **Container**: The toolbox. Contains the live DB connection, configured logger, and audit service. Passed from hand to hand.
+5.  **Business Objects**: Isolated modules. Receive the `Container` and execute logic.

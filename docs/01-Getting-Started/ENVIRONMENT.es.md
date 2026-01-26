@@ -1,48 +1,85 @@
-# Variables de Entorno (.env)
+# Guía de Entorno y Configuración
 
-El archivo `.env` controla cómo se comporta la aplicación en tu computadora. **NUNCA debes subir este archivo a Git**, ya que contiene contraseñas secretas.
+ToProccess sigue la metodología **Twelve-Factor App**, almacenando toda la configuración en variables de entorno.
 
-## Configuración Inicial
+## 1. Obligatorio vs Opcional
 
-Copia el archivo de ejemplo para crear tu propio `.env`:
+Aunque casi todas las variables tienen un valor por defecto (para facilitar el desarrollo local), en **PRODUCCIÓN** ciertas variables son mandatorias por seguridad.
+
+El servidor incorpora validación **Zod** al inicio. Si detecta una configuración combinada inválida (ej. `EMAIL_MODE=smtp` sin `EMAIL_SMTP_HOST`), se negará a iniciar.
+
+---
+
+## 2. Web Server (Exclusivo Servidor)
+
+Estas variables definen cómo el servidor escucha peticiones.
+
+| Variable          | Local Default | Producción           | ¿Obligatorio?                      |
+| :---------------- | :------------ | :------------------- | :--------------------------------- |
+| `NODE_ENV`        | `development` | `production`         | **SÍ** (Cambia logs, seguridad)    |
+| `APP_PORT`        | `3000`        | (Asignado por Cloud) | **SÍ**                             |
+| `APP_HOST`        | `localhost`   | `0.0.0.0`            | **SÍ** (En Docker/Render)          |
+| `APP_TRUST_PROXY` | `0`           | `1`                  | **SÍ** (Si usas Load Balancer/SSL) |
+
+## 3. Base de Datos (Credenciales)
+
+**⚠️ CRÍTICO**: Nunca comitear estas, solo ponerlas en el dashboard del hosting.
+
+| Variable     | Local Default | Producción         | ¿Obligatorio?         |
+| :----------- | :------------ | :----------------- | :-------------------- |
+| `PGHOST`     | `localhost`   | `db.render.com`... | **SÍ**                |
+| `PGUSER`     | `postgres`    | `app_user`         | **SÍ**                |
+| `PGPASSWORD` | `""`          | `XyZ123...`        | **SÍ**                |
+| `PGDATABASE` | `postgres`    | `mi_app_db`        | **SÍ**                |
+| `PGSSL`      | `false`       | `true`             | Depende del proveedor |
+
+## 4. Seguridad y Sesiones (Exclusivo Servidor)
+
+| Variable                | Local Default | Producción          | ¿Obligatorio?                 |
+| :---------------------- | :------------ | :------------------ | :---------------------------- |
+| `SESSION_SECRETS`       | `secret`      | `a8f93...`          | **SÍ** (Mínimo 32 caracteres) |
+| `SESSION_COOKIE_SECURE` | `false`       | `true`              | Recomendado                   |
+| `CORS_ORIGINS`          | -             | `https://miweb.com` | **SÍ** (Para bloquear otros)  |
+
+## 5. Email (SMTP)
+
+Si `EMAIL_MODE=smtp`, todas las siguientes pasan a ser **OBLIGATORIAS**:
+
+| Variable          | Local Default | Producción        | Notas                  |
+| :---------------- | :------------ | :---------------- | :--------------------- |
+| `EMAIL_MODE`      | `log`         | `smtp`            | Activa el envío real   |
+| `EMAIL_SMTP_HOST` | -             | `smtp.grid.com`   | Requerido si mode=smtp |
+| `EMAIL_SMTP_USER` | -             | `apikey`          | Requerido si mode=smtp |
+| `EMAIL_SMTP_PASS` | -             | `...`             | Requerido si mode=smtp |
+| `EMAIL_SMTP_FROM` | -             | `soporte@app.com` | Evita spam folders     |
+
+---
+
+## Resumen de Setup en Producción
+
+Al desplegar (en Render, AWS, DigitalOcean), asegúrate de definir **EXCLUSIVAMENTE** estas variables en el panel de control del servidor:
 
 ```bash
-cp .env.example .env
-# En Windows (PowerShell): Copy-Item .env.example .env
+# Básico
+NODE_ENV=production
+APP_PORT=3000
+
+# DB
+PGHOST=...
+PGUSER=...
+PGPASSWORD=...
+PGDATABASE=...
+PGSSL=true
+
+# Seguridad
+SESSION_SECRETS=GeneraUnaCadenaLargaAleatoriaDeVerdad
+CORS_ORIGINS=https://tu-dominio-frontend.com
+
+# (Opcional) Si envías emails
+EMAIL_MODE=smtp
+EMAIL_SMTP_HOST=...
+EMAIL_SMTP_USER=...
+EMAIL_SMTP_PASS=...
 ```
 
-## Variables Principales
-
-Aquí explicamos para qué sirve cada cosa:
-
-### Aplicación
-
-- `APP_PORT`: Puerto donde corre el servidor (Default: `3000`).
-- `APP_LANG`: Idioma por defecto (`es` o `en`).
-
-### Base de Datos
-
-Tienes dos formas de configurar PostgreSQL:
-
-1.  **Opción A (Recomendada Local)**: Variables individuales.
-
-    ```properties
-    PGHOST=localhost
-    PGPORT=5432
-    PGDATABASE=curso-node
-    PGUSER=postgres
-    PGPASSWORD=tu_password
-    ```
-
-2.  **Opción B**: Cadena de conexión completa (URL).
-    ```properties
-    DATABASE_URL=postgres://usuario:password@host:port/db
-    ```
-
-### Sesiones
-
-- `SESSION_SECRETS`: Una frase secreta usada para firmar las cookies. **Cámbiala en producción**.
-
-## Siguiente Paso
-
-Con las variables listas, es hora de [Ejecutar el Proyecto](FIRST_RUN.es.md).
+Todas las demás (`APP_LANG`, `AUTH_LOGIN_ID`, etc.) pueden omitirse si te sirven los defaults.

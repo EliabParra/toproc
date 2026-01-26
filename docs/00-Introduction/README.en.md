@@ -1,41 +1,89 @@
-# Node.js Backend Framework - Modular & Secure Architecture
+# Introduction & Philosophy
 
-Welcome to the official **ToProccess** documentation. This is a clear, robust backend framework designed for scalability, maintainability, and enterprise-grade security.
+Welcome to the definitive documentation for **ToProccess**.
 
-## What is this? ("Baby-Proof" Concept)
+> **Note to the reader**: This documentation is designed to be read by anyone, from a junior developer to a software architect. If a concept seems too basic, feel free to skip it. If it seems too complex, we've included analogies and diagrams to make it easier.
 
-Imagine you are building a giant Lego house. If you dump all the pieces on the floor and start building without a plan, you'll end up with an unstable mess.
+## 1. Project Vision
 
-This framework is like **an organized Lego kit with clear instructions**:
+ToProccess isn't just "another Node.js backend". It's a comprehensive answer to common problems that arise as projects scale: spaghetti code, business logic mixed with database queries, and inconsistent security.
 
-- You have separate boxes for each type of piece (Logic, Data, Security).
-- You have standard connectors so pieces always fit together (Dependency Injection).
-- You have a "Supervisor" checking that no one builds dangerous things (Security Service).
+### What problem does it solve?
 
-You don't have to invent _how_ to connect the pieces, you just worry about _what_ you want to build (your business logic).
+In traditional frameworks like plain Express, it's easy to start but very easy to make a mess.
 
-## Key Features
+- Where do I put validation?
+- How do I ensure only admins see this?
+- How do I reuse this function without copy-pasting?
 
-1.  **Clean Architecture**:
-    Your business logic (Business Objects) knows nothing about the database or the web server. This allows you to swap parts without breaking the whole system.
+ToProccess solves this by imposing **Order and Standards**.
 
-2.  **Transactional by Design**:
-    Everything you do is a "Transaction" with a unique code (e.g., `tx: 101`). This makes permission control and auditing extremely easy.
+### Design Philosophy: "Rails" over Express
 
-3.  **Integrated Security**:
-    You don't need to code `if (user.isAdmin)` on every line. The security system checks permissions _before_ your code even runs.
+Inspired by the "Convention over Configuration" philosophy.
 
-4.  **Robust Validation**:
-    We use **Zod** to ensure incoming data is perfect. If something is wrong, the system automatically rejects it with clear messages.
+- **Rigid Structure**: There is a specific place for everything (`BO`, `Service`, `Repository`).
+- **Paranoid Security**: Everything is forbidden by default ("Deny by Default").
+- **Strong Typing**: We use strict TypeScript. If it compiles, it likely works.
 
-5.  **Internationalization (i18n)**:
-    Your error and success messages can speak any language. The system detects the user's language and responds accordingly.
+---
 
-## Where do I start?
+## 2. Architecture Pillars
 
-If you are new, follow this path:
+### A. Simplified Clean Architecture
 
-1.  **[Installation](../01-Getting-Started/INSTALLATION.en.md)**: Setup your machine.
-2.  **[First Run](../01-Getting-Started/FIRST_RUN.en.md)**: Run the project.
-3.  **[Architecture](../02-Architecture/OVERVIEW.en.md)**: Understand the big picture.
-4.  **[Your First BO](../05-Guides/CREATE_NEW_MODULE.en.md)**: Create your own feature.
+We separate code into concentric layers.
+
+1.  **Domain (Core)**: Your business rules (`BO` and `Service`). They don't know databases or HTTP exist. They are pure.
+2.  **Infrastructure (Edge)**: Database, filesystem, email. These are tools the Domain uses.
+3.  **Interface (Outer)**: HTTP API. It only handles requests and transforms them.
+
+**Benefit**: You can swap PostgreSQL for MongoDB, or Express for Fastify, and your business logic (the most valuable part) doesn't change a single line.
+
+### B. Dependency Injection
+
+Instead of your objects creating their own dependencies, the system provides them.
+
+- **Before**: `const db = require('db');` (Hard to test, coupled).
+- **Now**: `constructor(container) { this.db = container.db; }` (Easy to test, modular).
+
+This allows **Mocking** in tests: we can pass a "fake database" to the BO to test it without touching the real database.
+
+### C. Transaction-Oriented Programming (RPC-Style)
+
+Unlike pure REST (GET /users, POST /users), we think in terms of **Business Actions**.
+
+- `tx: 101` -> "Login"
+- `tx: 205` -> "Approve Vacation Request"
+
+Each action has a unique ID. This greatly facilitates:
+
+- **Audit**: "Who executed tx 205?"
+- **Permissions**: "Does Role X have permission for tx 205?"
+
+---
+
+## 3. Fundamental Glossary
+
+Before continuing, let's define the vocabulary we will use throughout the documentation.
+
+| Term                     | Simplified Definition                                                                               | Analogy                                                                              |
+| :----------------------- | :-------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------- |
+| **BO (Business Object)** | Module grouping a complete functionality (Controller + Service + Repository).                       | A "Department" in a company (e.g., Sales Dept.).                                     |
+| **Dispatcher**           | The component that receives the HTTP request, finds which BO handles it, loads it, and executes it. | The building receptionist who tells you which office to go to.                       |
+| **Container**            | Object containing all global tools (DB, Logger, Config) passed to all BOs.                          | A master toolbox given to every worker.                                              |
+| **Tx (Transaction ID)**  | Unique number identifying a specific operation.                                                     | The ticket number at the bank.                                                       |
+| **Zod**                  | Library used to validate that input data is correct.                                                | The security guard checking your ID and backpack before entering.                    |
+| **Lazy Loading**         | Technique of loading files only when needed, not at startup.                                        | Turning on the light in a room only when you enter, not keeping the whole house lit. |
+
+---
+
+## 4. Who is this for?
+
+- **Backend Developers**: To build robust APIs.
+- **Tech Leads**: To have a solid, standardized foundation for their team.
+- **QA / Testers**: To understand how to test transactional flows.
+
+## Next Step
+
+Now that you understand the philosophy, let's look at how the code is physically organized in [Detailed File Structure](FILE_STRUCTURE.en.md).

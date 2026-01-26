@@ -1,64 +1,91 @@
-# Ejecutando el Proyecto (Running the Project)
+# Primera Ejecución Detallada (Deep Dive into First Run)
 
-¡Todo listo! Es hora de encender los motores.
+Ya instalaste todo y configuraste el entorno. Ahora vamos a ver qué pasa cuando "aprietas el botón de encendido".
 
-## 1. Inicializar la Base de Datos
+## 1. Inicialización de Base de Datos (`npm run db:init`)
 
-Antes de correr el servidor por primera vez, necesitamos crear las tablas base en PostgreSQL. Nuestro framework incluye una herramienta para esto.
+Este comando es crítico para la primera vez.
 
-Ejecuta:
+### ¿Qué hace exactamente?
+
+1.  **Conexión**: Se conecta a tu Postgres usando las credenciales de `.env`.
+2.  **Verificación**: Revisa si ya existen tablas.
+3.  **Ejecución de SQL**: Corre scripts de inicialización ubicados en `scripts/db-init/schema/`.
+    - `audit.ts`: Crea tabla `audit_log`.
+    - `auth.ts`: Crea tablas `users`, `profiles`, `sessions`.
+    - `base.ts`: Tablas base del sistema.
+4.  **Generadores**: Crea archivos dinámicos si es necesario (e.g. documentación automática de base de datos).
+
+### Uso
 
 ```bash
 npm run db:init
 ```
 
-Esto creará:
+**Salida Esperada:**
 
-- Esquema `security`.
-- Tablas: `users`, `profiles`, `sessions`, `audit`, etc.
-- Un usuario administrador por defecto (si así está configurado).
+```text
+✅ Connected to DB
+🚀 DB Init Complete
+```
 
-## 2. Modo Desarrollo (Development)
+> **Nota**: Si falla, revisa tu `PGPASSWORD` en el archivo `.env`. El 99% de los errores son credenciales incorrectas.
 
-Para programar, usa el modo desarrollo. Este modo:
+---
 
-- Reinicia el servidor automáticamente cuando guardas cambios.
-- Muestra logs bonitos y legibles.
+## 2. Modo Desarrollo (`npm run dev`)
+
+Este es el comando que usarás el 90% del tiempo.
+
+### Características Mágicas
+
+- **Hot Reload (Nodemon)**: No necesitas detener y reiniciar el server. Si editas un archivo y guardas (`Ctrl+S`), el servidor se reinicia solo en menos de 1 segundo.
+- **TypeScript on-the-fly (`tsx`)**: Ejecuta el código `.ts` directamente sin compilar a disco. Es muy rápido.
+- **Watch Mode**: Vigila carpetas clave (`src`, `BO`, `public`).
+
+### Uso
 
 ```bash
 npm run dev
 ```
 
-Deberías ver algo como:
+**Verificación**:
+Abre `http://localhost:3000/health`. Deberías ver: `OK`.
 
-```text
-[INFO] Server listening on port 3000
+---
+
+## 3. Modo Producción (`npm run build` + `npm start`)
+
+Así es como debe correr en AWS, DigitalOcean o tu servidor real. Nunca uses `npm run dev` en producción (es lento e inseguro).
+
+### Paso A: Compilación (`npm run build`)
+
+Transforma tu código TypeScript (bonito pero pesado) a JavaScript estándar (feo pero rapidísimo).
+
+- **Entrada**: carpeta `src/`, `BO/`.
+- **Salida**: carpeta `dist/`.
+
+> **¿Por qué compilar?**
+> Node.js no entiende TypeScript nativamente. La compilación elimina tipos y optimiza el código.
+
+### Paso B: Ejecución (`npm start`)
+
+Corre el código optimizado desde la carpeta `dist/`.
+
+```bash
+npm start
 ```
 
-## 3. Modo Producción (Production)
+---
 
-En un servidor real, queremos velocidad y estabilidad.
+## Resumen del Ciclo de Vida
 
-1.  **Compilar (Build)**: Traduce TypeScript a JavaScript optimizado.
-
-    ```bash
-    npm run build
-    ```
-
-    Esto crea la carpeta `dist/`.
-
-2.  **Iniciar (Start)**: Corre el código compilado.
-    ```bash
-    npm start
-    ```
-
-## 4. Verificar que funciona
-
-Abre tu navegador en:
-`http://localhost:3000/health`
-
-Deberías ver un mensaje `OK`.
+1.  **Instalar** (`npm install`)
+2.  **Configurar** (`.env`)
+3.  **Inicializar DB** (`npm run db:init`)
+4.  **Programar** (`npm run dev`)
+5.  **Desplegar** (`npm run build` -> `npm start`)
 
 ## Siguiente Paso
 
-Con el servidor corriendo, entiende cómo funciona leyendo [Arquitectura](../02-Architecture/OVERVIEW.es.md).
+Ya sabes correrlo. Ahora aprende a usar las herramientas de poder en [CLI Tools](CLI_TOOLS.es.md).

@@ -1,53 +1,54 @@
-# Inyección de Dependencias (Dependency Injection)
+# Inyección de Dependencias y Lazy Loading
 
-Este es un término elegante para algo muy simple: **No cocinar tu propia comida, pedir servicio a la habitación.**
+Explicación técnica de cómo el framework gestiona la memoria y los objetos.
 
-## ¿Qué significa?
+## El Contenedor (`IContainer`)
 
-En lugar de que tu código "cree" las cosas que necesita, el sistema se las "entrega" listas para usar.
-
-### Ejemplo Sin Inyección (Mala Idea)
+Este objeto es la "sangre" del sistema. Fluye por todos lados.
 
 ```typescript
-// Malo: El BO tiene que saber cómo conectarse a la DB
-class ProductBO {
-    constructor() {
-        this.db = new PostgresConnection('localhost', 'password') // ¡Hardcoded!
-    }
+export interface IContainer {
+    config: IConfig // Configuración global (cargada de .env)
+    log: ILogger // Instancia del Logger
+    db: IDatabase // Conexión activa a Postgres
+    audit: IAuditService // Servicio de auditoría
+    // ... otros servicios core
 }
 ```
 
-### Ejemplo Con Inyección (Nuestra Arquitectura)
+El `Dispatcher` crea este contenedor una vez (o lo reutiliza) y se lo pasa al `SecurityService`, que a su vez se lo pasa al `BusinessObject`.
+
+**Beneficio**:
+Si mañana quieres agregar un servicio de "Notificaciones Push" disponible para todos, solo lo agregas al Container en `Dispatcher` y automáticamente todos los BOs tienen acceso a `this.container.push`.
+
+## Lazy Loading (Carga Perezosa)
+
+Node.js es rápido, pero cargar 5000 archivos al inicio haría que el servidor tardara minutos en arrancar (pobre `npm run dev`).
+
+Para evitar esto, implementamos Lazy Loading en el `TransactionExecutor`.
+
+### Cómo funciona (`TransactionExecutor.ts`)
 
 ```typescript
-// Bueno: El BO recibe la DB ya lista
-class ProductBO extends BaseBO {
-    constructor(container: IContainer) {
-        super(container) // ¡Gracias por la DB!
-    }
+// Pseudocódigo simplificado
+async execute(objectName, method, params) {
+    // 1. Construir ruta del archivo
+    const path = `./BO/${objectName}/${objectName}BO.js`;
+
+    // 2. Importar DINÁMICAMENTE (solo ahora se lee el disco)
+    const module = await import(path);
+    const BOClass = module[`${objectName}BO`];
+
+    // 3. Instanciar e Inyectar
+    const instance = new BOClass(this.container);
+
+    // 4. Ejecutar
+    return instance[method](params);
 }
 ```
 
-## El Contendor (`IContainer`)
+### Ventajas
 
-Imagina una caja de herramientas mágica que se pasa de mano en mano. Esa caja contiene:
-
-- `db`: Acceso a datos.
-- `logger`: Para escribir logs.
-- `audit`: Para auditoría.
-- `config`: La configuración del sistema.
-
-Cuando tu BO se despierta, recibe esta caja. Así tu BO no necesita saber _cómo_ se conecta la base de datos, solo la _usa_.
-
-## Carga Dinámica (Lazy Loading)
-
-El `Dispatcher` no carga todos los archivos al inicio (sería muy lento). Solo carga el BO que hace falta en ese momento.
-
-1. Llega petición para `tx: 101`.
-2. Dispatcher busca `tx: 101` -> `AuthBO`.
-3. `import(AuthBO)`.
-4. `new AuthBO(container)`.
-5. Ejecutar.
-6. Tirar a la basura (Garbage Collection).
-
-Esto hace que el sistema sea muy ligero y rápido.
+1.  **Inicio Instantáneo**: El servidor arranca en milisegundos, sin importar si tienes 10 o 1000 BOs.
+2.  **Aislamiento de Errores**: Si un BO tiene un error de sintaxis, no rompe el servidor hasta que alguien intenta usar ESE BO específico.
+3.  **Menor Memoria**: Node.js puede liberar memoria de módulos poco usados (dependiendo del Garbage Collector).

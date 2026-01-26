@@ -1,52 +1,68 @@
-# Arquitectura General (Overview)
+# Arquitectura Detallada (Architecture Overview)
 
-Nuestro sistema sigue una versión pragmática de **Clean Architecture**. El objetivo es separar las responsabilidades para que el código sea mantenible.
+Para entender cómo escala ToProccess, usamos el modelo **C4** (Context, Containers, Components, Code). Aquí vamos a profundizar hasta el nivel de Componentes.
 
-## Diagrama de Capas
+## Nivel 1: Contexto del Sistema
+
+¿Dónde vive nuestro sistema en el mundo?
 
 ```mermaid
 graph TD
-    Client[Cliente] -->|HTTP| API[Capa API (Express)]
-    API -->|Despacha| Core[Capa Core (Dispatcher/Security)]
-    Core -->|Ejecuta| BO[Business Objects (Lógica)]
-    BO -->|Usa| Infra[Capa Infraestructura (DB/Email)]
+    User[Usuario Final] -->|HTTPS| CDN[CDN / Load Balancer (Cloudflare)]
+    CDN -->|HTTPS| System[ToProccess API]
+    System -->|TCP| DB[(PostgreSQL)]
+    System -->|SMTP| Email[Email Provider (AWS SES/SendGrid)]
 
-    classDef client fill:#f9f,stroke:#333;
-    classDef api fill:#bbf,stroke:#333;
-    classDef core fill:#dfd,stroke:#333;
-    classDef bo fill:#fdd,stroke:#333;
-    classDef infra fill:#ddd,stroke:#333;
-
-    class Client client;
-    class API api;
-    class Core core;
-    class BO bo;
-    class Infra infra;
+    classDef system fill:#1168bd,stroke:#0b4884,color:white;
+    classDef external fill:#999,stroke:#666,color:white;
+    class System system;
+    class User,CDN,DB,Email external;
 ```
 
-## Las 4 Capas Principales
+## Nivel 2: Contenedores (Nuestra API)
 
-1.  **Capa API (`src/api`, `src/express`)**:
-    - Es la "puerta de entrada".
-    - Recibe peticiones HTTP.
-    - No tiene lógica de negocio. Solo "pasa la pelota" al Core.
+Dentro de la caja "ToProccess API", esto es lo que tenemos:
 
-2.  **Capa Core (`src/core`)**:
-    - Es el "cerebro administrativo".
-    - `SecurityService`: Verifica permisos.
-    - `Dispatcher`: Decide a quién llamar.
-    - Garantiza que NADIE entre sin permiso.
+- **Tecnología**: Node.js v20+
+- **Framework Web**: Express.js 5 (Minimalista)
+- **Lenguaje**: TypeScript Estricto
 
-3.  **Business Objects (`BO/`)**:
-    - Aquí vive TU código.
-    - Contiene toda la lógica del negocio (e.g., "Cómo crear un producto").
-    - Validación de datos (Zod).
+Esta API es un "monolito modular". Todo corre en un solo proceso de Node, pero internamente está separado como si fueran microservicios lógicos.
 
-4.  **Capa Infraestructura (`src/db`, `src/infra`)**:
-    - Son los "servicios técnicos".
-    - Base de Datos, Email, Logs.
-    - Los BOs usan estos servicios, pero no saben cómo funcionan por dentro.
+## Nivel 3: Componentes (El Corazón)
 
-## ¿Por qué así?
+Aquí es donde nuestro framework brilla por su Clean Architecture modificada.
 
-Si mañana cambiamos PostgreSQL por MySQL, solo tocamos la Capa de Infraestructura. Tu lógica de negocio (`BO/`) no se entera ni se rompe.
+```mermaid
+graph TD
+    subgraph "Capa Web (Express)"
+        Handler["/toProccess Handler"]
+        Middlewares["Middlewares (Helmet, RateLimit, CSRF)"]
+    end
+
+    subgraph "Capa Core (Framework)"
+        Dispatcher[Dispatcher]
+        Security[SecurityService]
+        Container[DI Container]
+    end
+
+    subgraph "Capa de Negocio (Business Objects)"
+        AuthBO[AuthBO]
+        UserBO[UserBO]
+        ProductBO[ProductBO]
+    end
+
+    Handler --> Middlewares
+    Middlewares --> Dispatcher
+    Dispatcher -->|1. Resuelve TX| Security
+    Security -->|2. Instancia| Container
+    Container -->|3. Inyecta Deps| AuthBO
+```
+
+### Explicación de Componentes
+
+1.  **Capa Web**: Es tonta. Solo sabe de HTTP (req, res, headers). Su único trabajo es entregar el paquete JSON al Dispatcher.
+2.  **Dispatcher**: Es el director de tráfico. No sabe de negocios, solo sabe direccionar transacciones (`tx`).
+3.  **SecurityService**: El guardia armado. NADIE ejecuta nada si este servicio no da luz verde. Carga permisos desde la DB al inicio.
+4.  **Container**: La caja de herramientas. Contiene la conexión viva a la DB, el logger configurado, y el servicio de auditoría. Se pasa de mano en mano.
+5.  **Business Objects**: Módulos aislados. Reciben el `Container` y ejecutan la lógica.

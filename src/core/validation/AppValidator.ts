@@ -108,8 +108,6 @@ export class AppValidator {
      * - `invalid_format` (email) → `alerts.email`
      * - `too_small` → `alerts.lengthMin`
      * - `too_big` → `alerts.lengthMax`
-     *
-     * @private
      */
     private setupErrorMap() {
         // @ts-ignore: Bypass de incompatibilidad de tipos Zod para firma del callback
@@ -140,11 +138,17 @@ export class AppValidator {
             }
 
             if (i.code === z.ZodIssueCode.too_small && i.type === 'string') {
-                message = this.i18n.t('alerts.lengthMin', { value: pathStr, min: i.minimum })
+                message = this.i18n.t('alerts.lengthMin', {
+                    value: pathStr,
+                    min: i.minimum,
+                })
             }
 
             if (i.code === z.ZodIssueCode.too_big && i.type === 'string') {
-                message = this.i18n.t('alerts.lengthMax', { value: pathStr, max: i.maximum })
+                message = this.i18n.t('alerts.lengthMax', {
+                    value: pathStr,
+                    max: i.maximum,
+                })
             }
 
             return { message }

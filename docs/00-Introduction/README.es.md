@@ -1,41 +1,89 @@
-# Framework Backend en Node.js - Arquitectura Modular y Segura
+# Introducción y Filosofía (Introduction & Philosophy)
 
-Bienvenido a la documentación oficial de **ToProccess**. Este es un framework backend robusto, diseñado pensando en la escalabilidad, mantenimiento y seguridad empresarial.
+Bienvenido a la documentación definitiva de **ToProccess**.
 
-## ¿Qué es esto? (Concepto "Baby-Proof")
+> **Nota para el lector**: Esta documentación está diseñada para ser leída por cualquier persona, desde un desarrollador junior hasta un arquitecto de software. Si algún concepto te parece muy básico, puedes saltarlo. Si te parece muy complejo, hemos incluido analogías y diagramas para facilitarlo.
 
-Imagina que estás construyendo una casa de Lego gigante. Si tiras todas las piezas en el suelo y empiezas a construir sin orden, terminarás con un desastre inestable.
+## 1. La Visión del Proyecto
 
-Este framework es como **un kit de Lego organizado con instrucciones claras**:
+ToProccess no es solo "otro backend en Node.js". Es una respuesta a los problemas comunes que surgen cuando los proyectos crecen: código espagueti, lógica de negocio mezclada con base de datos, y seguridad inconsistente.
 
-- Tienes cajitas separadas para cada tipo de pieza (Lógica, Datos, Seguridad).
-- Tienes conectores estándar para que las piezas encajen siempre (Inyección de Dependencias).
-- Tienes un "Supervisor" que revisa que nadie construya cosas peligrosas (Security Service).
+### ¿Qué problema resuelve?
 
-No tienes que inventar _cómo_ conectar las piezas, solo tienes que preocuparte de _qué_ quieres construir (tu lógica de negocio).
+En frameworks tradicionales como Express plano, es fácil empezar, pero muy fácil desordenarse.
 
-## Características Principales
+- ¿Dónde pongo la validación?
+- ¿Cómo aseguro que solo el admin vea esto?
+- ¿Cómo reutilizo esta función sin copiar y pegar?
 
-1.  **Arquitectura Limpia (Clean Architecture)**:
-    Tu lógica de negocio (Business Objects) no sabe nada de la base de datos ni del servidor web. Esto permite cambiar piezas sin romper todo el sistema.
+ToProccess resuelve esto imponiendo **Orden y Estándares**.
 
-2.  **Transaccionalidad por Diseño**:
-    Todo lo que haces es una "Transacción" con un código único (e.g., `tx: 101`). Esto facilita el control de permisos y auditoría.
+### Filosofía de Diseño: "Rails" sobre Express
 
-3.  **Seguridad Integrada**:
-    No necesitas programar `if (user.isAdmin)` en cada línea. El sistema de seguridad verifica permisos _antes_ de que tu código se ejecute.
+Inspirado en la filosofía de "Convención sobre Configuración".
 
-4.  **Validación Robusta**:
-    Usamos **Zod** para asegurar que los datos que entran son perfectos. Si algo está mal, el sistema lo rechaza automáticamente con mensajes claros.
+- **Estructura Rígida**: Hay un lugar específico para cada cosa (`BO`, `Service`, `Repository`).
+- **Seguridad Paranoica**: Todo está prohibido por defecto ("Deny by Default").
+- **Tipado Fuerte**: Usamos TypeScript estricto. Si compila, probablemente funciona.
 
-5.  **Internacionalización (i18n)**:
-    Tus mensajes de error y éxito pueden hablar cualquier idioma. El sistema detecta el idioma del usuario y responde acorde.
+---
 
-## ¿Por dónde empiezo?
+## 2. Pilares de la Arquitectura
 
-Si eres nuevo, sigue este orden:
+### A. Clean Architecture Simplificada
 
-1.  **[Instalación](../01-Getting-Started/INSTALLATION.es.md)**: Prepara tu máquina.
-2.  **[Primeros Pasos](../01-Getting-Started/FIRST_RUN.es.md)**: Corre el proyecto.
-3.  **[Arquitectura](../02-Architecture/OVERVIEW.es.md)**: Entiende el mapa general.
-4.  **[Tu Primer BO](../05-Guides/CREATE_NEW_MODULE.es.md)**: Crea tu propia funcionalidad.
+Separamos el código en capas concéntricas.
+
+1.  **Dominio (Centro)**: Tus reglas de negocio (`BO` y `Service`). No saben que existen bases de datos ni HTTP. Son puros.
+2.  **Infraestructura (Borde)**: Base de datos, sistema de archivos, email. Son herramientas que el Dominio usa.
+3.  **Interfaz (Exterior)**: API HTTP. Solo recibe peticiones y las transforma.
+
+**Beneficio**: Puedes cambiar PostgreSQL por MongoDB, o Express por Fastify, y tu lógica de negocio (lo más valioso) no cambia ni una línea.
+
+### B. Inyección de Dependencias (Dependency Injection)
+
+En lugar de que tus objetos creen sus propias dependencias, el sistema se las da.
+
+- **Antes**: `const db = require('db');` (Difícil de probar, acoplado).
+- **Ahora**: `constructor(container) { this.db = container.db; }` (Fácil de probar, modular).
+
+Esto nos permite hacer **Mocking** en los tests: podemos pasar una "base de datos falsa" al BO para probarlo sin tocar la base de datos real.
+
+### C. Programación Orientada a Transacciones (RPC-Style)
+
+A diferencia de REST puro (GET /users, POST /users), pensamos en **Acciones de Negocio**.
+
+- `tx: 101` -> "Iniciar Sesión"
+- `tx: 205` -> "Aprobar Solicitud de Vacaciones"
+
+Cada acción tiene un ID único. Esto facilita enormemente:
+
+- **Auditoría**: "Quién ejecutó la tx 205?"
+- **Permisos**: "El Rol X tiene permiso para tx 205?"
+
+---
+
+## 3. Glosario Fundamental
+
+Antes de continuar, definamos el vocabulario que usaremos en toda la documentación.
+
+| Término                  | Definición Simplificada                                                                             | Analogía                                                                               |
+| :----------------------- | :-------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
+| **BO (Business Object)** | Módulo que agrupa una funcionalidad completa (Controller + Service + Repository).                   | Un "Departamento" de una empresa (e.g., Depto. de Ventas).                             |
+| **Dispatcher**           | El componente que recibe la petición HTTP, busca qué BO la atiende, lo carga y lo ejecuta.          | El recepcionista del edificio que te dice a qué oficina ir.                            |
+| **Container**            | Objeto que contiene todas las herramientas globales (DB, Logger, Config) y se pasa a todos los BOs. | Una caja de herramientas maestra que se le da a cada trabajador.                       |
+| **Tx (Transaction ID)**  | Número único que identifica una operación específica.                                               | El número de turno en el banco.                                                        |
+| **Zod**                  | Librería usada para validar que los datos de entrada sean correctos.                                | El guardia que revisa tu ID y mochila antes de entrar.                                 |
+| **Lazy Loading**         | Técnica de cargar archivos solo cuando se necesitan, no al inicio.                                  | Encender la luz de una habitación solo cuando entras, no tener toda la casa encendida. |
+
+---
+
+## 4. ¿Para quién es esto?
+
+- **Desarrolladores Backend**: Para construir APIs robustas.
+- **Líderes Técnicos**: Para tener una base sólida y estandarizada para su equipo.
+- **QA / Testers**: Para entender cómo probar los flujos transaccionales.
+
+## Siguiente Paso
+
+Ahora que entiendes la filosofía, veamos cómo está organizado el código físicamente en [Estructura de Archivos Detallada](FILE_STRUCTURE.es.md).
