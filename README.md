@@ -10,7 +10,8 @@ _**ToProccess core**: tx-driven secure dispatch backend._
 [![Node.js (ESM)](https://img.shields.io/badge/Node.js-ESM-3c873a?style=for-the-badge)](#)
 [![Express](https://img.shields.io/badge/Express-5.x-000000?style=for-the-badge)](#)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-required-336791?style=for-the-badge)](#)
-[![Tests](https://img.shields.io/badge/Tests-node%20--test-2f6feb?style=for-the-badge)](#)
+[![Tests](https://img.shields.io/badge/Tests-258%20passing-2f6feb?style=for-the-badge)](#)
+[![Coverage](https://img.shields.io/badge/Coverage-75.5%25-yellow?style=for-the-badge)](#)
 [![CI](https://img.shields.io/github/actions/workflow/status/EliabParra/toproc/ci.yml?branch=master&style=for-the-badge)](https://github.com/EliabParra/toproc/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-2f6feb?style=for-the-badge)](LICENSE)
 
@@ -109,6 +110,12 @@ Start here:
 - English index: [docs/en/00-index.md](docs/en/00-index.md)
 - Auth (EN): [docs/en/13-authentication.md](docs/en/13-authentication.md)
 - Frontend tutorial (EN): [docs/en/11-frontend-clients-and-requests.md](docs/en/11-frontend-clients-and-requests.md)
+
+### Documentación (ES)
+
+- **Arquitectura**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Visión general del sistema
+- **Inicio Rápido**: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) - Configuración inicial
+- **Crear BOs**: [docs/CREATING_BOS.md](docs/CREATING_BOS.md) - Guía para nuevos Business Objects
 
 ### Scripts
 
