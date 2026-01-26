@@ -1,16 +1,36 @@
 import { redactSecretsInString } from '../../helpers/sanitize.js'
+import { ILogger } from '../../types/core.js'
 
-type FinalErrorHandlerArgs = {
+export type FinalErrorHandlerArgs = {
     clientErrors: any
     serverErrors: any
+    log: ILogger
 }
 
-export function createFinalErrorHandler({ clientErrors, serverErrors }: FinalErrorHandlerArgs) {
-    return function finalErrorHandler(err: any, req: AppRequest, res: AppResponse, next: any) {
+/**
+ * Middleware para manejo final de errores.
+ *
+ * Captura errores no controlados, los loguea de forma estructurada
+ * y devuelve una respuesta estándar al cliente.
+ *
+ * Maneja:
+ * - Sanitización de mensajes de error
+ * - Traducción a códigos HTTP estándar
+ * - Evita doble respuesta si headers ya fueron enviados
+ *
+ * @function createFinalErrorHandler
+ * @param deps - Dependencias (errores configurados, logger)
+ * @returns {Function} Middleware de error de Express
+ */
+export function createFinalErrorHandler({
+    clientErrors,
+    serverErrors,
+    log,
+}: FinalErrorHandlerArgs) {
+    return function finalErrorHandler(err: any, req: any, res: any, next: any) {
         if ((res as any).headersSent) return next(err)
 
-        let status = err?.status ?? err?.statusCode
-        if (!Number.isInteger(status) || status < 400 || status > 599) status = 500
+        let status = Number(err?.status ?? err?.statusCode)
 
         // Common infra errors we may emit
         if (
@@ -19,6 +39,14 @@ export function createFinalErrorHandler({ clientErrors, serverErrors }: FinalErr
         ) {
             status = 403
         }
+
+        if (err?.type === 'entity.too.large' || (err?.limit && err?.length)) {
+            status = 413
+        } else if (typeof err?.message === 'string' && /too large/i.test(err.message)) {
+            status = 413
+        }
+
+        if (!Number.isInteger(status) || status < 400 || status > 599) status = 500
 
         let response = clientErrors.unknown
         if (status === 400) response = clientErrors.invalidParameters
@@ -39,7 +67,7 @@ export function createFinalErrorHandler({ clientErrors, serverErrors }: FinalErr
             ;(res as any).locals.__errorLogged = true
         } catch {}
         log.show({
-            type: (log as any).TYPE_ERROR,
+            type: log.TYPE_ERROR,
             msg: `${serverErrors.serverError.msg}, unhandled: ${safeErrorMessage}`,
             ctx: {
                 requestId: req.requestId,

@@ -4,7 +4,7 @@ import { IEmailService, ILogger } from '../../src/core/interfaces/services.js'
 import { AuthRepository } from './AuthRepository.js'
 import { RegisterParams } from './AuthTypes.js'
 
-type AuthConfig = {
+export type AuthConfig = {
     auth?: {
         loginId?: string
         requireEmailVerification?: boolean
@@ -27,7 +27,24 @@ type AuthConfig = {
     }
 }
 
+/**
+ * Servicio principal de Autenticación.
+ *
+ * Contiene la lógica de negocio pura (independiente de HTTP) para:
+ * - Registro de usuarios
+ * - Hashing de contraseñas
+ * - Verificación de correo electrónico
+ * - Restablecimiento de contraseña
+ * - Generación de códigos OTP
+ */
 export class AuthService {
+    /**
+     * Crea una instancia de AuthService.
+     * @param repo - Repositorio de datos
+     * @param email - Servicio de envío de emails
+     * @param config - Configuración de autenticación
+     * @param log - Logger para diagnóstico
+     */
     constructor(
         private readonly repo: AuthRepository,
         private readonly email: IEmailService,
@@ -39,6 +56,14 @@ export class AuthService {
         return createHash('sha256').update(value, 'utf8').digest('hex')
     }
 
+    /**
+     * Registra un nuevo usuario en el sistema.
+     * Realiza validaciones de unicidad (email/username), hashea contraseña
+     * y envía email de verificación si está configurado.
+     *
+     * @param params - Datos de registro
+     * @returns Objeto indicando éxito o error ('alreadyRegistered')
+     */
     async register(params: RegisterParams): Promise<{ success: boolean; error?: string }> {
         const username = typeof params.username === 'string' ? params.username : undefined
         const emailValue = typeof params.email === 'string' ? params.email : undefined
@@ -81,6 +106,10 @@ export class AuthService {
         return { success: true }
     }
 
+    /**
+     * Envía un correo de verificación con OTP.
+     * Genera código, guarda hash en BD y envía email.
+     */
     async sendVerificationEmail(userId: number, emailTo: string): Promise<void> {
         try {
             const purpose = String(
@@ -118,11 +147,9 @@ export class AuthService {
         }
     }
 
-    // ... Implement other methods (requestEmailVerification, verifyEmail, etc.)
-    // For brevity in this refactor step, I will focus on Register flow first to prove the Architecture.
-
-    // BUT user requested 'Refactor Auth Module' completely. I should port all logic.
-
+    /**
+     * Solicita reenvío de email de verificación.
+     */
     async requestEmailVerification(identifier: string): Promise<void> {
         let user = null
         if (identifier.includes('@')) user = await this.repo.getUserByEmail(identifier)
@@ -133,6 +160,10 @@ export class AuthService {
         await this.sendVerificationEmail(user.user_id, user.user_em)
     }
 
+    /**
+     * Verifica una dirección de email usando token y código OTP.
+     * Marca el usuario como verificado si es correcto.
+     */
     async verifyEmail(token: string, code: string): Promise<{ success: boolean; error?: string }> {
         const purpose = String(this.config.auth?.emailVerificationPurpose ?? 'email_verification')
         const tokenHash = this.sha256Hex(token)
@@ -172,6 +203,9 @@ export class AuthService {
         return { success: true }
     }
 
+    /**
+     * Inicia el flujo de restablecimiento de contraseña.
+     */
     async requestPasswordReset(identifier: string, ip?: string, userAgent?: string): Promise<void> {
         let user = null
         if (identifier.includes('@')) user = await this.repo.getUserByEmail(identifier)
@@ -234,6 +268,9 @@ export class AuthService {
         }
     }
 
+    /**
+     * Verifica si el token y código de restablecimiento son válidos sin consumirlos.
+     */
     async verifyPasswordReset(
         token: string,
         code: string
@@ -277,6 +314,10 @@ export class AuthService {
         } as any
     }
 
+    /**
+     * Realiza el cambio de contraseña.
+     * Verifica token, actualiza hash y revoca sesiones.
+     */
     async resetPassword(
         token: string,
         code: string,

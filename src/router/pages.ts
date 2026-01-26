@@ -8,6 +8,13 @@ type PagesRouterArgs = {
     session?: { sessionExists?: (req: any) => boolean }
 }
 
+/**
+ * Construye el router de páginas (SSR/Static).
+ * Mapea definiciones de rutas a archivos HTML y aplica protección de sesión si es necesario.
+ *
+ * @param args - Configuración ({ session })
+ * @returns Express Router
+ */
 export function buildPagesRouter({ session }: PagesRouterArgs) {
     const router = express.Router()
     const requireAuth = (req: any, res: any, next: any) => {

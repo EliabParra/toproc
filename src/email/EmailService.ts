@@ -11,7 +11,7 @@ function maskEmail(email: string) {
     return `${head}***@${domain}`
 }
 
-type EmailConfig = {
+export type EmailConfig = {
     mode?: string // 'log' | 'smtp'
     from?: string
     logIncludeSecrets?: boolean // If true, logs tokens/codes
@@ -45,6 +45,16 @@ function buildTransport(cfg: EmailConfig) {
     })
 }
 
+/**
+ * Servicio de envío de correos electrónicos.
+ *
+ * Soporta modo 'smtp' (producción) y modo 'log' (desarrollo).
+ * Enmascara direcciones de correo para logs seguros.
+ *
+ * @since 1.0.0
+ * @author Team ToProccess
+ * @license MIT
+ */
 export class EmailService implements IEmailService {
     log: ILogger
     config: IConfig
@@ -72,6 +82,9 @@ export class EmailService implements IEmailService {
         }
     }
 
+    /**
+     * Enmascara un email para logs (e.g. "el***@example.com").
+     */
     maskEmail(email: string) {
         return maskEmail(email)
     }

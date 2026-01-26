@@ -2,6 +2,15 @@ import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
 import { IConfig, ILogger, IDatabase } from '../../types/core.js'
 
+/**
+ * Configura el middleware de sesión (express-session) con almacenamiento persistente.
+ *
+ * Soporta PostgreSQL (connect-pg-simple) o MemoryStore.
+ * Configura seguridad de cookies (Secure, HttpOnly, SameSite) basada en configuración.
+ *
+ * @param app - Instancia de Express
+ * @param deps - Dependencias (config, log, db)
+ */
 export function applySessionMiddleware(
     app: any,
     deps: { config: IConfig; log: ILogger; db: IDatabase }

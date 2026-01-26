@@ -9,14 +9,23 @@ import { AuthSchemas } from './schemas.js'
 import { z } from 'zod'
 
 const require = createRequire(import.meta.url)
-// Access legacy config via globalThis if needed for messages or inject?
-// We fall back to globalThis for now to support legacy usage
 const getLang = () => (globalThis as any).config?.app?.lang ?? 'en'
 const successMsgsRaw = require('./messages/authSuccessMsgs.json')
 
+/**
+ * Business Object de Autenticación.
+ *
+ * Maneja el registro, verificación de email y recuperación de contraseñas.
+ * Orquesta la validación de entrada, lógica de negocio (AuthService) y respuestas HTTP.
+ *
+ */
 export class AuthBO extends BaseBO {
     private service: AuthService
 
+    /**
+     * Crea una instancia de AuthBO.
+     * @param deps - Dependencias inyectadas
+     */
     constructor(deps?: BODependencies) {
         // Fallback resolution for legacy compatibility / dynamic instantiation
         const d = deps ?? {
@@ -38,6 +47,13 @@ export class AuthBO extends BaseBO {
         return successMsgsRaw[getLang()]
     }
 
+    /**
+     * Registra un nuevo usuario.
+     * Valida esquema, verifica duplicados y envía email de verificación si corresponde.
+     *
+     * @param params - Datos del registro (username, email, password)
+     * @returns Respuesta APiResponse
+     */
     async register(params: unknown): Promise<ApiResponse> {
         try {
             const vRes = this.validate<z.infer<typeof AuthSchemas.register>>(
@@ -71,6 +87,10 @@ export class AuthBO extends BaseBO {
         }
     }
 
+    /**
+     * Solicita envío de email de verificación.
+     * @param params - { identifier }
+     */
     async requestEmailVerification(params: unknown): Promise<ApiResponse> {
         try {
             const vRes = this.validate<z.infer<typeof AuthSchemas.requestEmailVerification>>(
@@ -90,6 +110,10 @@ export class AuthBO extends BaseBO {
         }
     }
 
+    /**
+     * Verifica el email mediante token y código.
+     * @param params - { token, code }
+     */
     async verifyEmail(params: unknown): Promise<ApiResponse> {
         try {
             const vRes = this.validate<z.infer<typeof AuthSchemas.verifyEmail>>(
@@ -114,6 +138,10 @@ export class AuthBO extends BaseBO {
         }
     }
 
+    /**
+     * Solicita restablecimiento de contraseña.
+     * @param params - { identifier }
+     */
     async requestPasswordReset(params: unknown): Promise<ApiResponse> {
         try {
             const vRes = this.validate<z.infer<typeof AuthSchemas.requestPasswordReset>>(
@@ -136,6 +164,10 @@ export class AuthBO extends BaseBO {
         }
     }
 
+    /**
+     * Verifica token de restablecimiento de contraseña.
+     * @param params - { token, code }
+     */
     async verifyPasswordReset(params: unknown): Promise<ApiResponse> {
         try {
             const vRes = this.validate<z.infer<typeof AuthSchemas.verifyPasswordReset>>(
@@ -159,6 +191,10 @@ export class AuthBO extends BaseBO {
         }
     }
 
+    /**
+     * Ejecuta el cambio de contraseña.
+     * @param params - { token, code, newPassword }
+     */
     async resetPassword(params: unknown): Promise<ApiResponse> {
         try {
             const vRes = this.validate<z.infer<typeof AuthSchemas.resetPassword>>(
@@ -182,12 +218,4 @@ export class AuthBO extends BaseBO {
             return AuthErrorHandler.unknownError()
         }
     }
-
-    // Login logic was missing in original file provided?
-    // It was likely just not shown or I missed it.
-    // I should implement login if it existed or if required.
-    // Based on `schemas.ts` having `login`, I should probably support it if the service supports it.
-    // The previous file content did NOT show `login`.
-    // It showed `// ... Other methods mapping`.
-    // I will stick to the methods I saw in the file content.
 }

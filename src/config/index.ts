@@ -4,6 +4,12 @@ import { ConfigSchema, Config } from './schemas/index.js'
 import { deepMerge } from './utils/merge.utils.js'
 import { ZodError } from 'zod'
 
+/**
+ * Cargador principal de configuración.
+ *
+ * Orquesta la carga desde archivos y variables de entorno, fusiona y valida.
+ * Implementa Singleton para acceso global optimizado.
+ */
 export class ConfigLoader {
     private static instance: Config
 

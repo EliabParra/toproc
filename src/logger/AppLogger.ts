@@ -7,6 +7,12 @@ type LogEvent = {
     ctx?: unknown
 }
 
+/**
+ * Implementación de Logger con soporte para diagnósticos detallados y formato JSON/Texto.
+ *
+ * Niveles: ERROR (0), INFO (1), DEBUG (2), WARNING (3).
+ * Configurable mediante `config.log`.
+ */
 export class AppLogger implements ILogger {
     TYPE_ERROR = 0
     TYPE_INFO = 1

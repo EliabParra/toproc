@@ -1,3 +1,7 @@
+/**
+ * @module Dispatcher
+ * Módulo principal de despacho de peticiones.
+ */
 import express from 'express'
 import {
     IConfig,
@@ -15,7 +19,7 @@ import { applyRequestId } from '../../express/middleware/request-id.js'
 import { applyRequestLogger } from '../../express/middleware/request-logger.js'
 import { applyCorsIfEnabled } from '../../express/middleware/cors.js'
 import { applyBodyParsers } from '../../express/middleware/body-parsers.js'
-import { jsonBodySyntaxErrorHandler } from '../../express/middleware/json-syntax-error.js'
+import { createJsonSyntaxErrorHandler } from '../../express/middleware/json-syntax-error.js'
 import { createCsrfProtection, createCsrfTokenHandler } from '../../express/middleware/csrf.js'
 import {
     createLoginRateLimiter,
@@ -36,6 +40,12 @@ import {
 import { sendInvalidParameters } from '../../helpers/http-responses.js'
 import { redactSecretsInString } from '../../helpers/sanitize.js'
 
+/**
+ * Dispatcher principal de la API.
+ *
+ * Configura el servidor Express, middlewares y rutas.
+ * Orquesta la ejecución de peticiones hacia el SecurityService.
+ */
 export class Dispatcher {
     public app: any
     public server: any
@@ -102,7 +112,7 @@ export class Dispatcher {
         applyRequestId(this.app)
         applyRequestLogger(this.app, { log: this.log } as any) // Cast for legacy compatibility
         applyCorsIfEnabled(this.app, { config: this.config } as any)
-        applyBodyParsers(this.app)
+        applyBodyParsers(this.app, this.config)
 
         this.csrfTokenHandler = createCsrfTokenHandler({
             config: this.config,
@@ -110,7 +120,7 @@ export class Dispatcher {
         } as any)
         this.csrfProtection = createCsrfProtection({ config: this.config, msgs: this.msgs } as any)
 
-        this.app.use(jsonBodySyntaxErrorHandler)
+        this.app.use(createJsonSyntaxErrorHandler({ config: this.config, msgs: this.msgs }))
 
         this.loginRateLimiter = createLoginRateLimiter(this.clientErrors)
         // this.toProccessRateLimiter = createToProccessRateLimiter(this.clientErrors)
@@ -169,6 +179,7 @@ export class Dispatcher {
             createFinalErrorHandler({
                 clientErrors: this.clientErrors,
                 serverErrors: this.serverErrors,
+                log: this.log,
             })
         )
 

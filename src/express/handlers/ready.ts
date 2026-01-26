@@ -2,6 +2,16 @@ type ReadyHandlerArgs = {
     clientErrors: any
 }
 
+/**
+ * Crea handler para verificación de disponibilidad (Readiness Probe).
+ *
+ * Verifica conectividad con BD y estado de inicialización de seguridad.
+ * Retorna 200 OK si el servicio está listo para aceptar tráfico.
+ *
+ * @function createReadyHandler
+ * @param args - Configuración ({ clientErrors })
+ * @returns {Function} Express RequestHandler
+ */
 export function createReadyHandler({ clientErrors }: ReadyHandlerArgs) {
     return async function ready(req: AppRequest, res: AppResponse) {
         // Readiness: Security loaded + DB reachable.

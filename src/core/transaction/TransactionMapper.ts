@@ -1,21 +1,49 @@
 import { IDatabase, ILogger } from '../../types/core.js'
 
+/**
+ * Define la ruta de ejecución para una transacción.
+ */
 export type TransactionRoute = {
+    /** Nombre del Business Object */
     object_na: string
+    /** Nombre del método a ejecutar */
     method_na: string
 }
 
+/**
+ * Mapeador de transacciones que resuelve códigos TX a rutas de ejecución (BO/Método).
+ *
+ * Mantiene un caché en memoria de la tabla `security.methods` para resolución rápida.
+ * Se encarga de cargar y mantener la relación entre `tx_nu` (código de transacción)
+ * y el par `{ object_na, method_na }` que lo maneja.
+ *
+ * @example
+ * ```typescript
+ * const mapper = new TransactionMapper(db, log)
+ * await mapper.load()
+ * const route = mapper.resolve(100) // { object_na: 'Auth', method_na: 'login' }
+ * ```
+ */
 export class TransactionMapper {
     private txMap: Map<number, TransactionRoute> = new Map()
 
+    /**
+     * Crea una instancia de TransactionMapper.
+     *
+     * @param db - Acceso a base de datos para cargar mapeos
+     * @param log - Logger para diagnósticos
+     */
     constructor(
         private db: IDatabase,
         private log: ILogger
     ) {}
 
     /**
-     * Loads transaction mappings from the database.
-     * Corresponds to legacy SecurityService.loadDataTx
+     * Carga el mapa de transacciones desde la base de datos.
+     * Ejecuta `security.loadDataTx` y puebla el caché en memoria.
+     *
+     * @returns {Promise<void>}
+     * @throws {Error} Si hay un error de conexión o base de datos
      */
     async load(): Promise<void> {
         try {
@@ -46,7 +74,7 @@ export class TransactionMapper {
 
             this.log.show({
                 type: this.log.TYPE_INFO,
-                msg: `TransactionMapper: Loaded ${this.txMap.size} transactions`,
+                msg: `TransactionMapper: Carga exitosa de ${this.txMap.size} transacciones`,
             })
         } catch (err: any) {
             this.log.show({
@@ -58,7 +86,10 @@ export class TransactionMapper {
     }
 
     /**
-     * Resolves a transaction number to an object and method name.
+     * Resuelve un número de transacción a su ruta de ejecución.
+     *
+     * @param tx - Código de transacción (número o string numérico)
+     * @returns {TransactionRoute | null} La ruta { object_na, method_na } o null si no existe
      */
     resolve(tx: unknown): TransactionRoute | null {
         const key = typeof tx === 'number' ? tx : Number(tx)
@@ -68,7 +99,10 @@ export class TransactionMapper {
     }
 
     /**
-     * Manually add a route (useful for testing or dynamic plugin loading)
+     * Agrega manualmente una ruta al mapa (útil para testing o plugins).
+     *
+     * @param tx - Código de transacción
+     * @param route - Ruta de ejecución
      */
     addRoute(tx: number, route: TransactionRoute) {
         this.txMap.set(tx, route)

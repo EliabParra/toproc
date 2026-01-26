@@ -19,7 +19,8 @@
         "db:init": "node --import tsx scripts/db-init/index.ts",
         "hashpw": "tsx scripts/hash-password.ts",
         "bo": "node --import tsx scripts/bo/index.ts",
-        "export:starter": "tsx scripts/export-starter.ts"
+        "export:starter": "tsx scripts/export-starter.ts",
+        "docs:gen": "typedoc --out docs/api src BO --entryPointStrategy expand"
     },
     "type": "module",
     "dependencies": {
@@ -47,6 +48,7 @@
         "prettier": "^3.6.2",
         "supertest": "^7.1.4",
         "tsx": "^4.21.0",
+        "typedoc": "^0.28.16",
         "typescript": "^5.9.3"
     },
     "c8": {

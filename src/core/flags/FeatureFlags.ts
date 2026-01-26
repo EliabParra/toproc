@@ -7,6 +7,12 @@ export enum Feature {
     USE_I18N_V2 = 'USE_I18N_V2',
 }
 
+/**
+ * Gestor de banderas de características (Feature Flags).
+ *
+ * Controla la activación de funcionalidades mediante configuración o variables de entorno.
+ * Prioriza variables de entorno sobre configuración por defecto.
+ */
 export class FeatureFlags {
     private flags: Map<string, boolean> = new Map()
 

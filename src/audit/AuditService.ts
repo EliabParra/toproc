@@ -1,7 +1,7 @@
 import { IAuditService, IDatabase } from '../types/core.js'
 import { redactSecrets } from '../helpers/sanitize.js'
 
-type AuditArgs = {
+export type AuditArgs = {
     action: string
     object_na?: string | null
     method_na?: string | null
@@ -11,6 +11,12 @@ type AuditArgs = {
     details?: Record<string, unknown>
 }
 
+/**
+ * Servicio de Auditoría.
+ *
+ * Registra eventos de seguridad y negocio de manera asíncrona (Best Effort).
+ * Sanitiza automáticamente los datos para no registrar secretos/PII.
+ */
 export class AuditService implements IAuditService {
     private db: IDatabase
 

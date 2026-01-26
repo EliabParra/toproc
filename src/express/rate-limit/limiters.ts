@@ -29,6 +29,15 @@ function getTxDataFromReq(req: any) {
     }
 }
 
+/**
+ * Crea limitador para intentos de inicio de sesión.
+ *
+ * Protege endpoint de login contra fuerza bruta.
+ *
+ * @function createLoginRateLimiter
+ * @param clientErrors - Diccionario de errores
+ * @returns {Function} Middleware rateLimit
+ */
 export function createLoginRateLimiter(clientErrors: any) {
     return rateLimit({
         windowMs: 60 * 1000,
@@ -40,8 +49,16 @@ export function createLoginRateLimiter(clientErrors: any) {
     })
 }
 
-// Additional protection for public Auth flows routed via /toProccess.
-// Only applies when tx maps to Auth.{register,requestEmailVerification,verifyEmail,requestPasswordReset,verifyPasswordReset,resetPassword}.
+/**
+ * Limitador especializado para flujos críticos de Auth (Reset Password, Verificación).
+ *
+ * Aplica límites estrictos por IP y/u objetivo (email/token) para prevenir enumeración y brute-force.
+ * Genera claves únicas basándose en payload del body (email, username, token).
+ *
+ * @function createAuthPasswordResetRateLimiter
+ * @param clientErrors - Diccionario de errores
+ * @returns {Function} Middleware rateLimit
+ */
 export function createAuthPasswordResetRateLimiter(clientErrors: any) {
     return rateLimit({
         windowMs: 60 * 1000,
@@ -114,6 +131,16 @@ export function createAuthPasswordResetRateLimiter(clientErrors: any) {
     })
 }
 
+/**
+ * Limitador general para API logueada.
+ *
+ * Limita peticiones por usuario (si hay sesión) o por IP.
+ * Previene abuso general del sistema.
+ *
+ * @function createToProccessRateLimiter
+ * @param clientErrors - Diccionario de errores
+ * @returns {Function} Middleware rateLimit
+ */
 export function createToProccessRateLimiter(clientErrors: any) {
     return rateLimit({
         windowMs: 60 * 1000,

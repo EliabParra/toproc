@@ -17,6 +17,9 @@ const errorMsgs = require('./messages/authErrorMsgs.json')[config.app.lang] as R
     ApiError
 >
 
+/**
+ * Manejador de errores de autenticación.
+ */
 export class AuthErrorHandler {
     static invalidParameters(alerts?: string[]): ApiError {
         const { code, msg } = errorMsgs.invalidParameters

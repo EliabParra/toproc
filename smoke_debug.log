@@ -1,9 +1,0 @@
-[Globals] Resolving locales from: C:\Users\Eliab Parra\Dev\nodejs-backend-architecture\dist\src\locales
-[I18n] Checking locale dir: C:\Users\Eliab Parra\Dev\nodejs-backend-architecture\dist\src\locales\es
-[I18n] Loading 4 files from C:\Users\Eliab Parra\Dev\nodejs-backend-architecture\dist\src\locales\es
-[I18n] Checking locale dir: C:\Users\Eliab Parra\Dev\nodejs-backend-architecture\dist\src\locales\en
-[I18n] Loading 4 files from C:\Users\Eliab Parra\Dev\nodejs-backend-architecture\dist\src\locales\en
-dist smoke: failed
-TypeError: Cannot read properties of undefined (reading 'errors')
-    at new DBComponent (file:///C:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/dist/src/db/DBComponent.js:72:51)
-    at <anonymous> (C:\Users\Eliab Parra\Dev\nodejs-backend-architecture\dist\src\globals.js:56:8)

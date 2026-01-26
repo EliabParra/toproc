@@ -3,6 +3,27 @@ import { TransactionMapper } from '../transaction/TransactionMapper.js'
 import { PermissionGuard } from './PermissionGuard.js'
 import { TransactionExecutor } from '../transaction/TransactionExecutor.js'
 
+/**
+ * Servicio de seguridad y orquestador principal del framework.
+ *
+ * Responsable de coordinar el flujo de transacción:
+ * 1. Inicializa componentes (Mapper, Guard, Executor)
+ * 2. Mapea códigos de transacción (tx) a métodos (TransactionMapper)
+ * 3. Verifica permisos de acceso (PermissionGuard)
+ * 4. Ejecuta la lógica de negocio (TransactionExecutor)
+ *
+ * @example
+ * ```typescript
+ * const security = new SecurityService({ db, log, config, msgs })
+ * await security.init() // Carga permisos y mapeos
+ *
+ * // Uso típico en Dispatcher:
+ * const route = security.getDataTx('TX_CODE')
+ * if (security.getPermissions({ profile_id: 1, ...route })) {
+ *   const result = await security.executeMethod({ ...route, params })
+ * }
+ * ```
+ */
 export class SecurityService implements ISecurityService {
     private mapper: TransactionMapper
     private guard: PermissionGuard
@@ -13,9 +34,16 @@ export class SecurityService implements ISecurityService {
     private msgs: any
     private log: ILogger
 
+    /** Indica si el sistema de seguridad ha cargado correctamente */
     public isReady: boolean = false
+    /** Promesa que resuelve cuando la inicialización completa */
     public ready: Promise<boolean>
 
+    /**
+     * Crea una instancia de SecurityService.
+     *
+     * @param deps - Dependencias de infraestructura
+     */
     constructor(deps: { db: IDatabase; log: ILogger; config: any; msgs: any }) {
         this.log = deps.log
         this.config = deps.config
@@ -34,6 +62,13 @@ export class SecurityService implements ISecurityService {
         return this.msgs[this.config.app.lang].errors.server
     }
 
+    /**
+     * Inicializa los subsistemas de seguridad (Mapper y Guard).
+     * Carga permisos y mapeos desde la base de datos.
+     *
+     * @returns {Promise<boolean>} True si la inicialización fue exitosa
+     * @throws {Error} Si falla la carga de datos iniciales
+     */
     async init(): Promise<boolean> {
         try {
             await Promise.all([this.guard.load(), this.mapper.load()])
@@ -48,11 +83,26 @@ export class SecurityService implements ISecurityService {
         }
     }
 
+    /**
+     * Resuelve un código de transacción a su ruta de ejecución (BO y método).
+     *
+     * @param tx - Código de transacción (e.g., "AUTH_LOGIN")
+     * @returns {{ object_na: string; method_na: string } | false} Objeto con ruta o false si no existe
+     */
     getDataTx(tx: unknown): { object_na: string; method_na: string } | false {
         const route = this.mapper.resolve(tx)
         return route || false
     }
 
+    /**
+     * Verifica si un perfil tiene permisos para ejecutar un método.
+     *
+     * @param jsonData - Datos para verificación
+     * @param jsonData.profile_id - ID del perfil del usuario
+     * @param jsonData.method_na - Nombre del método
+     * @param jsonData.object_na - Nombre del Business Object
+     * @returns {boolean} True si tiene permiso, False en caso contrario
+     */
     getPermissions(jsonData: {
         profile_id: number
         method_na: string
@@ -61,6 +111,15 @@ export class SecurityService implements ISecurityService {
         return this.guard.check(jsonData.profile_id, jsonData.object_na, jsonData.method_na)
     }
 
+    /**
+     * Ejecuta un método de negocio a través del Executor.
+     *
+     * @param jsonData - Datos de ejecución
+     * @param jsonData.object_na - Nombre del Business Object
+     * @param jsonData.method_na - Nombre del método
+     * @param jsonData.params - Parámetros para la función
+     * @returns {Promise<{ code: number; msg: string; [key: string]: any }>} Resultado de la ejecución
+     */
     async executeMethod(jsonData: {
         object_na: string
         method_na: string

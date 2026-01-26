@@ -1,3 +1,9 @@
+/**
+ * Validadores HTTP manuales (Legacy).
+ * Usado para validación de entrada en endpoints antiguos o helpers de sesión.
+ *
+ * @module HttpValidators
+ */
 export function isPlainObject(val: unknown): val is Record<string, any> {
     return val !== null && typeof val === 'object' && !Array.isArray(val)
 }

@@ -47,6 +47,14 @@ function resolveSpaDistPath() {
     return null
 }
 
+/**
+ * Configura el hosting de Single Page Application (SPA).
+ *
+ * Sirve archivos estáticos y configura fallback a `index.html` para rutas no encontradas (Client-side routing).
+ * Requiere configuración de `SPA_DIST_PATH`.
+ *
+ * @param app - Instancia de Express
+ */
 export async function registerSpaHosting(app: any) {
     await ensureSpaDistPathIfNeeded()
 

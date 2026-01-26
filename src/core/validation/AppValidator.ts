@@ -7,7 +7,6 @@ import { I18nService } from '../i18n/I18nService.js'
  *
  * AppValidator proporciona validación type-safe con mensajes de error localizados.
  * Se integra con el mapa de errores de Zod para producir alertas amigables
- * basadas en la configuración i18n de la aplicación.
  *
  * @example
  * ```typescript

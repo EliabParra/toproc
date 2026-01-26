@@ -1,5 +1,12 @@
 import { z } from 'zod'
 
+/**
+ * Esquemas de validación para autenticación.
+ *
+ * @since 1.0.0
+ * @author Team ToProccess
+ * @license MIT
+ */
 export const AuthSchemas = {
     identifier: z.string().trim().min(3).max(320),
     email: z.string().trim().email(),

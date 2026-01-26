@@ -1,0 +1,31 @@
+{
+    "$schema": "https://typedoc.org/schema.json",
+    "entryPoints": ["src", "BO"],
+    "entryPointStrategy": "expand",
+    "out": "docs/api",
+    "blockTags": [
+        "@version",
+        "@implements",
+        "@transaction",
+        "@since",
+        "@author",
+        "@returns",
+        "@param",
+        "@example",
+        "@license",
+        "@template",
+        "@deprecated",
+        "@throws",
+        "@module",
+        "@extends"
+    ],
+    "exclude": ["**/*.test.ts", "**/*.spec.ts", "**/dist/**", "**/test/**"],
+    "validation": {
+        "notExported": false,
+        "invalidLink": true,
+        "notDocumented": false
+    },
+    "name": "ToProccess API",
+    "includeVersion": true,
+    "readme": "README.md"
+}

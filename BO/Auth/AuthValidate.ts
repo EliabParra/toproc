@@ -1,5 +1,9 @@
 import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
+
+const config = (globalThis as any).config
+const v = (globalThis as any).v
+
 type AuthLabels = {
     identifier: string
     email: string
@@ -10,8 +14,12 @@ type AuthLabels = {
     newPassword: string
 }
 
-const labels = require('./messages/authAlerts.json')[config.app.lang].labels as AuthLabels
+const labels = require('./messages/authAlerts.json')[config?.app?.lang ?? 'en'].labels as AuthLabels
 
+/**
+ * Validador legacy para Auth.
+ * @deprecated Recomendado usar esquemas Zod (AuthSchemas).
+ */
 export class AuthValidate {
     static normalizeText(value: string | null | undefined): string | undefined {
         if (typeof value !== 'string') return undefined

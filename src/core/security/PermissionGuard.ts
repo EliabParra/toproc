@@ -1,8 +1,29 @@
 import { IDatabase, ILogger } from '../../types/core.js'
 
+/**
+ * Guardián de permisos que verifica autorización de acceso.
+ *
+ * Mantiene un caché en memoria de la tabla `security.permission_methods`.
+ * Verifica si un `profile_id` tiene acceso a un par `(object_na, method_na)`.
+ *
+ *
+ * @example
+ * ```typescript
+ * const guard = new PermissionGuard(db, log)
+ * await guard.load()
+ *
+ * const canAccess = guard.check(1, 'User', 'create') // true/false
+ * ```
+ */
 export class PermissionGuard {
     private permissionCache: Map<string, boolean> = new Map()
 
+    /**
+     * Crea una instancia de PermissionGuard.
+     *
+     * @param db - Acceso a base de datos para cargar permisos
+     * @param log - Logger para diagnósticos
+     */
     constructor(
         private db: IDatabase,
         private log: ILogger
@@ -13,8 +34,11 @@ export class PermissionGuard {
     }
 
     /**
-     * Loads permissions from the database.
-     * Corresponds to legacy SecurityService.loadPermissions
+     * Carga la tabla de permisos desde la base de datos.
+     * Ejecuta `security.loadPermissions` y puebla el caché en memoria.
+     *
+     * @returns {Promise<void>}
+     * @throws {Error} Si hay un error de conexión o consulta
      */
     async load(): Promise<void> {
         try {
@@ -38,7 +62,7 @@ export class PermissionGuard {
 
             this.log.show({
                 type: this.log.TYPE_INFO,
-                msg: `PermissionGuard: Loaded ${this.permissionCache.size} permissions`,
+                msg: `PermissionGuard: Carga exitosa de ${this.permissionCache.size} permisos`,
             })
         } catch (err: any) {
             this.log.show({
@@ -50,7 +74,12 @@ export class PermissionGuard {
     }
 
     /**
-     * Checks if a profile has permission to execute a method on an object.
+     * Verifica si un perfil tiene permiso para ejecutar un método en un objeto.
+     *
+     * @param profileId - ID del perfil del usuario
+     * @param object - Nombre del Business Object
+     * @param method - Nombre del método
+     * @returns {boolean} True si tiene permiso explícito, False en caso contrario
      */
     check(profileId: number, object: string, method: string): boolean {
         const key = this.generateKey(profileId, method, object)
@@ -58,7 +87,11 @@ export class PermissionGuard {
     }
 
     /**
-     * Manually add a permission (useful for testing or super-admin overrides)
+     * Agrega manualmente un permiso al caché (útil para testing o overrides).
+     *
+     * @param profileId - ID del perfil
+     * @param object - Nombre del Business Object
+     * @param method - Nombre del método
      */
     addPermission(profileId: number, object: string, method: string) {
         const key = this.generateKey(profileId, method, object)

@@ -1,53 +1,26 @@
-export interface IDatabaseService {
-    exe(schema: string, query: string, params?: unknown): Promise<{ rows: any[]; rowCount: number }>
-    exeRaw(sql: string, params?: unknown): Promise<{ rows: any[]; rowCount: number }>
-    exeNamed(
-        schema: string,
-        query: string,
-        paramsObj: unknown,
-        orderKeys: unknown[],
-        opts?: { strict?: boolean; enforceSqlArity?: boolean }
-    ): Promise<{ rows: any[]; rowCount: number }>
-}
+import {
+    IDatabase as CoreDatabase,
+    ILogger as CoreLogger,
+    IEmailService as CoreEmail,
+    IValidator as CoreValidator,
+} from '../../types/core.js'
 
-export interface IEmailService {
-    sendLoginChallenge(params: {
-        to: string
-        token: string
-        code: string
-        appName?: unknown
-    }): Promise<{ ok: boolean; mode: string }>
+/**
+ * Re-exportación de interfaces Core para compatibilidad y unificación.
+ * Evita la duplicidad de tipos entre services.ts y types/core.ts.
+ */
 
-    sendPasswordReset(params: {
-        to: string
-        token: string
-        code: string
-        appName?: unknown
-    }): Promise<{ ok: boolean; mode: string }>
+export type IDatabaseService = CoreDatabase
+export type ILogger = CoreLogger
+export type IEmailService = CoreEmail
 
-    sendEmailVerification(params: {
-        to: string
-        token: string
-        code: string
-        appName?: unknown
-    }): Promise<{ ok: boolean; mode: string }>
-
-    maskEmail(email: string): string
-}
-
-export interface ILogger {
-    TYPE_ERROR: number
-    TYPE_INFO: number
-    TYPE_DEBUG: number
-    TYPE_WARNING: number
-    show(params: { type: number; msg?: unknown; ctx?: unknown } | string): void
-}
-
-export interface IValidator {
-    validateString(param: any): boolean
-    validateInt(param: any): boolean
-    validateEmail(param: any): boolean
-    getAlerts(): string[]
-    // Add other methods as needed from Validator.ts
-    validate(value: any, type: string): boolean
+// IValidator en services.ts tenía métodos legacy específicos.
+// Extendemos la interfaz CoreValidator para mantener compatibilidad si es necesario,
+// pero idealmente deberíamos migrar a la interfaz unificada.
+export interface IValidator extends CoreValidator {
+    validateString?(param: any): boolean
+    validateInt?(param: any): boolean
+    validateEmail?(param: any): boolean
+    // getAlerts ya está en CoreValidator como opcional
+    validate(value: any, type: string): any // Overload conflict potential, making flexible
 }

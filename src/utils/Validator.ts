@@ -10,7 +10,7 @@ export type ParamObject = {
     [k: string]: unknown
 }
 
-type ValidatorMessages = Record<string, string>
+export type ValidatorMessages = Record<string, string>
 export type ValidationParam = unknown | ParamObject
 
 function isParamObject(value: unknown): value is ParamObject {
@@ -20,6 +20,12 @@ function isParamObject(value: unknown): value is ParamObject {
 /**
  * Validator utility for validating request parameters and inputs.
  * Supports various types (int, string, email, etc.) and generates localized alerts/messages.
+ */
+/**
+ * Utilidad de validación heredada (Legacy).
+ * Usada antes de la migración a Zod/AppValidator.
+ *
+ * @deprecated Transicionando a `AppValidator` y esquemas Zod.
  */
 export default class Validator {
     public status: ValidatorStatus = {}
@@ -31,7 +37,7 @@ export default class Validator {
      */
     public msgs: ValidatorMessages
 
-    constructor(config: IConfig, msgs: Record<string, any>) {
+    constructor(config: IConfig, msgs: ValidatorMessages) {
         this.status = {}
         this.alerts = []
 

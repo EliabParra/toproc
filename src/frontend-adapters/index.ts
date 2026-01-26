@@ -12,11 +12,11 @@ type RegisterFrontendHostingArgs = {
 }
 
 /**
- * Registers optional frontend hosting adapters.
+ * Registra adaptadores de frontend opcionales.
  *
- * IMPORTANT: ordering matters.
- * - pages mode should be registered in the "preApi" stage (so it can own / routes)
- * - spa mode should be registered in the "postApi" stage (so API routes are not shadowed by SPA fallback)
+ * IMPORTANTE: el orden importa.
+ * - pages mode debe ser registrado en el "preApi" stage (para que pueda tener sus propias rutas)
+ * - spa mode debe ser registrado en el "postApi" stage (para que las rutas de API no sean sombreadas por el fallback SPA)
  */
 export async function registerFrontendHosting(
     app: any,

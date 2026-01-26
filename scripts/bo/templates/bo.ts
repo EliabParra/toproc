@@ -30,7 +30,15 @@ ${methodSchemas}
 export function templateRepository(objectName: string) {
     return `import { IDatabase } from '../../src/types/core.js'
 
+/**
+ * Repositorio de acceso a datos para ${objectName}BO.
+ *
+ * Encapsula la lógica de consultas a base de datos.
+ */
 export class ${objectName}Repository {
+    /**
+     * @param db - Instancia de base de datos
+     */
     constructor(private readonly db: IDatabase) {}
 
     // Example
@@ -45,6 +53,11 @@ export function templateService(objectName: string) {
     return `import { ILogger, IConfig } from '../../src/types/core.js'
 import { ${objectName}Repository } from './${objectName}Repository.js'
 
+/**
+ * Servicio de Negocio para ${objectName}.
+ *
+ * Contiene la lógica pura de negocio, libre de dependencias HTTP.
+ */
 export class ${objectName}Service {
     constructor(
         private readonly repo: ${objectName}Repository,
@@ -76,7 +89,13 @@ export function templateBO(className: string, methods: string[]) {
         .map((m) => {
             const isCreate =
                 m.toLowerCase().includes('create') || m.toLowerCase().includes('register')
-            return `    async ${m}(params: unknown): Promise<ApiResponse> {
+            return `    /**
+     * Método ${m}
+     *
+     * @param params - Parámetros de la transacción
+     * @returns ApiResponse estandarizada
+     */
+    async ${m}(params: unknown): Promise<ApiResponse> {
         try {
             const vRes = this.validate<z.infer<typeof ${cleanName}Schemas.${m}>>(
                 params,
@@ -103,6 +122,11 @@ import { ${cleanName}Service } from './${cleanName}Service.js'
 import { ${cleanName}Schemas } from './schemas.js'
 import { z } from 'zod'
 
+/**
+ * Business Object para ${cleanName}.
+ *
+ * Orquesta transacciones del dominio ${cleanName}.
+ */
 export class ${boClassName} extends BaseBO {
     private service: ${cleanName}Service
 

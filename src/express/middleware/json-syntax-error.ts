@@ -1,20 +1,33 @@
-export function jsonBodySyntaxErrorHandler(err: any, req: AppRequest, res: AppResponse, next: any) {
-    const status = err?.status ?? err?.statusCode
-    const isEntityParseFailed = err?.type === 'entity.parse.failed'
-    const isSyntaxError = err instanceof SyntaxError
-    const looksLikeJsonParseError = status === 400 && (isEntityParseFailed || isSyntaxError)
+import { IConfig } from '../../types/core.js'
 
-    if (!looksLikeJsonParseError) return next(err)
+/**
+ * Crea un middleware para capturar errores de sintaxis JSON en el body.
+ *
+ * Express/BodyParser lanza un error 400 si el JSON está mal formado (SyntaxError).
+ * Este middleware intercepta ese error específico y devuelve nuestra respuesta estándar de "Parámetros inválidos".
+ *
+ * @function createJsonSyntaxErrorHandler
+ * @param deps - Dependencias (config, msgs)
+ * @returns {Function} Middleware de manejo de errores Express
+ */
+export function createJsonSyntaxErrorHandler(deps: { config: IConfig; msgs: any }) {
+    const { config, msgs } = deps
+    return function jsonBodySyntaxErrorHandler(err: any, req: any, res: any, next: any) {
+        const status = err?.status ?? err?.statusCode
+        const isEntityParseFailed = err?.type === 'entity.parse.failed'
+        const isSyntaxError = err instanceof SyntaxError
+        const looksLikeJsonParseError = status === 400 && (isEntityParseFailed || isSyntaxError)
 
-    const alert = (msgs as any)[(config as any).app.lang].alerts.invalidJson.replace(
-        '{value}',
-        'body'
-    )
-    return res
-        .status((msgs as any)[(config as any).app.lang].errors.client.invalidParameters.code)
-        .send({
-            msg: (msgs as any)[(config as any).app.lang].errors.client.invalidParameters.msg,
-            code: (msgs as any)[(config as any).app.lang].errors.client.invalidParameters.code,
+        if (!looksLikeJsonParseError) return next(err)
+
+        const lang = config.app.lang || 'es'
+        const alert = msgs[lang].alerts.invalidJson.replace('{value}', 'body')
+        const errorDef = msgs[lang].errors.client.invalidParameters
+
+        return res.status(errorDef.code).send({
+            msg: errorDef.msg,
+            code: errorDef.code,
             alerts: [alert],
         })
+    }
 }

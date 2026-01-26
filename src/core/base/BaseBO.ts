@@ -37,7 +37,11 @@ export type BODependencies = {
  * Los Business Objects encapsulan lógica de dominio y manejan solicitudes de transacciones.
  * Cada método de un BO típicamente corresponde a una transacción definida en el transactionMap.
  *
+ * Provee métodos helpers para estandarizar respuestas (`success`, `error`, `created`)
+ * y facilitar la validación de datos (`validate`).
+ *
  * @abstract
+ *
  * @example
  * ```typescript
  * import { BaseBO, BODependencies, ApiResponse } from '../core/base/BaseBO.js'

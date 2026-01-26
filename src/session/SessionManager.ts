@@ -39,6 +39,16 @@ function redactSecretsInString(s: string): string {
 // Ideally we should move these helpers to src/utils or src/helpers in clean architecture
 import { parseLoginBody, parseLoginVerifyBody } from '../helpers/http-validators.js'
 
+/**
+ * Gestor de sesiones de usuario.
+ *
+ * Responsable de:
+ * 1. Autenticación de usuarios (login)
+ * 2. Validación de credenciales (bcrypt)
+ * 3. Gestión del estado de sesión (cookie/store)
+ * 4. Auditoría de accesos
+ *
+ */
 export class SessionManager implements ISessionService {
     private db: IDatabase
     private log: ILogger
@@ -56,6 +66,11 @@ export class SessionManager implements ISessionService {
     private loginId: string
     private requireEmailVerification: boolean
 
+    /**
+     * Crea una instancia de SessionManager.
+     *
+     * @param deps - Dependencias requeridas
+     */
     constructor(deps: {
         db: IDatabase
         log: ILogger
@@ -85,11 +100,25 @@ export class SessionManager implements ISessionService {
         this.requireEmailVerification = Boolean(this.authCfg.requireEmailVerification)
     }
 
+    /**
+     * Verifica si existe una sesión activa en el request.
+     *
+     * @param req - Request Express
+     * @returns {boolean} True si hay sesión con user_id
+     */
     sessionExists(req: any) {
         if (req.session && req.session.user_id) return true
         return false
     }
 
+    /**
+     * Crea una nueva sesión (Login).
+     * Valida credenciales, crea la sesión y retorna respuesta HTTP.
+     *
+     * @param req - Request Express
+     * @param res - Response Express
+     * @returns {Promise<any>} Respuesta HTTP
+     */
     async createSession(req: any, res: any) {
         try {
             // Context Mock for helpers that need it
@@ -190,6 +219,11 @@ export class SessionManager implements ISessionService {
         }
     }
 
+    /**
+     * Destruye la sesión actual (Logout).
+     *
+     * @param req - Request Express
+     */
     destroySession(req: any) {
         try {
             req.session?.destroy?.()

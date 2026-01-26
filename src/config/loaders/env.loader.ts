@@ -1,6 +1,12 @@
 import { Config } from '../schemas/index.js'
 import { PartialDeep, envBool, envInt, envList } from '../utils/env.utils.js'
 
+/**
+ * Cargador de configuración desde variables de entorno.
+ *
+ * Mapea `process.env` a la estructura de configuración `Config`.
+ * Realiza conversiones de tipos básicas (int, bool, list) usando utilidades.
+ */
 export class EnvLoader {
     static load(): PartialDeep<Config> {
         const env = process.env
