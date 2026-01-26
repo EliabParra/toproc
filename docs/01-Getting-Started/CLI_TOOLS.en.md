@@ -32,12 +32,49 @@ The quality guardian. Run it before every commit.
 npm run verify
 ```
 
-### Technical Documentation Generator (`npm run docs:gen`)
+### Business Documentation Generator (`npm run docs:bo`)
 
-If you write JSDoc comments in your code, this tool generates a navigable website.
+Automatically generates an index of all **Business Objects** and transactions available in your system.
 
 ```bash
-npm run docs:gen
+npm run docs:bo
 ```
 
-The result is saved in `docs/api/`. Useful for viewing class diagrams and method references for the entire framework.
+- **Output**: `docs/05-Guides/BO_INDEX.md`
+- **Usage**: Run after creating new BOs to keep documentation up to date.
+
+### Interactive Playground (`npm run playground`)
+
+Test your validation rules (Zod) interactively without Postman or starting the server.
+
+```bash
+npm run playground
+```
+
+- **Commands**: `auth.login {"email":"x", "password":"123"}`
+- **Benefit**: Immediate feedback on whether your schemas are correct.
+
+### Code Audit (`npm run audit`)
+
+Scans your source code for architectural anti-patterns.
+
+```bash
+npm run audit
+```
+
+- **Rules**: Forbids `console.log` (use `this.log`), direct `req.body` access, deep imports, etc.
+- **CI/CD**: If errors are found, the build fails.
+
+### VSCode Snippets
+
+The project includes configuration for **Smart Autocomplete**.
+
+In any `.ts` file, type:
+
+- `tp-bo`: Creates the base structure of a Business Object class.
+- `tp-bo-method`: Adds a transactional method to an existing BO.
+- `tp-schema`: Creates a standard Zod schema.
+- `tp-service`: Creates a service with injected dependencies.
+- `tp-repo-method`: Creates a DB access method.
+- `tp-test`: Creates a test suite (Node Test Runner).
+- `tp-log`: Inserts a standard log line.

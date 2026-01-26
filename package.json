@@ -20,7 +20,10 @@
         "hashpw": "tsx scripts/hash-password.ts",
         "bo": "node --import tsx scripts/bo/index.ts",
         "export:starter": "tsx scripts/export-starter.ts",
-        "docs:gen": "typedoc --out docs/api src BO --entryPointStrategy expand"
+        "docs:gen": "typedoc --out docs/api src BO --entryPointStrategy expand",
+        "docs:bo": "node --import tsx scripts/docs/gen-bo-index.ts",
+        "playground": "node --import tsx scripts/playground.ts",
+        "audit": "node --import tsx scripts/audit.ts"
     },
     "type": "module",
     "dependencies": {
