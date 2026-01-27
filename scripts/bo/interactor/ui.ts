@@ -1,6 +1,10 @@
 import readline from 'node:readline/promises'
 import 'colors'
 
+/**
+ * Interactive UI for BO CLI
+ * Provides beautiful console output and user prompts
+ */
 export class Interactor {
     private rl: readline.Interface
 
@@ -15,13 +19,25 @@ export class Interactor {
         this.rl.close()
     }
 
+    // ============================================================
+    // Headers & Dividers
+    // ============================================================
+
     header() {
         console.log('')
-        console.log('📦 ToProccess Business Object CLI'.cyan.bold)
-        console.log('================================================'.gray)
-        console.log('Manage your Business Objects, Permissions, and DB Sync'.gray)
+        console.log('📦 ToProccess BO CLI'.cyan.bold)
+        console.log('══════════════════════════════════════════════════'.gray)
+        console.log('Manage Business Objects, Permissions, and DB Sync'.gray)
         console.log('')
     }
+
+    divider() {
+        console.log('──────────────────────────────────────────────────'.gray)
+    }
+
+    // ============================================================
+    // Input Methods
+    // ============================================================
 
     async ask(question: string, defaultValue?: string): Promise<string> {
         const def = defaultValue ? ` (${defaultValue.dim})` : ''
@@ -39,7 +55,8 @@ export class Interactor {
     async select(question: string, options: string[], defaultOption?: string): Promise<string> {
         console.log(`${'➜'.green} ${question.bold}:`)
         options.forEach((opt, i) => {
-            console.log(`  ${i + 1}. ${opt}`)
+            const marker = defaultOption === opt ? '❯'.cyan : ' '
+            console.log(`  ${marker} ${String(i + 1).gray}. ${opt}`)
         })
 
         while (true) {
@@ -53,5 +70,127 @@ export class Interactor {
             }
             console.log(`${'⚠'.yellow} Invalid selection`)
         }
+    }
+
+    async multiSelect(
+        question: string,
+        options: string[],
+        defaults: string[] = []
+    ): Promise<string[]> {
+        const selected = new Set<string>(defaults)
+
+        console.log(`${'➜'.green} ${question.bold}:`)
+        console.log('   Use numbers to toggle, Enter when done'.gray)
+
+        const printOptions = () => {
+            options.forEach((opt, i) => {
+                const checked = selected.has(opt) ? '◉'.green : '◯'.gray
+                console.log(`  ${checked} ${String(i + 1).gray}. ${opt}`)
+            })
+        }
+
+        printOptions()
+
+        while (true) {
+            const ans = await this.ask('Toggle or Enter to confirm', '')
+
+            if (ans === '') {
+                return Array.from(selected)
+            }
+
+            const idx = parseInt(ans) - 1
+            if (idx >= 0 && idx < options.length) {
+                const opt = options[idx]
+                if (selected.has(opt)) {
+                    selected.delete(opt)
+                } else {
+                    selected.add(opt)
+                }
+                // Reprint
+                console.log('')
+                printOptions()
+            } else {
+                console.log(`${'⚠'.yellow} Invalid selection`)
+            }
+        }
+    }
+
+    // ============================================================
+    // Output Methods
+    // ============================================================
+
+    success(message: string) {
+        console.log(`${'✅'.green} ${message.green}`)
+    }
+
+    error(message: string) {
+        console.log(`${'❌'.red} ${message.red}`)
+    }
+
+    warn(message: string) {
+        console.log(`${'⚠️'.yellow} ${message.yellow}`)
+    }
+
+    info(message: string) {
+        console.log(`${'ℹ'.blue} ${message}`)
+    }
+
+    step(message: string, status: 'pending' | 'done' | 'error' = 'pending') {
+        const icon = status === 'done' ? '✅'.green : status === 'error' ? '❌'.red : '⏳'.yellow
+        console.log(`   ├── ${icon} ${message}`)
+    }
+
+    // ============================================================
+    // Tables
+    // ============================================================
+
+    table(headers: string[], rows: string[][]) {
+        // Calculate column widths
+        const widths = headers.map((h, i) => {
+            return Math.max(h.length, ...rows.map((r) => (r[i] || '').length))
+        })
+
+        // Print header
+        const headerLine = headers.map((h, i) => h.padEnd(widths[i])).join(' │ ')
+        const dividerLine = widths.map((w) => '─'.repeat(w)).join('─┼─')
+
+        console.log('┌' + widths.map((w) => '─'.repeat(w + 2)).join('┬') + '┐')
+        console.log('│ ' + headerLine.bold + ' │')
+        console.log('├' + widths.map((w) => '─'.repeat(w + 2)).join('┼') + '┤')
+
+        // Print rows
+        for (const row of rows) {
+            const rowLine = row.map((cell, i) => (cell || '').padEnd(widths[i])).join(' │ ')
+            console.log('│ ' + rowLine + ' │')
+        }
+
+        console.log('└' + widths.map((w) => '─'.repeat(w + 2)).join('┴') + '┘')
+    }
+
+    // ============================================================
+    // Progress
+    // ============================================================
+
+    private spinnerFrames = ['⣾', '⣽', '⣻', '⢿', '⡿', '⣟', '⣯', '⣷']
+    private spinnerIndex = 0
+    private spinnerInterval: NodeJS.Timeout | null = null
+
+    startSpinner(message: string) {
+        this.spinnerIndex = 0
+        process.stdout.write(`   ${this.spinnerFrames[0].cyan} ${message}`)
+
+        this.spinnerInterval = setInterval(() => {
+            this.spinnerIndex = (this.spinnerIndex + 1) % this.spinnerFrames.length
+            process.stdout.write(`\r   ${this.spinnerFrames[this.spinnerIndex].cyan} ${message}`)
+        }, 80)
+    }
+
+    stopSpinner(success = true) {
+        if (this.spinnerInterval) {
+            clearInterval(this.spinnerInterval)
+            this.spinnerInterval = null
+        }
+        const icon = success ? '✅'.green : '❌'.red
+        process.stdout.write(`\r   ${icon}\n`)
     }
 }

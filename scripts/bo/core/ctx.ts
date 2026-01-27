@@ -7,6 +7,7 @@ export interface BoConfig {
     rootDir: string
     isInteractive: boolean
     isDryRun: boolean
+    all?: boolean
 }
 
 export class Context {

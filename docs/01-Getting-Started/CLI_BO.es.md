@@ -1,72 +1,246 @@
 # CLI Deep Dive: Business Object Generator (`npm run bo`)
 
 El generador de Business Objects es tu mejor amigo para no escribir "boilerplate" (código repetitivo).
-Se encarga de crear la estructura estándar de 4 capas en segundos.
+Se encarga de crear la estructura estándar de **7 archivos** en segundos.
 
 ## Comando Principal
 
 ```bash
-npm run bo new <NombreEntidad> [opciones]
+npm run bo [comando] [opciones]
 ```
 
-### Argumentos
+### Menú Interactivo
 
-| Argumento       | Requerido | Descripción                                                        |
-| :-------------- | :-------- | :----------------------------------------------------------------- |
-| `NombreEntidad` | Sí        | El nombre del módulo (PascalCase). Ej: `Products`, `UserInvoices`. |
+Si ejecutas solo `npm run bo`, verás un menú interactivo:
 
-### Opciones (Flags)
+```
+📦 ToProccess BO CLI
+══════════════════════════════════════════════════
 
-| Flag        | Alias | Default                    | Descripción                                                |
-| :---------- | :---- | :------------------------- | :--------------------------------------------------------- |
-| `--methods` | `-m`  | `get,create,update,delete` | Lista separada por comas de métodos a generar en el BO.    |
-| `--dry-run` | `-d`  | `false`                    | Muestra qué archivos se crearían sin escribirlos en disco. |
+? ¿Qué te gustaría hacer?
+  1. 🆕 Crear nuevo Business Object
+  2. 📋 Listar todos los BOs
+  3. 🔄 Sincronizar métodos a la DB
+  4. 🔐 Gestionar permisos
+  5. 🔑 Generar preset de Auth
+  6. 🔍 Health check de BOs
+  7. 🚀 Wizard de configuración
+  8. ❌ Salir
+```
 
 ---
 
-## Ejemplos de Uso
+## Comandos Disponibles
 
-### 1. El Básico (CRUD Completo)
+| Comando                       | Descripción                                |
+| ----------------------------- | ------------------------------------------ |
+| `npm run bo new <Nombre>`     | Crea un nuevo Business Object (7 archivos) |
+| `npm run bo list`             | Lista todos los BOs registrados            |
+| `npm run bo sync [nombre]`    | Sincroniza métodos con la base de datos    |
+| `npm run bo perms [nombre]`   | Gestiona permisos para un BO               |
+| `npm run bo auth`             | Genera el módulo de autenticación          |
+| `npm run bo analyze [nombre]` | Health check de BOs                        |
+| `npm run bo init`             | Wizard de configuración inicial            |
 
-Crea un módulo con `get`, `create`, `update`, `delete`.
+---
 
-```bash
-npm run bo new Tickets
-```
+## `npm run bo new <Nombre>`
 
-**Resultado en disco (`src/BO/Tickets/`)**:
+Crea un nuevo Business Object con la estructura de 7 archivos.
 
-- `TicketsBO.ts`: Controlador con los 4 métodos.
-- `TicketsService.ts`: Lógica vacía lista para llenar.
-- `TicketsRepository.ts`: Queries SQL placeholder.
-- `schemas.ts`: Schemas Zod básicos para los 4 métodos.
+### Opciones
 
-### 2. Personalizado (Solo Lectura)
+| Flag        | Alias | Default                    | Descripción                         |
+| ----------- | ----- | -------------------------- | ----------------------------------- |
+| `--methods` | `-m`  | `get,create,update,delete` | Métodos a generar                   |
+| `--dry`     | `-d`  | `false`                    | Muestra qué se crearía sin escribir |
+| `--yes`     | `-y`  | `false`                    | Modo no interactivo                 |
 
-Si estás creando un reporte que solo lee datos, no necesitas `create` ni `delete`.
-
-```bash
-npm run bo new DailyReports --methods "search,exportPDF"
-```
-
-**Resultado**:
-El `DailyReportsBO.ts` tendrá solo `search` y `exportPDF`. Esto mantiene el código limpio desde el día 1.
-
-### 3. Prueba Segura (Dry Run)
-
-¿No estás seguro de qué va a pasar? Úsalo antes de ensuciar tu proyecto.
+### Ejemplos
 
 ```bash
-npm run bo new ComplexModule --dry-run
+# CRUD completo
+npm run bo new Products
+
+# Solo lectura
+npm run bo new Reports --methods "list,search,export"
+
+# Verificar antes de crear
+npm run bo new Orders --dry
 ```
 
-**Salida**:
+### Nomenclatura de Archivos
 
-```text
-[DRY] would create /path/to/project/BO/ComplexModule
-[DRY] Would write to .../ComplexModuleBO.ts
-...
+Los archivos siguen la convención `{Nombre}.{Tipo}.ts`:
+
 ```
+BO/Product/
+├── 📦 ProductBO.ts            # Business Object (archivo principal)
+├── 🧠 Product.Service.ts      # Lógica de negocio
+├── 🗄️ Product.Repository.ts   # Acceso a base de datos
+├── ✅ Product.Schemas.ts       # Validaciones Zod
+├── 📘 Product.Types.ts         # Interfaces TypeScript
+├── 💬 Product.Messages.ts      # Strings y mensajes
+└── ❌ Product.Errors.ts        # Clases de error personalizadas
+```
+
+> [!NOTE]
+> Esta nomenclatura facilita la organización y búsqueda de archivos en editores con soporte de fuzzy search.
+
+---
+
+## `npm run bo sync`
+
+Sincroniza los métodos de tus BOs con la tabla `security.methods`.
+
+```bash
+# Sincronizar un BO específico
+npm run bo sync Products
+
+# Sincronizar todos los BOs
+npm run bo sync --all
+
+# Eliminar métodos que ya no existen en el código
+npm run bo sync --all --prune
+```
+
+---
+
+## `npm run bo perms`
+
+Gestiona permisos de forma interactiva.
+
+```bash
+npm run bo perms Products
+```
+
+Muestra una matriz de permisos:
+
+```
+🔐 Gestión de Permisos para ProductsBO
+──────────────────────────────────────────────────
+
+┌──────────────┬──────────┬──────────┬──────────┐
+│ Método       │ Admin    │ Public   │ Session  │
+├──────────────┼──────────┼──────────┼──────────┤
+│ get          │ ✅       │ ✅       │ ✅       │
+│ create       │ ✅       │ ❌       │ ✅       │
+│ update       │ ✅       │ ❌       │ ✅       │
+│ delete       │ ✅       │ ❌       │ ❌       │
+└──────────────┴──────────┴──────────┴──────────┘
+
+💡 Opciones:
+   1. Otorgar permiso
+   2. Revocar permiso
+   3. Aplicar plantilla
+   4. Salir
+```
+
+### Plantillas de Permisos
+
+1. **Lectura Pública, Escritura Privada**: Métodos de lectura públicos, escritura solo admin/session
+2. **Solo Admin**: Todo solo para administradores
+3. **Todo Autenticado**: Todo para perfiles con sesión
+4. **Todo Público**: Sin restricciones
+
+---
+
+## `npm run bo auth`
+
+Genera el módulo de autenticación completo con la estructura de 7 archivos.
+
+```bash
+npm run bo auth
+```
+
+Crea:
+
+```
+BO/Auth/
+├── 📦 AuthBO.ts              # Business Object principal
+├── 🧠 Auth.Service.ts        # Lógica de autenticación
+├── 🗄️ Auth.Repository.ts     # Acceso a DB
+├── ✅ Auth.Schemas.ts         # Validaciones Zod
+├── 📘 Auth.Types.ts           # Interfaces (User, Session, etc.)
+├── 💬 Auth.Messages.ts        # Mensajes en español
+├── ❌ Auth.Errors.ts          # Errores personalizados
+└── 🔜 Auth.SocialAuth.ts     # OAuth (próximamente)
+```
+
+---
+
+## `npm run bo analyze`
+
+Ejecuta un health check en tus Business Objects.
+
+```bash
+# Analizar todos los BOs
+npm run bo analyze
+
+# Analizar uno específico
+npm run bo analyze Products
+```
+
+---
+
+## `npm run bo init`
+
+Wizard de configuración inicial para nuevos proyectos.
+
+```bash
+npm run bo init
+```
+
+Te guía paso a paso:
+
+1. Crear tu primer BO
+2. Configurar base de datos
+3. Sincronizar métodos
+4. Configurar permisos
+
+---
+
+## Snippets de VSCode
+
+El proyecto incluye snippets para acelerar el desarrollo. Escribe el prefijo y presiona `Tab`:
+
+### Snippets Disponibles
+
+| Prefijo       | Descripción                                 |
+| ------------- | ------------------------------------------- |
+| `tp-bo`       | Genera estructura base de Business Object   |
+| `tp-service`  | Genera estructura base de Service           |
+| `tp-repo`     | Genera estructura base de Repository        |
+| `tp-schema`   | Genera schemas Zod con validaciones         |
+| `tp-types`    | Genera interfaces TypeScript para entidades |
+| `tp-messages` | Genera objeto de mensajes con éxito/error   |
+| `tp-errors`   | Genera clases de error personalizadas       |
+| `tp-test`     | Genera estructura de test unitario          |
+
+### Uso
+
+1. Crea un nuevo archivo en la carpeta de tu BO
+2. Escribe el prefijo del snippet (ej: `tp-bo`)
+3. Presiona `Tab` para expandir
+4. Usa `Tab` para navegar entre los placeholders
+
+### Ejemplo: `tp-messages`
+
+```typescript
+// Escribe: tp-messages + Tab
+
+export const ProductMessages = {
+    GET: 'Product encontrado',
+    CREATE: 'Product creado exitosamente',
+    UPDATE: 'Product actualizado exitosamente',
+    DELETE: 'Product eliminado exitosamente',
+    NOT_FOUND: 'Product no encontrado',
+    // ...
+}
+```
+
+> [!TIP]
+> Los snippets usan placeholders inteligentes. Al expandir, el cursor se posiciona en el nombre y al escribir se actualiza automáticamente en todos los lugares relevantes.
 
 ---
 
@@ -74,20 +248,18 @@ npm run bo new ComplexModule --dry-run
 
 ### ¿Qué pasa si la carpeta ya existe?
 
-El script fallará para protegerte de sobrescribir trabajo existente.
-**Solución**: Borra la carpeta manualmente o usa otro nombre.
+El script pregunta si quieres sobrescribir con `--yes` o en modo interactivo.
 
 ### ¿Puedo editar las plantillas?
 
 ¡Sí! Las plantillas viven en `scripts/bo/templates/`.
-Si tu equipo decide que todos los BOs deben tener un método `audit()`, edita la plantilla `bo.ts` ahí y todos los futuros BOs lo tendrán.
 
-### ¿Por qué crea 4 archivos?
+### ¿Por qué 7 archivos?
 
-Es la arquitectura del framework:
+La separación promueve:
 
-1.  **BO**: Interface pública.
-2.  **Service**: Cerebro.
-3.  **Repository**: Músculo (DB).
-4.  **Schema**: Validación.
-    Tenerlos separados desde el principio evita que termines con un archivo de 2000 líneas.
+1. **Testabilidad**: Cada capa se puede probar independientemente
+2. **Mantenibilidad**: Código organizado y predecible
+3. **Reusabilidad**: Messages y errors se pueden compartir
+4. **Tipado**: Types centralizados evitan duplicación
+5. **i18n**: Messages.ts facilita internacionalización
