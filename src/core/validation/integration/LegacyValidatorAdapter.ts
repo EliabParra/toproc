@@ -1,5 +1,5 @@
 import { AppValidator } from '../AppValidator.js'
-import { ZodSchema, z } from 'zod'
+import { ZodObject, ZodType, z } from 'zod'
 import { ValidatorStatus } from '../../../utils/Validator.js'
 
 /**
@@ -33,7 +33,7 @@ export class LegacyValidatorAdapter {
      * Main legacy method: v.validate(value, type)
      */
     validate(value: unknown, type: string): boolean {
-        let schema: ZodSchema<any>
+        let schema: ZodType
 
         switch (type) {
             case 'int':
@@ -72,7 +72,7 @@ export class LegacyValidatorAdapter {
         }
 
         try {
-            const result = this.validator.validate(value, schema)
+            const result = this.validator.validate(value, schema as ZodObject)
 
             if (!result.valid) {
                 const errors = result.errors || [{ message: 'Unknown validation error' }]

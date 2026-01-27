@@ -79,7 +79,7 @@ export class Interactor {
     ): Promise<string[]> {
         const selected = new Set<string>(defaults)
 
-        console.log(`${'➜'.green} ${question.bold}:`)
+        console.log(`${'➜ '.green} ${question.bold}:`)
         console.log('   Use numbers to toggle, Enter when done'.gray)
 
         const printOptions = () => {

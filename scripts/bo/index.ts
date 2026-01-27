@@ -44,13 +44,13 @@ ${'Examples:'.bold}
   npm run bo new Order --dry
 
 ${'Generated Files:'.bold} (7 files per BO)
-  📄 {Name}BO.ts          Main Business Object
-  📄 {Name}Service.ts     Business logic layer
-  📄 {Name}Repository.ts  Database access layer
-  📄 schemas.ts           Zod validations
-  📄 types.ts             TypeScript interfaces
-  📄 messages.ts          User-facing strings
-  📄 errors.ts            Custom error classes
+  📦 {Name}BO.ts             Main Business Object
+  🧠 {Name}.Service.ts       Business logic layer
+  🗄️ {Name}.Repository.ts    Database access layer
+  ✅ {Name}.Schemas.ts        Zod validations
+  📘 {Name}.Types.ts          TypeScript interfaces
+  💬 {Name}.Messages.ts       User-facing strings
+  ❌ {Name}.Errors.ts         Custom error classes
 `
 
 const MENU_OPTIONS = [

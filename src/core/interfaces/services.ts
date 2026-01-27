@@ -1,9 +1,11 @@
+import { ZodObject } from 'zod'
 import {
     IDatabase as CoreDatabase,
     ILogger as CoreLogger,
     IEmailService as CoreEmail,
     IValidator as CoreValidator,
 } from '../../types/core.js'
+import { ValidationResult } from '../validation/types.js'
 
 /**
  * Re-exportación de interfaces Core para compatibilidad y unificación.
@@ -22,5 +24,5 @@ export interface IValidator extends CoreValidator {
     validateInt?(param: any): boolean
     validateEmail?(param: any): boolean
     // getAlerts ya está en CoreValidator como opcional
-    validate(value: any, type: string): any // Overload conflict potential, making flexible
+    validate<T>(value: T, schema: ZodObject): ValidationResult<T> // Overload conflict potential, making flexible
 }

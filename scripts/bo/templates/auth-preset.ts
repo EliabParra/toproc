@@ -1,14 +1,3 @@
-import {
-    authMethods as presetAuthMethods,
-    templateAuthSuccessMsgs as presetTemplateAuthSuccessMsgs,
-    templateAuthErrorMsgs as presetTemplateAuthErrorMsgs,
-    templateAuthAlertsLabels as presetTemplateAuthAlertsLabels,
-    templateAuthErrorHandler as presetTemplateAuthErrorHandler,
-    templateAuthValidate as presetTemplateAuthValidate,
-    templateAuthRepo as presetTemplateAuthRepo,
-    templateAuthBO as presetTemplateAuthBO,
-} from '../../bo-auth-preset.js'
-
 /**
  * AuthPreset - Plantillas para módulo de autenticación
  *
@@ -21,115 +10,429 @@ import {
  * - Auth.Messages.ts
  * - Auth.Errors.ts
  */
+
 export const AuthPreset = {
-    methods: presetAuthMethods,
-
-    // BO principal
-    bo: presetTemplateAuthBO,
-
-    // Repository (legacy name: repo)
-    repository: presetTemplateAuthRepo,
-
-    // Validación
-    validate: presetTemplateAuthValidate,
-
-    // Legacy JSON messages (para compatibilidad)
-    success: presetTemplateAuthSuccessMsgs,
-    error: presetTemplateAuthErrorMsgs,
-    alerts: presetTemplateAuthAlertsLabels,
-    errorHandler: presetTemplateAuthErrorHandler,
+    // Definición de métodos para la CLI
+    methods: () => [
+        'register',
+        'requestEmailVerification',
+        'verifyEmail',
+        'requestPasswordReset',
+        'verifyPasswordReset',
+        'resetPassword',
+    ],
 
     // ============================================================
-    // Nuevas plantillas para estructura de 7 archivos
+    // Plantillas
     // ============================================================
 
-    /**
-     * Auth.Service.ts - Lógica de negocio de autenticación
-     */
-    service: () => `import { ILogger, IConfig } from '../../src/types/core.js'
-import { AuthRepository } from './Auth.Repository.js'
-import type { User, UserCredentials, AuthToken, Session } from './Auth.Types.js'
-import { AuthNotFoundError, AuthInvalidCredentialsError } from './Auth.Errors.js'
+    bo: () => `import { BaseBO, BODependencies } from '../../src/core/base/BaseBO.js'
+import { ApiResponse } from '../../src/core/response/ApiResponse.js'
+import { AuthService } from './Auth.Service.js'
+import {
+    AuthSchemas,
+    RegisterInput,
+    VerifyEmailInput,
+    ResetPasswordInput,
+    ResetPasswordConfirmInput,
+} from './Auth.Schemas.js'
 import { AuthMessages } from './Auth.Messages.js'
+import { isAuthError } from './Auth.Errors.js'
 
-/**
- * Capa de servicio para lógica de autenticación.
- * 
- * Contiene lógica de negocio pura, libre de concerns HTTP.
- */
-export class AuthService {
-    constructor(
-        private readonly repo: AuthRepository,
-        private readonly log: ILogger,
-        private readonly config: IConfig
-    ) {}
+export class AuthBO extends BaseBO {
+    private service: AuthService
 
-    /**
-     * Valida credenciales y genera sesión
-     */
-    async login(credentials: UserCredentials): Promise<Session> {
-        const user = await this.repo.findByLoginId(credentials.loginId)
-        if (!user) {
-            throw new AuthNotFoundError()
+    constructor(deps: BODependencies) {
+        super(deps)
+        this.service = new AuthService(this.log, this.config)
+    }
+
+    async register(params: RegisterInput): Promise<ApiResponse> {
+        try {
+            const vRes = this.validate<RegisterInput>(params, AuthSchemas.register)
+            if (!vRes.ok) return this.validationError(vRes.alerts)
+
+            await this.service.register(vRes.data)
+            return this.created(null, AuthMessages.REGISTER_SUCCESS)
+        } catch (err) {
+            if (isAuthError(err)) return this.error(err.message, err.code)
+            return this.error('Error desconocido en registro')
         }
-        
-        const isValid = await this.repo.verifyPassword(user.userId, credentials.password)
-        if (!isValid) {
-            throw new AuthInvalidCredentialsError()
+    }
+
+    async verifyEmail(params: VerifyEmailInput): Promise<ApiResponse> {
+        try {
+            const vRes = this.validate<VerifyEmailInput>(params, AuthSchemas.verifyEmail)
+            if (!vRes.ok) return this.validationError(vRes.alerts)
+
+            await this.service.verifyEmail(vRes.data.token)
+            return this.success(null, AuthMessages.EMAIL_VERIFIED)
+        } catch (err) {
+            if (isAuthError(err)) return this.error(err.message, err.code)
+            return this.error('Error en verificación de email')
         }
-        
-        const session = await this.repo.createSession(user.userId)
-        this.log.show({ type: this.log.TYPE_INFO, msg: \`User logged in: \${user.userId}\` })
-        
-        return session
     }
 
-    /**
-     * Registra nuevo usuario
-     */
-    async register(data: Partial<User>): Promise<User> {
-        this.log.show({ type: this.log.TYPE_INFO, msg: 'Creating new user' })
-        return this.repo.createUser(data)
+    async requestPasswordReset(params: ResetPasswordInput): Promise<ApiResponse> {
+        try {
+            const vRes = this.validate<ResetPasswordInput>(params, AuthSchemas.resetPassword)
+            if (!vRes.ok) return this.validationError(vRes.alerts)
+
+            await this.service.requestPasswordReset(vRes.data.email)
+            return this.success(null, AuthMessages.PASSWORD_RESET_SENT)
+        } catch (err) {
+            if (isAuthError(err)) return this.error(err.message, err.code)
+            return this.error('Error solicitando reset de password')
+        }
     }
 
-    /**
-     * Cierra sesión
-     */
-    async logout(sessionId: string): Promise<void> {
-        await this.repo.deleteSession(sessionId)
-    }
+    async resetPassword(params: ResetPasswordConfirmInput): Promise<ApiResponse> {
+        try {
+            const vRes = this.validate<ResetPasswordConfirmInput>(
+                params,
+                AuthSchemas.resetPasswordConfirm
+            )
+            if (!vRes.ok) return this.validationError(vRes.alerts)
 
-    /**
-     * Verifica token de sesión
-     */
-    async verifySession(token: string): Promise<Session | null> {
-        return this.repo.findSessionByToken(token)
+            await this.service.resetPassword(vRes.data.token, vRes.data.newPassword)
+            return this.success(null, AuthMessages.PASSWORD_CHANGED)
+        } catch (err) {
+            if (isAuthError(err)) return this.error(err.message, err.code)
+            return this.error('Error cambiando password')
+        }
     }
 }
 `,
 
-    /**
-     * Auth.Schemas.ts - Validaciones Zod
-     */
+    service: () => `import { createHash, randomBytes } from 'node:crypto'
+import bcrypt from 'bcryptjs'
+import type { ILogger, IConfig } from '../../src/types/core.js'
+import { EmailService } from '../../src/email/EmailService.js'
+import { AuthRepository, UserRow } from './Auth.Repository.js'
+import type { User, RegisterData } from './Auth.Types.js'
+import { AuthEmailExistsError, AuthTokenInvalidError } from './Auth.Errors.js'
+
+function sha256Hex(value: string): string {
+    return createHash('sha256').update(value, 'utf8').digest('hex')
+}
+
+export class AuthService {
+    private emailService: EmailService
+
+    constructor(
+        private readonly log: ILogger,
+        private readonly config: IConfig
+    ) {
+        this.emailService = new EmailService({ log: this.log, config: this.config })
+    }
+
+    async register(data: RegisterData): Promise<User> {
+        this.log.show({ type: this.log.TYPE_INFO, msg: 'Creating new user: ' + data.email })
+
+        const exists = await AuthRepository.getUserBaseByEmail(data.email)
+        if (exists) {
+            throw new AuthEmailExistsError(data.email)
+        }
+
+        const hash = await bcrypt.hash(data.password, 10)
+
+        const user = await AuthRepository.insertUser({
+            username: data.name ?? null,
+            email: data.email,
+            passwordHash: hash,
+        })
+
+        const sessionProfileId = Number((this.config as any)?.auth?.sessionProfileId ?? 1)
+        await AuthRepository.upsertUserProfile({
+            userId: user.user_id,
+            profileId: sessionProfileId,
+        })
+
+        if ((this.config as any)?.auth?.requireEmailVerification) {
+            await this.sendVerificationEmail(user.user_id, data.email)
+        }
+
+        return this.mapUser({ ...user, user_em: data.email, user_na: data.name, user_pw: hash })
+    }
+
+    async requestEmailVerification(identifier: string): Promise<void> {
+        let user: UserRow | null = null
+        if (identifier.includes('@')) {
+            user = await AuthRepository.getUserByEmail(identifier)
+        } else {
+            user = await AuthRepository.getUserByUsername(identifier)
+        }
+
+        if (user && user.user_em) {
+            await this.sendVerificationEmail(user.user_id, user.user_em)
+        }
+    }
+
+    async verifyEmail(token: string): Promise<void> {
+        const purpose = String(
+            (this.config as any)?.auth?.emailVerificationPurpose ?? 'email_verification'
+        )
+        const tokenHash = sha256Hex(token)
+
+        const otp = await AuthRepository.getActiveOneTimeCodeForPurposeAndTokenHash({
+            purpose,
+            tokenHash,
+        })
+
+        if (!otp) throw new AuthTokenInvalidError()
+
+        await AuthRepository.setUserEmailVerified(otp.user_id)
+        await AuthRepository.consumeOneTimeCode(otp.code_id)
+    }
+
+    async requestPasswordReset(email: string): Promise<void> {
+        const user = await AuthRepository.getUserByEmail(email)
+        if (!user || !user.user_em) return
+
+        const purpose = String((this.config as any)?.auth?.passwordResetPurpose ?? 'password_reset')
+        const expiresSeconds = 900
+
+        await AuthRepository.invalidateActivePasswordResetsForUser(user.user_id)
+
+        const token = randomBytes(32).toString('hex')
+        const tokenHash = sha256Hex(token)
+
+        await AuthRepository.insertPasswordReset({
+            userId: user.user_id,
+            tokenHash,
+            sentTo: user.user_em,
+            expiresSeconds,
+        })
+
+        await this.emailService.sendPasswordReset({
+            to: user.user_em,
+            token,
+            code: '000000',
+            appName: (this.config as any)?.app?.name,
+        })
+    }
+
+    async resetPassword(token: string, newPassword: string): Promise<void> {
+        const tokenHash = sha256Hex(token)
+        const reset = await AuthRepository.getPasswordResetByTokenHash(tokenHash)
+
+        if (!reset || reset.used_at) throw new AuthTokenInvalidError()
+
+        const hash = await bcrypt.hash(newPassword, 10)
+        await AuthRepository.updateUserPassword({ userId: reset.user_id, passwordHash: hash })
+        await AuthRepository.markPasswordResetUsed(reset.reset_id)
+    }
+
+    private async sendVerificationEmail(userId: number, emailAddr: string) {
+        const purpose = String(
+            (this.config as any)?.auth?.emailVerificationPurpose ?? 'email_verification'
+        )
+        const expiresSeconds = 900
+
+        const token = randomBytes(32).toString('hex')
+        const tokenHash = sha256Hex(token)
+
+        await AuthRepository.insertOneTimeCode({
+            userId,
+            purpose,
+            codeHash: tokenHash,
+            expiresSeconds,
+            meta: { tokenHash },
+        })
+
+        await this.emailService.sendEmailVerification({
+            to: emailAddr,
+            token,
+            code: '000000',
+            appName: (this.config as any)?.app?.name,
+        })
+    }
+
+    private mapUser(row: UserRow): User {
+        return {
+            userId: row.user_id,
+            email: row.user_em!,
+            name: row.user_na ?? undefined,
+            passwordHash: row.user_pw ?? '',
+            isEmailVerified: !!row.email_verified_at,
+            isActive: true,
+            createdAt: new Date(),
+        }
+    }
+}
+`,
+
+    repository: () => `/*
+Auth Repository
+
+- DB access helpers used by AuthBO.
+- Must align with query names in src/config/queries.json.
+*/
+
+import { IDatabase } from '../../src/types/core.js'
+
+// IMPORTANT: This uses global 'db' instance for static methods or injected db.
+// Since existing methods use static, we keep it static for now, but cleaner usage is DI.
+const db = (globalThis as any).db as IDatabase
+
+export type UserRow = {
+    user_id: number
+    user_na?: string | null
+    user_em?: string | null
+    email_verified_at?: string | Date | null
+    user_pw?: string | null
+    profile_id?: number | null
+}
+
+export type OneTimeCodeRow = {
+    code_id: number
+    user_id: number
+    purpose?: string | null
+    expires_at?: string | Date | null
+    consumed_at?: string | Date | null
+    attempt_count?: number | null
+    meta?: any
+}
+
+export type PasswordResetRow = {
+    reset_id: number
+    user_id: number
+    expires_at?: string | Date | null
+    used_at?: string | Date | null
+    attempt_count?: number | null
+}
+
+export class AuthRepository {
+    // --- Users
+    static async getUserByEmail(email: string): Promise<UserRow | null> {
+        const r = (await db.exe('security', 'getUserByEmail', [email])) as { rows?: UserRow[] }
+        return r.rows?.[0] ?? null
+    }
+
+    static async getUserByUsername(username: string): Promise<UserRow | null> {
+        const r = (await db.exe('security', 'getUserByUsername', [username])) as {
+            rows?: UserRow[]
+        }
+        return r.rows?.[0] ?? null
+    }
+
+    static async getUserBaseByEmail(email: string): Promise<UserRow | null> {
+        const r = (await db.exe('security', 'getUserBaseByEmail', [email])) as {
+            rows?: UserRow[]
+        }
+        return r.rows?.[0] ?? null
+    }
+
+    static async insertUser(params: {
+        username: string | null
+        email: string | null
+        passwordHash: string
+    }): Promise<{ user_id: number }> {
+        const r = (await db.exe('security', 'insertUser', [params.username, params.email, params.passwordHash])) as {
+            rows?: Array<{ user_id: number }>
+        }
+        const row = r.rows?.[0]
+        if (!row?.user_id) throw new Error('insertUser did not return user_id')
+        return row
+    }
+
+    static async upsertUserProfile({ userId, profileId }: { userId: number; profileId: number }) {
+        await db.exe('security', 'upsertUserProfile', [userId, profileId])
+        return true
+    }
+
+    static async setUserEmailVerified(userId: number) {
+        await db.exe('security', 'setUserEmailVerified', [userId])
+        return true
+    }
+
+    // --- Password reset
+    static async insertPasswordReset(params: {
+        userId: number
+        tokenHash: string
+        sentTo: string
+        expiresSeconds: number
+    }): Promise<void> {
+        await db.exe('security', 'insertPasswordReset', [
+            params.userId,
+            params.tokenHash,
+            params.sentTo,
+            String(params.expiresSeconds),
+            null, // ip
+            null, // userAgent
+        ])
+    }
+
+    static async invalidateActivePasswordResetsForUser(userId: number): Promise<boolean> {
+        await db.exe('security', 'invalidateActivePasswordResetsForUser', [userId])
+        return true
+    }
+
+    static async getPasswordResetByTokenHash(tokenHash: string): Promise<PasswordResetRow | null> {
+        const r = (await db.exe('security', 'getPasswordResetByTokenHash', [tokenHash])) as {
+            rows?: PasswordResetRow[]
+        }
+        return r.rows?.[0] ?? null
+    }
+
+    static async markPasswordResetUsed(resetId: number): Promise<boolean> {
+        await db.exe('security', 'markPasswordResetUsed', [resetId])
+        return true
+    }
+
+    // --- One-time codes
+    static async insertOneTimeCode(params: {
+        userId: number
+        purpose: string
+        codeHash: string
+        expiresSeconds: number
+        meta?: any
+    }): Promise<boolean> {
+        await db.exe('security', 'insertOneTimeCode', [
+            params.userId,
+            params.purpose,
+            params.codeHash,
+            String(params.expiresSeconds),
+            JSON.stringify(params.meta ?? {}),
+        ])
+        return true
+    }
+
+    static async consumeOneTimeCode(codeId: number): Promise<boolean> {
+        await db.exe('security', 'consumeOneTimeCode', [codeId])
+        return true
+    }
+
+    static async getActiveOneTimeCodeForPurposeAndTokenHash(params: {
+        purpose: string
+        tokenHash: string
+    }): Promise<OneTimeCodeRow | null> {
+        const r = (await db.exe('security', 'getActiveOneTimeCodeForPurposeAndTokenHash', [
+            params.purpose,
+            params.tokenHash,
+        ])) as { rows?: OneTimeCodeRow[] }
+        return r.rows?.[0] ?? null
+    }
+
+    static async updateUserPassword(params: { userId: number; passwordHash: string }): Promise<boolean> {
+        await db.exe('security', 'updateUserPassword', [params.userId, params.passwordHash])
+        return true
+    }
+}
+`,
+
     schemas: () => `import { z } from 'zod'
 import { AuthMessages } from './Auth.Messages.js'
 
-/**
- * Schemas Zod para métodos de AuthBO
- */
 export const AuthSchemas = {
     login: z.object({
-        loginId: z.string({ required_error: AuthMessages.VALIDATION.LOGIN_ID_REQUIRED })
-            .min(1, AuthMessages.VALIDATION.LOGIN_ID_REQUIRED),
-        password: z.string({ required_error: AuthMessages.VALIDATION.PASSWORD_REQUIRED })
-            .min(1, AuthMessages.VALIDATION.PASSWORD_REQUIRED),
+        loginId: z.string().min(1, AuthMessages.VALIDATION.LOGIN_ID_REQUIRED),
+        password: z.string().min(1, AuthMessages.VALIDATION.PASSWORD_REQUIRED),
     }),
 
     register: z.object({
-        email: z.string({ required_error: AuthMessages.VALIDATION.EMAIL_REQUIRED })
-            .email(AuthMessages.VALIDATION.EMAIL_INVALID),
-        password: z.string({ required_error: AuthMessages.VALIDATION.PASSWORD_REQUIRED })
-            .min(8, AuthMessages.VALIDATION.PASSWORD_TOO_SHORT),
+        email: z.string().email(AuthMessages.VALIDATION.EMAIL_INVALID),
+        password: z.string().min(8, AuthMessages.VALIDATION.PASSWORD_TOO_SHORT),
         name: z.string().optional(),
     }),
 
@@ -138,42 +441,39 @@ export const AuthSchemas = {
     }),
 
     verifyEmail: z.object({
-        token: z.string({ required_error: AuthMessages.VALIDATION.TOKEN_REQUIRED }),
+        token: z.string().min(1, AuthMessages.VALIDATION.TOKEN_REQUIRED),
+    }),
+
+    requestEmailVerification: z.object({
+        identifier: z.string().min(1, AuthMessages.VALIDATION.EMAIL_REQUIRED),
     }),
 
     resetPassword: z.object({
-        email: z.string({ required_error: AuthMessages.VALIDATION.EMAIL_REQUIRED })
-            .email(AuthMessages.VALIDATION.EMAIL_INVALID),
+        email: z.string().email(AuthMessages.VALIDATION.EMAIL_INVALID),
+    }),
+
+    resetPasswordConfirm: z.object({
+        token: z.string().min(1, AuthMessages.VALIDATION.TOKEN_REQUIRED),
+        newPassword: z.string().min(8, AuthMessages.VALIDATION.PASSWORD_TOO_SHORT),
     }),
 
     changePassword: z.object({
-        currentPassword: z.string({ required_error: AuthMessages.VALIDATION.PASSWORD_REQUIRED }),
-        newPassword: z.string({ required_error: AuthMessages.VALIDATION.PASSWORD_REQUIRED })
-            .min(8, AuthMessages.VALIDATION.PASSWORD_TOO_SHORT),
+        currentPassword: z.string().min(1, AuthMessages.VALIDATION.PASSWORD_REQUIRED),
+        newPassword: z.string().min(8, AuthMessages.VALIDATION.PASSWORD_TOO_SHORT),
     }),
 }
 
-// Tipos inferidos
 export type LoginInput = z.infer<typeof AuthSchemas.login>
 export type RegisterInput = z.infer<typeof AuthSchemas.register>
 export type LogoutInput = z.infer<typeof AuthSchemas.logout>
 export type VerifyEmailInput = z.infer<typeof AuthSchemas.verifyEmail>
+export type RequestEmailVerificationInput = z.infer<typeof AuthSchemas.requestEmailVerification>
 export type ResetPasswordInput = z.infer<typeof AuthSchemas.resetPassword>
+export type ResetPasswordConfirmInput = z.infer<typeof AuthSchemas.resetPasswordConfirm>
 export type ChangePasswordInput = z.infer<typeof AuthSchemas.changePassword>
 `,
 
-    /**
-     * Auth.Types.ts - Interfaces TypeScript
-     */
-    types: () => `/**
- * Definiciones de tipos para Auth
- */
-
-// ============================================================
-// Tipos de Entidad
-// ============================================================
-
-export interface User {
+    types: () => `export interface User {
     userId: number
     email: string
     name?: string
@@ -205,10 +505,6 @@ export interface AuthToken {
     expiresAt: Date
 }
 
-// ============================================================
-// Tipos de Entrada
-// ============================================================
-
 export interface UserCredentials {
     loginId: string
     password: string
@@ -225,10 +521,6 @@ export interface PasswordResetData {
     newPassword: string
 }
 
-// ============================================================
-// Tipos de Respuesta
-// ============================================================
-
 export interface LoginResult {
     user: UserSummary
     session: Session
@@ -240,15 +532,7 @@ export interface RegisterResult {
 }
 `,
 
-    /**
-     * Auth.Messages.ts - Mensajes en español
-     */
-    messages: () => `/**
- * Mensajes y strings para Auth
- */
-
-export const AuthMessages = {
-    // Éxito
+    messages: () => `export const AuthMessages = {
     LOGIN_SUCCESS: 'Sesión iniciada exitosamente',
     LOGOUT_SUCCESS: 'Sesión cerrada exitosamente',
     REGISTER_SUCCESS: 'Usuario registrado exitosamente',
@@ -256,7 +540,6 @@ export const AuthMessages = {
     PASSWORD_RESET_SENT: 'Enlace de recuperación enviado',
     PASSWORD_CHANGED: 'Contraseña actualizada exitosamente',
 
-    // Error
     USER_NOT_FOUND: 'Usuario no encontrado',
     INVALID_CREDENTIALS: 'Credenciales inválidas',
     EMAIL_NOT_VERIFIED: 'Email no verificado',
@@ -265,7 +548,6 @@ export const AuthMessages = {
     EMAIL_ALREADY_EXISTS: 'Ya existe un usuario con este email',
     ACCOUNT_DISABLED: 'Cuenta deshabilitada',
 
-    // Validación
     VALIDATION: {
         LOGIN_ID_REQUIRED: 'El email o usuario es requerido',
         PASSWORD_REQUIRED: 'La contraseña es requerida',
@@ -275,7 +557,6 @@ export const AuthMessages = {
         TOKEN_REQUIRED: 'El token es requerido',
     },
 
-    // Dinámicos
     welcomeBack: (name: string) => \`Bienvenido de nuevo, \${name}\`,
     verificationSentTo: (email: string) => \`Se envió verificación a \${email}\`,
 }
@@ -284,32 +565,25 @@ export type AuthMessageKey = keyof typeof AuthMessages
 export type AuthValidationKey = keyof typeof AuthMessages.VALIDATION
 `,
 
-    /**
-     * Auth.Errors.ts - Clases de error
-     */
-    errors: () => `/**
- * Clases de Error para Auth
- */
-
-import { AuthMessages } from './Auth.Messages.js'
+    errors: () => `import { AuthMessages } from './Auth.Messages.js'
 
 export class AuthError extends Error {
-    readonly code: string
-    readonly status: number
+    readonly tag: string
+    readonly code: number
     readonly details?: Record<string, unknown>
 
     constructor(
         message: string,
-        code: string,
-        status: number = 500,
+        tag: string,
+        code: number = 500,
         details?: Record<string, unknown>
     ) {
         super(message)
         this.name = 'AuthError'
+        this.tag = tag
         this.code = code
-        this.status = status
         this.details = details
-        
+
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, AuthError)
         }
@@ -319,8 +593,8 @@ export class AuthError extends Error {
         return {
             name: this.name,
             message: this.message,
+            tag: this.tag,
             code: this.code,
-            status: this.status,
             details: this.details,
         }
     }

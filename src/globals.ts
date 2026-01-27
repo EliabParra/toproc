@@ -3,11 +3,6 @@
  *
  * Configura `globalThis` con accesores para compatibilidad hacia atrás
  * y registra servicios en el contenedor de inyección de dependencias.
- *
- * @module Globals
- * @since 1.0.0
- * @author Team ToProccess
- * @license MIT
  */
 import 'dotenv/config'
 import { createRequire } from 'node:module'

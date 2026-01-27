@@ -3,11 +3,6 @@
  *
  * Inicializa el contenedor DI, servicios core (Logger, Audit, Email, Session, Security)
  * y arranca el Dispatcher (Servidor HTTP).
- *
- * @module ApplicationEntry
- * @since 1.0.0
- * @author Team ToProccess
- * @license MIT
  */
 import './globals.js' // Populates container with foundation (db, log, config, etc.)
 import { container } from './core/Container.js'

@@ -6,6 +6,7 @@ export type ValidationSuccess<T> = {
 export type ValidationFailure = {
     valid: false
     errors: ValidationError[]
+    alerts?: string[]
 }
 
 export type ValidationError = {

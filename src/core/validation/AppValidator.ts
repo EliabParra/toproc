@@ -1,4 +1,4 @@
-import { z, ZodSchema, ZodError } from 'zod'
+import { z, ZodObject, ZodError } from 'zod'
 import { ValidationResult, ValidationError } from './types.js'
 import { I18nService } from '../i18n/I18nService.js'
 
@@ -69,17 +69,12 @@ export class AppValidator {
      *     // TypeScript sabe que result.data es { name: string, email: string }
      *     await userService.create(result.data)
      * } else {
-     *     // result.errors contiene mensajes localizados
-     *     return res.status(400).json({ alerts: result.errors.map(e => e.message) })
-     * }
-     * ```
      */
-    validate<T>(data: unknown, schema: ZodSchema<T>): ValidationResult<T> {
+    validate<T>(data: T, schema: ZodObject): ValidationResult<T> {
         const result = schema.safeParse(data)
+        const resultData = result.data as T
 
-        if (result.success) {
-            return { valid: true, data: result.data }
-        }
+        if (result.success) return { valid: true, data: resultData }
 
         // ZodError issues es la fuente de verdad para safeParse
         const issues = (result.error as any).issues || (result.error as any).errors || []

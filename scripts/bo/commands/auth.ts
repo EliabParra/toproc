@@ -37,7 +37,7 @@ export class AuthCommand {
     }
 
     async run(opts: AuthOptions = {}) {
-        console.log(`\n${'🔑'.cyan} Auth Preset Generator`.cyan.bold)
+        console.log('\n🔑 Auth Preset Generator'.cyan.bold)
         console.log('══════════════════════════════════════════════════'.gray)
         console.log('')
 
@@ -50,7 +50,7 @@ export class AuthCommand {
         } catch {}
 
         if (exists) {
-            console.log(`${'⚠️'.yellow} Auth module already exists at BO/Auth/`.yellow)
+            console.log('⚠️ Auth module already exists at BO/Auth/'.yellow)
             const overwrite = await this.interactor.confirm('Overwrite existing files?', false)
             if (!overwrite) {
                 console.log('Cancelled.'.gray)
@@ -60,7 +60,7 @@ export class AuthCommand {
         }
 
         // Show available features
-        console.log('${"📋".blue} Available Auth Features:')
+        console.log('📋 Available Auth Features:')
         console.log('')
 
         for (const f of AUTH_FEATURES) {
@@ -82,7 +82,7 @@ export class AuthCommand {
         }
 
         if (opts.isDryRun) {
-            console.log(`\n${'📋'.blue} Dry run - would create:`.gray)
+            console.log('\n📋 Dry run - would create:'.gray)
             console.log('   BO/Auth/')
             console.log('      ├── 📦 AuthBO.ts')
             console.log('      ├── 🧠 Auth.Service.ts')
@@ -99,18 +99,21 @@ export class AuthCommand {
         // Create directories
         await fs.mkdir(authDir, { recursive: true })
 
-        console.log(`\n${'📁'.green} BO/Auth/`)
+        console.log('\n📁 BO/Auth/')
 
         // Generate files with new naming convention
         const files = [
-            { path: path.join(authDir, 'AuthBO.ts'), content: AuthPreset.bo(), icon: '📦' },
+            { 
+                path: path.join(authDir, 'AuthBO.ts'),
+                content: AuthPreset.bo(), icon: '📦'
+            },
             {
                 path: path.join(authDir, 'Auth.Service.ts'),
                 content: AuthPreset.service(),
                 icon: '🧠',
             },
             {
-                path: path.join(authDir, 'Auth.Repository.ts'),
+                path: path.join(authDir, ' Auth.Repository.ts'),
                 content: AuthPreset.repository(),
                 icon: '🗄️',
             },
@@ -135,7 +138,7 @@ export class AuthCommand {
         for (const f of files) {
             await fs.writeFile(f.path, f.content)
             const basename = path.basename(f.path)
-            console.log(`   ├── ${f.icon} ${basename} .............. ${'✅'.green}`)
+            console.log(`   ├── ${f.icon} ${basename} .............. ✅`)
         }
 
         // Create Social Auth placeholder
@@ -144,7 +147,7 @@ export class AuthCommand {
         console.log(`   └── 🔜 Auth.SocialAuth.ts ........ ${'Coming Soon'.yellow}`)
 
         console.log('')
-        console.log(`${'🎉'.green} Auth module created with 7 files!`.green.bold)
+        console.log('🎉 Auth module created with 7 files!'.green.bold)
         console.log('')
         console.log('💡 Next steps:'.cyan)
         console.log(`   1. Edit ${'Auth.Types.ts'.bold} to define user interfaces`)
