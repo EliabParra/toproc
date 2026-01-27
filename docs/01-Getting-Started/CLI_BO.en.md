@@ -206,16 +206,18 @@ The project includes snippets to speed up development. Type the prefix and press
 
 ### Available Snippets
 
-| Prefix        | Description                                 |
-| ------------- | ------------------------------------------- |
-| `tp-bo`       | Generate Business Object base structure     |
-| `tp-service`  | Generate Service base structure             |
-| `tp-repo`     | Generate Repository base structure          |
-| `tp-schema`   | Generate Zod schemas with validations       |
-| `tp-types`    | Generate TypeScript interfaces for entities |
-| `tp-messages` | Generate messages object with success/error |
-| `tp-errors`   | Generate custom error classes               |
-| `tp-test`     | Generate unit test structure                |
+| Prefix           | Description                              |
+| ---------------- | ---------------------------------------- |
+| `tp-bo`          | Complete Business Object with method     |
+| `tp-bo-method`   | Add transactional method to a BO         |
+| `tp-service`     | Service class with repository and errors |
+| `tp-repo-method` | Database access method                   |
+| `tp-schema`      | Zod schemas with messages integration    |
+| `tp-types`       | TypeScript interfaces for entities       |
+| `tp-messages`    | Success/error/validation messages        |
+| `tp-errors`      | Custom error classes                     |
+| `tp-test`        | Test suite with Node Test Runner         |
+| `tp-log`         | Logging with the logger system           |
 
 ### Usage
 

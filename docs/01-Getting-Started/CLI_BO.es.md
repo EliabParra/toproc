@@ -206,16 +206,18 @@ El proyecto incluye snippets para acelerar el desarrollo. Escribe el prefijo y p
 
 ### Snippets Disponibles
 
-| Prefijo       | Descripción                                 |
-| ------------- | ------------------------------------------- |
-| `tp-bo`       | Genera estructura base de Business Object   |
-| `tp-service`  | Genera estructura base de Service           |
-| `tp-repo`     | Genera estructura base de Repository        |
-| `tp-schema`   | Genera schemas Zod con validaciones         |
-| `tp-types`    | Genera interfaces TypeScript para entidades |
-| `tp-messages` | Genera objeto de mensajes con éxito/error   |
-| `tp-errors`   | Genera clases de error personalizadas       |
-| `tp-test`     | Genera estructura de test unitario          |
+| Prefijo          | Descripción                             |
+| ---------------- | --------------------------------------- |
+| `tp-bo`          | Business Object completo con método     |
+| `tp-bo-method`   | Agregar método transaccional a un BO    |
+| `tp-service`     | Clase Service con repository y errors   |
+| `tp-repo-method` | Método de acceso a base de datos        |
+| `tp-schema`      | Schemas Zod con integración de messages |
+| `tp-types`       | Interfaces TypeScript para entidades    |
+| `tp-messages`    | Mensajes de éxito/error/validación      |
+| `tp-errors`      | Clases de error personalizadas          |
+| `tp-test`        | Suite de test con Node Test Runner      |
+| `tp-log`         | Logging con el sistema de logger        |
 
 ### Uso
 
