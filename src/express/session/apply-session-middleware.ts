@@ -21,6 +21,10 @@ export function applySessionMiddleware(
     const sessionConfig: any = JSON.parse(JSON.stringify(config.session ?? {}))
     sessionConfig.cookie = sessionConfig.cookie ?? {}
 
+    // Resolve deprecation warnings
+    if (sessionConfig.resave === undefined) sessionConfig.resave = false
+    if (sessionConfig.saveUninitialized === undefined) sessionConfig.saveUninitialized = false
+
     if (sessionConfig.cookie.httpOnly == null) sessionConfig.cookie.httpOnly = true
 
     if (typeof sessionConfig.cookie.sameSite === 'boolean') {

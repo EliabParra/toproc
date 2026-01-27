@@ -1,0 +1,101 @@
+{
+	"Business Object": {
+		"prefix": "tp-bo",
+		"body": [
+			"import { BaseBO, BODependencies } from '../../src/core/base/BaseBO.js'",
+			"import { z } from 'zod'",
+			"",
+			"export class ${1:Name}BO extends BaseBO {",
+			"    constructor(deps?: BODependencies) {",
+			"        super(deps)",
+			"    }",
+			"",
+			"    async ${2:methodName}(params: unknown): Promise<any> {",
+			"        const vRes = this.validate(params, z.object({}))",
+			"        if (!vRes.ok) return this.validationError(vRes.alerts)",
+			"",
+			"        return this.success({ message: 'Not implemented' })",
+			"    }",
+			"}"
+		],
+		"description": "ToProccess Business Object Skeleton"
+	},
+	"BO Method (Transaction)": {
+		"prefix": "tp-bo-method",
+		"body": [
+			"/**",
+			" * ${1:Method Description}",
+			" *",
+			" * @param params - Transaction parameters",
+			" */",
+			"async ${2:methodName}(params: unknown): Promise<ApiResponse> {",
+			"    const vRes = this.validate(params, ${3:Schema})",
+			"    if (!vRes.ok) return this.validationError(vRes.alerts)",
+			"    ",
+			"    const result = await this.service.${4:serviceMethod}(vRes.data)",
+			"    return this.success(result)",
+			"}"
+		],
+		"description": "Add a transactional method to BO"
+	},
+	"Zod Schema": {
+		"prefix": "tp-schema",
+		"body": [
+			"import { z } from 'zod'",
+			"",
+			"export const ${1:Name}Schema = z.object({",
+			"    ${2:field}: z.string(),",
+			"})"
+		],
+		"description": "Zod Schema Definition"
+	},
+	"Service Class": {
+		"prefix": "tp-service",
+		"body": [
+			"import { ILogger, IConfig } from '../../src/core/types/core.js'",
+			"",
+			"export class ${1:Name}Service {",
+			"    constructor(",
+			"        private readonly config: IConfig,",
+			"        private readonly log: ILogger",
+			"    ) {}",
+			"",
+			"    async ${2:doSomething}() {",
+			"        this.log.show({ type: this.log.TYPE_INFO, msg: 'Executing' })",
+			"    }",
+			"}"
+		],
+		"description": "Service Class with DI"
+	},
+    "Test Suite (Node)": {
+		"prefix": "tp-test",
+		"body": [
+			"import { describe, it } from 'node:test'",
+			"import assert from 'node:assert'",
+			"",
+			"describe('${1:Suite Name}', () => {",
+			"    it('${2:should do something}', () => {",
+			"        assert.strictEqual(1, 1)",
+			"    })",
+			"})"
+		],
+		"description": "Node Test Runner Suite"
+	},
+    "Repository Method": {
+		"prefix": "tp-repo-method",
+		"body": [
+			"async ${1:methodName}(${2:arg}: string) {",
+			"    const r = await this.db.exe('${3:namespace}', '${4:queryName}', [${2:arg}])",
+			"    return r.rows?.[0] ?? null",
+			"}"
+		],
+		"description": "Database Access Method"
+	},
+    "Logger Info": {
+		"prefix": "tp-log",
+		"body": [
+			"this.log.show({ type: this.log.TYPE_INFO, msg: '${1:Message}' })"
+		],
+		"description": "Log an info message"
+	}
+}

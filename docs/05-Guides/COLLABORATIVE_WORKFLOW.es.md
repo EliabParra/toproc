@@ -1,0 +1,181 @@
+# 🤝 Guía de Desarrollo Colaborativo
+
+Esta guía detalla cómo utilizar **ToProccess Framework** como base para construir una aplicación real en equipo. Cubre desde la estructura de repositorios hasta el flujo de trabajo diario para Backend y Frontend.
+
+## 1. Arquitectura del Proyecto (Repositorios)
+
+Para aplicaciones modernas, recomendamos separar el código en dos repositorios distintos. Esto permite ciclos de despliegue independientes y especialización del equipo.
+
+### Estructura Recomendada
+
+```text
+MiSuperApp/ (Organización en GitHub/GitLab)
+├── mi-app-backend/   <-- (Clon de ToProccess Framework)
+│   ├── .github/
+│   ├── src/
+│   ├── BO/
+│   ├── Dockerfile
+│   └── docker-compose.yml
+│
+└── mi-app-frontend/  <-- (React, Vue, Angular, Next.js)
+    ├── src/
+    ├── package.json
+    └── ...
+```
+
+### 🚀 Despegue del Proyecto (Tech Lead / Inicializador)
+
+1.  **Backend**:
+    - Usa este framework como "Template" o clónalo.
+    - Renombra el proyecto en `package.json` y `docker-compose.yml` (ej. `mi-app-api`).
+    - Limpia los ejemplos que no necesites (opcional).
+    - Sube el código a `mi-app-backend`.
+2.  **Frontend**:
+    - Inicia tu proyecto (ej. `npm create vite@latest`).
+    - Configura el cliente HTTP para apuntar a `http://localhost:3000`.
+
+---
+
+## 2. Flujo de Trabajo Backend (El Equipo API)
+
+### A. Onboarding (Nuevo Desarrollador)
+
+Cuando "Pedro" se une al equipo de Backend:
+
+1.  `git clone .../mi-app-backend`
+2.  `cp .env.example .env` (Solicita las credenciales secretas al equipo si las hay).
+3.  **Modo Docker (Recomendado)**:
+    - `docker-compose up -d`
+    - `docker-compose exec api npm run db:init`
+4.  **Modo Manual**:
+    - Instala Node/Postgres.
+    - Crea la DB local.
+    - `npm run db:init`
+
+### B. Ciclo de Desarrollo Diario
+
+1.  **Sincronizar**: `git pull origin main`
+2.  **Actualizar Base de Datos**:
+    - Siempre ejecuta `npm run db:init` después de un pull.
+    - _¿Por qué?_ Si alguien agregó una tabla nueva ayer, este comando la creará en tu máquina.
+3.  **Programar**:
+    - Crea tu rama: `git checkout -b feature/nueva-funcionalidad`
+    - Crea tus BOs, Rutas, etc.
+4.  **Cambios en Base de Datos**:
+    - ⚠️ **No hagas cambios manuales en tu DB local** (pgAdmin).
+    - Agrega los cambios en `scripts/db-init/schema/`.
+    - Prueba que corran bien con `npm run db:init`.
+    - _Regla de Oro_: El código es la verdad absoluta de la base de datos.
+5.  **Pull Request**:
+    - Sube tu código. CI/CD debería correr `npm run verify`.
+
+---
+
+## 3. Flujo de Trabajo Frontend (El Equipo UI)
+
+El equipo de Frontend necesita que el Backend funcione, pero no necesariamente tocar su código.
+
+### Opción A: Backend en Docker (La más limpia)
+
+El desarrollador Frontend:
+
+1.  Clona `mi-app-backend`.
+2.  Corre `docker-compose up -d`.
+3.  Se olvida del backend. Se enfoca en su repo `mi-app-frontend`.
+    - Si el Backend se actualiza, solo hace `git pull && docker-compose restart` en la carpeta del backend.
+
+### Opción B: API Remota (Staging)
+
+Si tienen un servidor de pruebas (Staging) en la nube:
+
+1.  Frontend configura su `.env`: `VITE_API_URL=https://api-staging.mi-app.com`.
+2.  No necesita correr nada del backend localmente.
+3.  _Desventaja_: Si se cae internet o rompen Staging, se bloquea el desarrollo.
+
+### Integración (CORS y Puertos)
+
+- El Backend corre en el puerto `3000`.
+- El Frontend usualmente corre en `5173` (Vite) o `4200` (Angular).
+- **CORS**: En `src/app.ts`, asegúrate de que el origen del frontend esté permitido o usa `*` (asterisco) solo para desarrollo.
+
+---
+
+## 4. Gestión de Base de Datos en Equipo (Deep Dive)
+
+El mayor reto colaborativo es que la base de datos de todos esté sincronizada.
+Si Pedro tiene una tabla `products` y Juan no, el código de Pedro fallará en la máquina de Juan.
+
+### El Problema
+
+Tradicionalmente, los desarrolladores usan clientes visuales (pgAdmin, DBeaver) para crear tablas.
+
+- 🚫 **Error**: Pedro crea la tabla `products` manualmente en su PC.
+- 🚫 **Consecuencia**: Esa tabla vive solo en la PC de Pedro. Cuando sube su código, nadie más la tiene. Juan baja el código, corre la app y... **¡Crash!** "Relation does not exist".
+
+### La Solución ToProccess: "Schema as Code"
+
+En este framework, **el código es la única verdad**. No tocamos pgAdmin para crear tablas.
+
+#### Algoritmo de Sincronización
+
+El script `npm run db:init` hace esto cada vez que corre:
+
+1.  Lee todos los archivos `.ts` en `scripts/db-init/schema/`.
+2.  Ejecuta los comandos SQL en orden.
+3.  **Idempotencia**: Los comandos usan `IF NOT EXISTS`. Si la tabla ya existe, no hace nada. Si no existe, la crea.
+
+#### Ejemplo Real: Agregar la tabla de Productos
+
+Imagina que te toca crear el módulo de Productos.
+
+**Paso 1: Crear el archivo de Schema**
+Creas `scripts/db-init/schema/ecommerce.ts`:
+
+```typescript
+export const ECOMMERCE_SCHEMA = [
+    // Usar siempre "IF NOT EXISTS"
+    `create table if not exists products (
+        product_id bigint generated by default as identity primary key,
+        name text not null,
+        price integer not null
+    );`,
+]
+```
+
+**Paso 2: Registrar el Schema**
+En `scripts/db-init/index.ts`, lo agregas a la lista de ejecución:
+
+```typescript
+import { ECOMMERCE_SCHEMA } from './schema/ecommerce.js'
+// ...
+for (const sql of ECOMMERCE_SCHEMA) {
+    await executor.run(sql, [], 'Ecommerce Schema')
+}
+```
+
+**Paso 3: Subir a Git**
+Haces commit y push de estos dos archivos.
+
+**Paso 4: El resto del equipo**
+Cuando Juan llegue mañana a trabajar:
+
+1.  `git pull` (Baja tus archivos `.ts`).
+2.  `npm run db:init` (El script lee tu nuevo archivo y crea la tabla `products` en SU base de datos local).
+3.  ¡Listo! Juan tiene la BD actualizada automáticamente.
+
+### Reglas de Oro
+
+1.  **Nunca** uses `CREATE TABLE` manual en pgAdmin.
+2.  Usa siempre `IF NOT EXISTS` en tus scripts para que no fallen si se corren dos veces.
+3.  Corre `npm run db:init` cada vez que hagas `git pull`.
+
+---
+
+## 5. Resumen de Comandos
+
+| Situación               | Repo Backend                                              | Repo Frontend                               |
+| :---------------------- | :-------------------------------------------------------- | :------------------------------------------ |
+| **Inicio del día**      | `git pull`<br>`npm run db:init`<br>`docker-compose up -d` | `git pull`<br>`npm run dev`                 |
+| **Nueva Funcionalidad** | `npm run bo` (Crear archivos)<br>Programar...<br>Tests... | Programar componentes...<br>Consumir API... |
+| **BD cambió**           | Agregar SQL en `scripts/`                                 | (Esperar a que Backend avise)               |
+| **Terminar**            | `git push`                                                | `git push`                                  |

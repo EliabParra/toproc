@@ -12,4 +12,4 @@ Total Business Objects: **1**
 ## Transactions (TX)
 
 Valid transactions are defined in the database `security.methods` table.
-Use `npm run bo -- list` to see the active runtime mapping.
+Use `npm run bo list` to see the active runtime mapping.

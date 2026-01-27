@@ -2,7 +2,12 @@
 
 Welcome to the definitive documentation for **ToProccess**.
 
-> **Note to the reader**: This documentation is designed to be read by anyone, from a junior developer to a software architect. If a concept seems too basic, feel free to skip it. If it seems too complex, we've included analogies and diagrams to make it easier.
+> **Reader's Note**: This documentation is designed for everyone, from junior developers to software architects. If a concept seems too basic, feel free to skip it. If it seems too complex, we've included analogies and diagrams to help.
+
+👀 **Looking to start now?**
+
+- **[Quick Start Guide (Docker vs Manual)](../01-Getting-Started/QUICK_START.en.md)** 🚀
+- **[Collaborative Workflow (Git, Frontend, Backend)](../05-Guides/COLLABORATIVE_WORKFLOW.en.md)** 🤝
 
 ## 1. Project Vision
 

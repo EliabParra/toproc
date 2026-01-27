@@ -1,0 +1,64 @@
+name: toproc
+
+services:
+    # --- Servicio API (Nuestra App) ---
+    api:
+        build:
+            context: .
+            # IMPORTANTE: Para desarrollo, usamos la etapa 'builder' del Dockerfile.
+            # ¿Por qué? Porque 'builder' tiene las devDependencies (TypeScript, etc.)
+            # y herramientas necesarias para correr 'npm run dev'.
+            target: builder
+        container_name: toproc-api
+        ports:
+            - '3000:3000' # Mapea puerto 3000 del host al 3000 del contenedor
+        volumes:
+            # --- VOLUMEN MÁGICO PARA HOT RELOAD ---
+            # Mapeamos la carpeta actual (.) del host a /app en el contenedor.
+            # Cualquier cambio que hagas en tu editor se refleja instantáneamente dentro.
+            - .:/app
+            # Excepción: Usamos los node_modules del contenedor, NO los de Windows.
+            # Esto evita problemas de compatibilidad entre OS.
+            - /app/node_modules
+        environment:
+            - NODE_ENV=development
+            - PORT=3000
+            # Conexión a la base de datos definida abajo (hostname: db)
+            - DATABASE_URL=postgres://postgres:postgres@db:5432/toproc_dev
+        depends_on:
+            db:
+                condition: service_healthy # Espera a que la DB esté lista antes de iniciar
+        # Sobrescribimos el comando CMD del Dockerfile para usar modo desarrollo
+        command: npm run dev
+        networks:
+            - toproc-net
+
+    # --- Servicio Base de Datos (PostgreSQL) ---
+    db:
+        image: postgres:15-alpine
+        container_name: toproc-db
+        restart: always
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: toproc_dev
+        ports:
+            - '5432:5432' # Útil si quieres conectar TablePlus/DBeaver desde fuera
+        volumes:
+            # Persistencia de datos: Si borras el contenedor, los datos sobreviven aquí.
+            - postgres_data:/var/lib/postgresql/data
+        healthcheck:
+            # Comprobación de salud para que la API sepa cuándo conectarse
+            test: ['CMD-SHELL', 'pg_isready -U postgres']
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        networks:
+            - toproc-net
+
+networks:
+    toproc-net:
+        driver: bridge
+
+volumes:
+    postgres_data:

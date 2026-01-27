@@ -4,6 +4,11 @@ Bienvenido a la documentación definitiva de **ToProccess**.
 
 > **Nota para el lector**: Esta documentación está diseñada para ser leída por cualquier persona, desde un desarrollador junior hasta un arquitecto de software. Si algún concepto te parece muy básico, puedes saltarlo. Si te parece muy complejo, hemos incluido analogías y diagramas para facilitarlo.
 
+👀 **¿Buscas empezar ya?**
+
+- **[Guía de Inicio Rápido (Docker vs Manual)](../01-Getting-Started/QUICK_START.es.md)** 🚀
+- **[Flujo de Trabajo Colaborativo (Git, Frontend, Backend)](../05-Guides/COLLABORATIVE_WORKFLOW.es.md)** 🤝
+
 ## 1. La Visión del Proyecto
 
 ToProccess no es solo "otro backend en Node.js". Es una respuesta a los problemas comunes que surgen cuando los proyectos crecen: código espagueti, lógica de negocio mezclada con base de datos, y seguridad inconsistente.

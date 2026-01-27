@@ -15,7 +15,7 @@
         "config:check": "node --import tsx scripts/config/check.ts",
         "verify": "npm run typecheck && npm run build && tsx scripts/smoke-dist.ts && npm test",
         "start": "node --import tsx src/index.ts",
-        "dev": "nodemon --watch src --watch BO --watch public --ext js,ts,json,html,css --signal SIGINT --exec \"node --import tsx src/index.ts\"",
+        "dev": "nodemon --legacy-watch --watch src --watch BO --watch public --ext js,ts,json,html,css --signal SIGINT --exec \"node --import tsx src/index.ts\"",
         "db:init": "node --import tsx scripts/db-init/index.ts",
         "hashpw": "tsx scripts/hash-password.ts",
         "bo": "node --import tsx scripts/bo/index.ts",
