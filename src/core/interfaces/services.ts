@@ -24,5 +24,5 @@ export interface IValidator extends CoreValidator {
     validateInt?(param: any): boolean
     validateEmail?(param: any): boolean
     // getAlerts ya está en CoreValidator como opcional
-    validate<T>(value: T, schema: ZodObject): ValidationResult<T> // Overload conflict potential, making flexible
+    // validate is inherited from CoreValidator with correct signature
 }
