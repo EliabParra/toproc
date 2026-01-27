@@ -73,7 +73,7 @@ cp .env.example .env
 Crea las tablas del sistema (`security`, `session`, `audit`).
 
 ```bash
-npm run db:init
+npm run db
 ```
 
 ### 5. Arrancar
@@ -92,7 +92,7 @@ npm run dev
 - [Instalación y Setup](docs/01-Getting-Started/INSTALLATION.es.md)
 - [Configuración de Entorno (.env)](docs/01-Getting-Started/ENVIRONMENT.es.md)
 - [Tu Primer Business Object](docs/05-Guides/CREATING_BOS.es.md)
-- [CLI Tools (db:init, bo)](docs/01-Getting-Started/CLI_TOOLS.es.md)
+- [CLI Tools (db, bo)](docs/01-Getting-Started/CLI_TOOLS.es.md)
 
 ### 🏛️ 02. Arquitectura
 
@@ -135,7 +135,7 @@ npm run dev
 | `npm run dev`          | Modo desarrollo con `nodemon` (Hot Reload).      |
 | `npm start`            | Modo producción (Ejecuta `dist/index.js`).       |
 | `npm run verify`       | **Quality Gate**: Typecheck + Build + Tests.     |
-| `npm run db:init`      | Crea/Restablece el esquema de base de datos.     |
+| `npm run db`           | CLI interactivo de BD (sync, seed, reset).       |
 | `npm run config:check` | Valida el archivo `.env` sin arrancar el server. |
 | `npm run bo <cmd>`     | CLI para crear BOs: `new`, `sync`, `list`.       |
 | `npm run docs:gen`     | Genera documentación API (TypeDoc).              |

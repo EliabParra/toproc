@@ -1,181 +1,385 @@
 # 🤝 Guía de Desarrollo Colaborativo
 
-Esta guía detalla cómo utilizar **ToProccess Framework** como base para construir una aplicación real en equipo. Cubre desde la estructura de repositorios hasta el flujo de trabajo diario para Backend y Frontend.
+Esta guía detalla cómo utilizar el **CLI de Base de Datos** (`npm run db`) para mantener la base de datos sincronizada en todo el equipo. Es el documento esencial para evitar el clásico problema de "¡En mi máquina funciona!".
 
-## 1. Arquitectura del Proyecto (Repositorios)
+---
 
-Para aplicaciones modernas, recomendamos separar el código en dos repositorios distintos. Esto permite ciclos de despliegue independientes y especialización del equipo.
+## 1. El Problema Clásico
 
-### Estructura Recomendada
+### Escenario de Pesadilla
 
-```text
-MiSuperApp/ (Organización en GitHub/GitLab)
-├── mi-app-backend/   <-- (Clon de ToProccess Framework)
-│   ├── .github/
-│   ├── src/
-│   ├── BO/
-│   ├── Dockerfile
-│   └── docker-compose.yml
-│
-└── mi-app-frontend/  <-- (React, Vue, Angular, Next.js)
-    ├── src/
-    ├── package.json
-    └── ...
+```
+Día 1: Pedro crea una tabla "productos" manualmente en pgAdmin
+Día 2: Pedro sube código que usa la tabla "productos"
+Día 3: Juan hace git pull, corre la app y... 💥
+       "ERROR: relation 'productos' does not exist"
 ```
 
-### 🚀 Despegue del Proyecto (Tech Lead / Inicializador)
+### ¿Por Qué Pasa?
 
-1.  **Backend**:
-    - Usa este framework como "Template" o clónalo.
-    - Renombra el proyecto en `package.json` y `docker-compose.yml` (ej. `mi-app-api`).
-    - Limpia los ejemplos que no necesites (opcional).
-    - Sube el código a `mi-app-backend`.
-2.  **Frontend**:
-    - Inicia tu proyecto (ej. `npm create vite@latest`).
-    - Configura el cliente HTTP para apuntar a `http://localhost:3000`.
+- La base de datos **no está en Git**
+- Los cambios manuales en pgAdmin **no se comparten**
+- Cada desarrollador tiene **una copia diferente** del esquema
 
 ---
 
-## 2. Flujo de Trabajo Backend (El Equipo API)
+## 2. La Solución: Schema as Code
 
-### A. Onboarding (Nuevo Desarrollador)
+> **Regla de Oro**: El código es la única verdad de la base de datos.
 
-Cuando "Pedro" se une al equipo de Backend:
+En ToProccess, todos los cambios de base de datos se definen en archivos TypeScript bajo `scripts/db/schemas/`. Cuando cualquier desarrollador ejecuta `npm run db sync`, su base de datos local se actualiza automáticamente.
 
-1.  `git clone .../mi-app-backend`
-2.  `cp .env.example .env` (Solicita las credenciales secretas al equipo si las hay).
-3.  **Modo Docker (Recomendado)**:
-    - `docker-compose up -d`
-    - `docker-compose exec api npm run db:init`
-4.  **Modo Manual**:
-    - Instala Node/Postgres.
-    - Crea la DB local.
-    - `npm run db:init`
-
-### B. Ciclo de Desarrollo Diario
-
-1.  **Sincronizar**: `git pull origin main`
-2.  **Actualizar Base de Datos**:
-    - Siempre ejecuta `npm run db:init` después de un pull.
-    - _¿Por qué?_ Si alguien agregó una tabla nueva ayer, este comando la creará en tu máquina.
-3.  **Programar**:
-    - Crea tu rama: `git checkout -b feature/nueva-funcionalidad`
-    - Crea tus BOs, Rutas, etc.
-4.  **Cambios en Base de Datos**:
-    - ⚠️ **No hagas cambios manuales en tu DB local** (pgAdmin).
-    - Agrega los cambios en `scripts/db-init/schema/`.
-    - Prueba que corran bien con `npm run db:init`.
-    - _Regla de Oro_: El código es la verdad absoluta de la base de datos.
-5.  **Pull Request**:
-    - Sube tu código. CI/CD debería correr `npm run verify`.
+```
+scripts/db/schemas/
+├── 01_base.ts          # Tablas del sistema (security, sessions)
+├── 10_users_extended.ts # Extensiones de usuarios
+├── 20_auth.ts          # Autenticación (opcional)
+├── 50_productos.ts     # ← TUS TABLAS VAN AQUÍ
+└── 90_audit.ts         # Auditoría
+```
 
 ---
 
-## 3. Flujo de Trabajo Frontend (El Equipo UI)
+## 3. Flujo de Trabajo Diario
 
-El equipo de Frontend necesita que el Backend funcione, pero no necesariamente tocar su código.
+### Al Empezar el Día
 
-### Opción A: Backend en Docker (La más limpia)
+```bash
+# 1. Obtener cambios del equipo
+git pull origin main
 
-El desarrollador Frontend:
+# 2. Sincronizar base de datos
+npm run db sync
 
-1.  Clona `mi-app-backend`.
-2.  Corre `docker-compose up -d`.
-3.  Se olvida del backend. Se enfoca en su repo `mi-app-frontend`.
-    - Si el Backend se actualiza, solo hace `git pull && docker-compose restart` en la carpeta del backend.
+# 3. Sincronizar métodos de BOs
+npm run db bo
 
-### Opción B: API Remota (Staging)
+# 4. Empezar a trabajar
+npm run dev
+```
 
-Si tienen un servidor de pruebas (Staging) en la nube:
+> 💡 **Tip**: Crea un alias `alias sync="git pull && npm run db sync && npm run db bo"` para hacer esto en un solo comando.
 
-1.  Frontend configura su `.env`: `VITE_API_URL=https://api-staging.mi-app.com`.
-2.  No necesita correr nada del backend localmente.
-3.  _Desventaja_: Si se cae internet o rompen Staging, se bloquea el desarrollo.
+### Al Crear una Nueva Tabla
 
-### Integración (CORS y Puertos)
+1. **Crea el archivo de esquema**:
 
-- El Backend corre en el puerto `3000`.
-- El Frontend usualmente corre en `5173` (Vite) o `4200` (Angular).
-- **CORS**: En `src/app.ts`, asegúrate de que el origen del frontend esté permitido o usa `*` (asterisco) solo para desarrollo.
-
----
-
-## 4. Gestión de Base de Datos en Equipo (Deep Dive)
-
-El mayor reto colaborativo es que la base de datos de todos esté sincronizada.
-Si Pedro tiene una tabla `products` y Juan no, el código de Pedro fallará en la máquina de Juan.
-
-### El Problema
-
-Tradicionalmente, los desarrolladores usan clientes visuales (pgAdmin, DBeaver) para crear tablas.
-
-- 🚫 **Error**: Pedro crea la tabla `products` manualmente en su PC.
-- 🚫 **Consecuencia**: Esa tabla vive solo en la PC de Pedro. Cuando sube su código, nadie más la tiene. Juan baja el código, corre la app y... **¡Crash!** "Relation does not exist".
-
-### La Solución ToProccess: "Schema as Code"
-
-En este framework, **el código es la única verdad**. No tocamos pgAdmin para crear tablas.
-
-#### Algoritmo de Sincronización
-
-El script `npm run db:init` hace esto cada vez que corre:
-
-1.  Lee todos los archivos `.ts` en `scripts/db-init/schema/`.
-2.  Ejecuta los comandos SQL en orden.
-3.  **Idempotencia**: Los comandos usan `IF NOT EXISTS`. Si la tabla ya existe, no hace nada. Si no existe, la crea.
-
-#### Ejemplo Real: Agregar la tabla de Productos
-
-Imagina que te toca crear el módulo de Productos.
-
-**Paso 1: Crear el archivo de Schema**
-Creas `scripts/db-init/schema/ecommerce.ts`:
+```bash
+# Crea scripts/db/schemas/50_productos.ts
+```
 
 ```typescript
-export const ECOMMERCE_SCHEMA = [
-    // Usar siempre "IF NOT EXISTS"
-    `create table if not exists products (
-        product_id bigint generated by default as identity primary key,
-        name text not null,
-        price integer not null
+export const sql = [
+    `CREATE TABLE IF NOT EXISTS productos (
+        producto_id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+        nombre TEXT NOT NULL,
+        precio INTEGER NOT NULL,
+        stock INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
     );`,
+
+    `CREATE INDEX IF NOT EXISTS idx_productos_nombre 
+     ON productos(nombre);`,
 ]
 ```
 
-**Paso 2: Registrar el Schema**
-En `scripts/db-init/index.ts`, lo agregas a la lista de ejecución:
+2. **Aplica el esquema**:
 
-```typescript
-import { ECOMMERCE_SCHEMA } from './schema/ecommerce.js'
-// ...
-for (const sql of ECOMMERCE_SCHEMA) {
-    await executor.run(sql, [], 'Ecommerce Schema')
-}
+```bash
+npm run db sync
 ```
 
-**Paso 3: Subir a Git**
-Haces commit y push de estos dos archivos.
+3. **Verifica que funciona**:
 
-**Paso 4: El resto del equipo**
-Cuando Juan llegue mañana a trabajar:
+```bash
+npm run verify
+```
 
-1.  `git pull` (Baja tus archivos `.ts`).
-2.  `npm run db:init` (El script lee tu nuevo archivo y crea la tabla `products` en SU base de datos local).
-3.  ¡Listo! Juan tiene la BD actualizada automáticamente.
+4. **Sube a Git**:
 
-### Reglas de Oro
+```bash
+git add scripts/db/schemas/50_productos.ts
+git commit -m "feat(db): add productos table"
+git push
+```
 
-1.  **Nunca** uses `CREATE TABLE` manual en pgAdmin.
-2.  Usa siempre `IF NOT EXISTS` en tus scripts para que no fallen si se corren dos veces.
-3.  Corre `npm run db:init` cada vez que hagas `git pull`.
+### Al Hacer Pull Request
+
+```bash
+# Verifica que tus esquemas son idempotentes
+npm run db sync --dry-run
+
+# Asegúrate de que todo pasa
+npm run verify
+```
 
 ---
 
-## 5. Resumen de Comandos
+## 4. Anatomía de un Archivo de Esquema
 
-| Situación               | Repo Backend                                              | Repo Frontend                               |
-| :---------------------- | :-------------------------------------------------------- | :------------------------------------------ |
-| **Inicio del día**      | `git pull`<br>`npm run db:init`<br>`docker-compose up -d` | `git pull`<br>`npm run dev`                 |
-| **Nueva Funcionalidad** | `npm run bo` (Crear archivos)<br>Programar...<br>Tests... | Programar componentes...<br>Consumir API... |
-| **BD cambió**           | Agregar SQL en `scripts/`                                 | (Esperar a que Backend avise)               |
-| **Terminar**            | `git push`                                                | `git push`                                  |
+```typescript
+// scripts/db/schemas/50_mi_modulo.ts
+
+export const sql = [
+    // 1. SIEMPRE usa IF NOT EXISTS
+    `CREATE TABLE IF NOT EXISTS mi_tabla (
+        id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+        nombre TEXT NOT NULL
+    );`,
+
+    // 2. Los índices también son idempotentes
+    `CREATE INDEX IF NOT EXISTS idx_mi_tabla_nombre 
+     ON mi_tabla(nombre);`,
+
+    // 3. Columnas nuevas (ALTER TABLE)
+    `DO $$
+     BEGIN
+         IF NOT EXISTS (
+             SELECT 1 FROM information_schema.columns 
+             WHERE table_name = 'mi_tabla' AND column_name = 'email'
+         ) THEN
+             ALTER TABLE mi_tabla ADD COLUMN email TEXT;
+         END IF;
+     END $$;`,
+]
+```
+
+### Convenciones de Nombrado
+
+| Prefijo | Propósito                           |
+| ------- | ----------------------------------- |
+| `01_`   | Tablas del sistema (security, core) |
+| `10_`   | Extensiones de usuarios             |
+| `20_`   | Autenticación                       |
+| `50_`   | Tablas de negocio (tu dominio)      |
+| `90_`   | Auditoría, logs                     |
+
+> **Importante**: Los archivos se ejecutan en **orden alfabético**. Usa prefijos numéricos para controlar dependencias.
+
+---
+
+## 5. Sincronización de Business Objects
+
+### El Problema de los Métodos
+
+Cuando creas un nuevo método en un BO:
+
+```typescript
+// BO/Producto/ProductoBO.ts
+class ProductoBO extends BaseBO {
+    async listar() { ... }
+    async crear() { ... }   // ← NUEVO MÉTODO
+}
+```
+
+Ese método necesita:
+
+1. Un registro en `security.methods` (con número `tx`)
+2. Permisos en `security.permission_methods`
+
+### La Solución: `npm run db bo`
+
+```bash
+npm run db bo
+```
+
+Esto automáticamente:
+
+1. Escanea todos los BOs en `BO/`
+2. Detecta métodos `async` públicos
+3. Registra los nuevos en la BD
+4. Asigna números `tx` automáticamente
+
+### Detectar Métodos Huérfanos
+
+Si alguien eliminó un método del código pero sigue en la BD:
+
+```bash
+npm run db bo
+# ⚠️ Found 2 orphaned methods:
+#    • ProductoBO.metodoViejo (tx: 150)
+```
+
+### Limpiar Métodos Huérfanos
+
+```bash
+# Primero, ver qué se eliminaría (dry-run)
+npm run db bo --prune --dry-run
+
+# Si estás seguro, eliminar
+npm run db bo --prune
+```
+
+---
+
+## 6. Comandos Esenciales
+
+| Situación             | Comando                                              |
+| --------------------- | ---------------------------------------------------- |
+| **Inicio del día**    | `git pull && npm run db sync && npm run db bo`       |
+| **Nueva tabla**       | Crear archivo en `schemas/`, luego `npm run db sync` |
+| **Nuevo método BO**   | `npm run db bo`                                      |
+| **Verificar estado**  | `npm run db bo --dry-run`                            |
+| **Limpiar huérfanos** | `npm run db bo --prune`                              |
+| **Reset total**       | `npm run db reset --yes`                             |
+
+---
+
+## 7. Estructura de Repositorios (Equipos Grandes)
+
+Para equipos Backend + Frontend separados:
+
+```
+mi-empresa/
+├── mi-app-backend/   ← ToProccess (API)
+│   ├── scripts/db/schemas/
+│   ├── BO/
+│   └── src/
+│
+└── mi-app-frontend/  ← React/Vue/Angular
+    └── src/
+```
+
+### Flujo para Desarrollador Backend
+
+```bash
+cd mi-app-backend
+git pull
+npm run db sync
+npm run db bo
+npm run dev
+```
+
+### Flujo para Desarrollador Frontend
+
+**Opción A: Backend en Docker (Recomendado)**
+
+```bash
+cd mi-app-backend
+docker-compose up -d
+# Olvidarse del backend, enfocarse en frontend
+```
+
+**Opción B: Backend Local**
+
+```bash
+cd mi-app-backend
+git pull
+npm run db sync
+npm run dev
+# En otra terminal
+cd mi-app-frontend
+npm run dev
+```
+
+---
+
+## 8. CI/CD: Automatización
+
+En tu pipeline de GitHub Actions / GitLab CI:
+
+```yaml
+# .github/workflows/ci.yml
+jobs:
+    test:
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Start PostgreSQL
+              run: docker-compose up -d postgres
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Sync database
+              run: npm run db sync -- --yes
+
+            - name: Register BOs
+              run: npm run db bo -- --yes
+
+            - name: Run tests
+              run: npm run verify
+```
+
+---
+
+## 9. Resolución de Problemas
+
+### "Relation does not exist"
+
+```
+ERROR: relation "mi_tabla" does not exist
+```
+
+**Causa**: La tabla no existe en tu BD local.
+
+**Solución**:
+
+```bash
+npm run db sync
+```
+
+### "Duplicate key value"
+
+```
+ERROR: duplicate key value violates unique constraint
+```
+
+**Causa**: Intentas insertar un registro que ya existe.
+
+**Solución**: Usa `ON CONFLICT DO NOTHING` o `INSERT ... ON CONFLICT DO UPDATE`.
+
+### "Column already exists"
+
+**Causa**: Tu `ALTER TABLE ADD COLUMN` no es idempotente.
+
+**Solución**: Envuelve en `DO $$ ... END $$;` con verificación.
+
+---
+
+## 10. Mejores Prácticas
+
+### ✅ Hacer
+
+- Usar `IF NOT EXISTS` siempre
+- Ejecutar `npm run db sync` después de cada `git pull`
+- Mantener los archivos de esquema pequeños y enfocados
+- Usar prefijos numéricos consistentes
+
+### ❌ No Hacer
+
+- Crear tablas manualmente en pgAdmin
+- Modificar tablas existentes sin archivos de esquema
+- Compartir dumps SQL por Slack/email
+- Usar `DROP TABLE` sin protección
+
+---
+
+## 11. Resumen Visual
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Pedro crea    │     │   Juan hace     │     │   María hace    │
+│   50_orders.ts  │────▶│   git pull      │────▶│   git pull      │
+│                 │     │   npm run db    │     │   npm run db    │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+         │                      │                       │
+         ▼                      ▼                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     GIT (Código + Esquemas)                     │
+└─────────────────────────────────────────────────────────────────┘
+         │                      │                       │
+         ▼                      ▼                       ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   BD de Pedro   │     │   BD de Juan    │     │   BD de María   │
+│   ✅ orders     │     │   ✅ orders     │     │   ✅ orders     │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
+
+---
+
+## Ver También
+
+- [CLI de Base de Datos (referencia completa)](../01-Getting-Started/CLI_DB.es.md)
+- [Generador de BOs](../01-Getting-Started/CLI_BO.es.md)
+- [Sistema de Seguridad](../02-Architecture/SECURITY_SYSTEM.es.md)

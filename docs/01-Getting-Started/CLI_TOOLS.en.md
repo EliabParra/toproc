@@ -9,8 +9,8 @@ We have created exhaustive documentation for the most complex tools:
 1.  **[BO Generator (npm run bo)](CLI_BO.en.md)**
     Learn how to create modules, services, and repositories automatically with a single command.
 
-2.  **[DB Initializer (npm run db:init)](CLI_DB_INIT.en.md)**
-    Discover how to bootstrap your database, configure schemas, and troubleshoot connection issues.
+2.  **[Database CLI (npm run db)](CLI_DB.en.md)**
+    The central tool for managing schemas, syncing BOs, and keeping the DB in sync across your team.
 
 ---
 

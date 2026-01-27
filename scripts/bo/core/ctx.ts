@@ -38,7 +38,7 @@ export class Context {
             // Load valid config
             // Connect DB
             // Assign to this.db
-            // For now, assume migration to use `db-init` core DB?
+            // For now, assume migration to use unified `npm run db` CLI?
             // Or stick to `src/globals` logic?
             // Let's stick to importing globals.js in index.ts for simplicity.
             await import('../../../src/globals.js')

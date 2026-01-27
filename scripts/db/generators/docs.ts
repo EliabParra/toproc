@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { InitConfig } from '../core/config.js'
+import { InitConfig } from '../types.js'
 
 export class DocsGenerator {
     constructor(private rootDir: string) {}

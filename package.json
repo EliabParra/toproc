@@ -16,7 +16,7 @@
         "verify": "npm run typecheck && npm run build && tsx scripts/smoke-dist.ts && npm test",
         "start": "node --import tsx src/index.ts",
         "dev": "nodemon --legacy-watch --watch src --watch BO --watch public --ext js,ts,json,html,css --signal SIGINT --exec \"node --import tsx src/index.ts\"",
-        "db:init": "node --import tsx scripts/db-init/index.ts",
+        "db": "node --import tsx scripts/db/index.ts",
         "hashpw": "tsx scripts/hash-password.ts",
         "bo": "node --import tsx scripts/bo/index.ts",
         "export:starter": "tsx scripts/export-starter.ts",
@@ -27,6 +27,7 @@
     },
     "type": "module",
     "dependencies": {
+        "bcrypt": "^6.0.0",
         "bcryptjs": "^2.4.3",
         "colors": "^1.4.0",
         "connect-pg-simple": "^10.0.0",
@@ -42,6 +43,7 @@
         "zod": "^4.3.6"
     },
     "devDependencies": {
+        "@types/bcrypt": "^6.0.0",
         "@types/bcryptjs": "^2.4.6",
         "@types/node": "^25.0.3",
         "@types/nodemailer": "^7.0.4",

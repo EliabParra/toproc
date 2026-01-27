@@ -1,11 +1,11 @@
-import { Database } from './db.js'
+import { IDatabase } from '../../../src/types/core.js'
 import 'colors'
 
 export class Executor {
     private history: Array<{ sql: string; params: any[] }> = []
 
     constructor(
-        private db: Database,
+        private db: IDatabase,
         private dryRun: boolean = false
     ) {}
 
@@ -21,7 +21,7 @@ export class Executor {
 
         try {
             this.history.push({ sql, params })
-            return await this.db.query(sql, params)
+            return await this.db.exeRaw(sql, params)
         } catch (error: any) {
             console.error(`${'ERROR'.red}: Failed to execute SQL`)
             console.error(`SQL: ${sql}`)

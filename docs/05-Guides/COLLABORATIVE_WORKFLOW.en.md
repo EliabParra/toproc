@@ -1,131 +1,385 @@
 # 🤝 Collaborative Development Guide
 
-This guide details how to use **ToProccess Framework** as a foundation for building a real application as a team. It covers everything from repository structure to daily workflows for Backend and Frontend.
+This guide details how to use the **Database CLI** (`npm run db`) to keep the database synchronized across your team. It's the essential document to avoid the classic "It works on my machine!" problem.
 
-## 1. Project Architecture (Repositories)
+---
 
-For modern applications, we recommend separating code into two distinct repositories. This allows for independent deployment cycles and team specialization.
+## 1. The Classic Problem
 
-### Recommended Structure
+### Nightmare Scenario
 
-```text
-MySuperApp/ (Organization on GitHub/GitLab)
-├── my-app-backend/   <-- (ToProccess Framework Clone)
-│   ├── .github/
-│   ├── src/
-│   ├── BO/
-│   ├── Dockerfile
-│   └── docker-compose.yml
-│
-└── my-app-frontend/  <-- (React, Vue, Angular, Next.js)
-    ├── src/
-    ├── package.json
-    └── ...
+```
+Day 1: Pedro creates a "products" table manually in pgAdmin
+Day 2: Pedro pushes code that uses the "products" table
+Day 3: Juan does git pull, runs the app and... 💥
+       "ERROR: relation 'products' does not exist"
 ```
 
-### 🚀 Lift-off (Tech Lead / Initializer)
+### Why Does This Happen?
 
-1.  **Backend**:
-    - Use this framework as a "Template" or clone it.
-    - Rename the project in `package.json` and `docker-compose.yml` (e.g., `my-app-api`).
-    - Clean up examples you don't need (optional).
-    - Push code to `my-app-backend`.
-2.  **Frontend**:
-    - Start your project (e.g., `npm create vite@latest`).
-    - Configure HTTP client to point to `http://localhost:3000`.
+- The database is **not in Git**
+- Manual changes in pgAdmin are **not shared**
+- Each developer has a **different copy** of the schema
 
 ---
 
-## 2. Backend Workflow (The API Team)
+## 2. The Solution: Schema as Code
 
-### A. Onboarding (New Developer)
+> **Golden Rule**: Code is the single source of truth for the database.
 
-When "Alice" joins the Backend team:
+In ToProccess, all database changes are defined in TypeScript files under `scripts/db/schemas/`. When any developer runs `npm run db sync`, their local database is automatically updated.
 
-1.  `git clone .../my-app-backend`
-2.  `cp .env.example .env` (Request secret credentials from the team if any).
-3.  **Docker Mode (Recommended)**:
-    - `docker-compose up -d`
-    - `docker-compose exec api npm run db:init`
-4.  **Manual Mode**:
-    - Install Node/Postgres.
-    - Create local DB.
-    - `npm run db:init`
-
-### B. Daily Development Cycle
-
-1.  **Sync**: `git pull origin main`
-2.  **Update Database**:
-    - Always run `npm run db:init` after a pull.
-    - _Why?_ If someone added a new table yesterday, this command will create it on your machine.
-3.  **Code**:
-    - Create your branch: `git checkout -b feature/new-feature`
-    - Create your BOs, Routes, etc.
-4.  **Database Changes**:
-    - ⚠️ **Do not make manual changes in your local DB** (pgAdmin).
-    - Add changes in `scripts/db-init/schema/`.
-    - Test that they run well with `npm run db:init`.
-    - _Golden Rule_: The code is the single source of truth for the database.
-5.  **Pull Request**:
-    - Push your code. CI/CD should run `npm run verify`.
+```
+scripts/db/schemas/
+├── 01_base.ts          # System tables (security, sessions)
+├── 10_users_extended.ts # User extensions
+├── 20_auth.ts          # Authentication (optional)
+├── 50_products.ts      # ← YOUR TABLES GO HERE
+└── 90_audit.ts         # Auditing
+```
 
 ---
 
-## 3. Frontend Workflow (The UI Team)
+## 3. Daily Workflow
 
-The Frontend team needs the Backend to work, but doesn't necessarily need to touch its code.
+### Starting the Day
 
-### Option A: Backend in Docker (Cleanest)
+```bash
+# 1. Get team changes
+git pull origin main
 
-The Frontend developer:
+# 2. Sync database
+npm run db sync
 
-1.  Clones `my-app-backend`.
-2.  Runs `docker-compose up -d`.
-3.  Forgets about the backend. Focuses on their `my-app-frontend` repo.
-    - If Backend updates, they just do `git pull && docker-compose restart` in the backend folder.
+# 3. Sync BO methods
+npm run db bo
 
-### Option B: Remote API (Staging)
+# 4. Start working
+npm run dev
+```
 
-If you have a testing server (Staging) in the cloud:
+> 💡 **Tip**: Create an alias `alias sync="git pull && npm run db sync && npm run db bo"` to do this in one command.
 
-1.  Frontend configures their `.env`: `VITE_API_URL=https://api-staging.my-app.com`.
-2.  No need to run backend locally.
-3.  _Downside_: If internet fails or Staging breaks, development is blocked.
+### Creating a New Table
 
-### Integration (CORS and Ports)
+1. **Create the schema file**:
 
-- Backend runs on port `3000`.
-- Frontend usually runs on `5173` (Vite) or `4200` (Angular).
-- **CORS**: In `src/app.ts`, ensure frontend origin is allowed or use `*` (asterisco) only for development.
+```bash
+# Create scripts/db/schemas/50_products.ts
+```
+
+```typescript
+export const sql = [
+    `CREATE TABLE IF NOT EXISTS products (
+        product_id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+        name TEXT NOT NULL,
+        price INTEGER NOT NULL,
+        stock INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+    );`,
+
+    `CREATE INDEX IF NOT EXISTS idx_products_name 
+     ON products(name);`,
+]
+```
+
+2. **Apply the schema**:
+
+```bash
+npm run db sync
+```
+
+3. **Verify it works**:
+
+```bash
+npm run verify
+```
+
+4. **Push to Git**:
+
+```bash
+git add scripts/db/schemas/50_products.ts
+git commit -m "feat(db): add products table"
+git push
+```
+
+### Making a Pull Request
+
+```bash
+# Verify your schemas are idempotent
+npm run db sync --dry-run
+
+# Make sure everything passes
+npm run verify
+```
 
 ---
 
-## 4. Team Database Management
+## 4. Anatomy of a Schema File
 
-The biggest collaborative challenge is keeping everyone's database in sync.
+```typescript
+// scripts/db/schemas/50_my_module.ts
 
-### 🚫 The Setup to AVOID
+export const sql = [
+    // 1. ALWAYS use IF NOT EXISTS
+    `CREATE TABLE IF NOT EXISTS my_table (
+        id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+        name TEXT NOT NULL
+    );`,
 
-- Alice creates a table manually on her PC.
-- Pushes code that uses that table.
-- Bob pulls code, runs the app, and... **Crash!** "Relation does not exist".
+    // 2. Indexes are also idempotent
+    `CREATE INDEX IF NOT EXISTS idx_my_table_name 
+     ON my_table(name);`,
 
-### ✅ The ToProccess Way
+    // 3. New columns (ALTER TABLE)
+    `DO $$
+     BEGIN
+         IF NOT EXISTS (
+             SELECT 1 FROM information_schema.columns 
+             WHERE table_name = 'my_table' AND column_name = 'email'
+         ) THEN
+             ALTER TABLE my_table ADD COLUMN email TEXT;
+         END IF;
+     END $$;`,
+]
+```
 
-1.  Alice edits `scripts/db-init/schema/my-tables.ts` and adds the `CREATE TABLE`.
-2.  Alice verifies that `db:init` works.
-3.  Alice pushes the `.ts` file.
-4.  Bob pulls code, runs `db:init`, and the table magically appears.
+### Naming Conventions
 
-> **Note**: `db:init` is designed to be **idempotent** (can be run a thousand times safely). Use `CREATE TABLE IF NOT EXISTS` always.
+| Prefix | Purpose                        |
+| ------ | ------------------------------ |
+| `01_`  | System tables (security, core) |
+| `10_`  | User extensions                |
+| `20_`  | Authentication                 |
+| `50_`  | Business tables (your domain)  |
+| `90_`  | Auditing, logs                 |
+
+> **Important**: Files are executed in **alphabetical order**. Use numeric prefixes to control dependencies.
 
 ---
 
-## 5. Command Summary
+## 5. Business Object Synchronization
 
-| Situation        | Backend Repo                                              | Frontend Repo                        |
-| :--------------- | :-------------------------------------------------------- | :----------------------------------- |
-| **Start of Day** | `git pull`<br>`npm run db:init`<br>`docker-compose up -d` | `git pull`<br>`npm run dev`          |
-| **New Feature**  | `npm run bo` (Create files)<br>Code...<br>Tests...        | Code components...<br>Consume API... |
-| **DB Changed**   | Add SQL in `scripts/`                                     | (Wait for Backend to notify)         |
-| **Finish**       | `git push`                                                | `git push`                           |
+### The Methods Problem
+
+When you create a new method in a BO:
+
+```typescript
+// BO/Product/ProductBO.ts
+class ProductBO extends BaseBO {
+    async list() { ... }
+    async create() { ... }   // ← NEW METHOD
+}
+```
+
+That method needs:
+
+1. A record in `security.methods` (with `tx` number)
+2. Permissions in `security.permission_methods`
+
+### The Solution: `npm run db bo`
+
+```bash
+npm run db bo
+```
+
+This automatically:
+
+1. Scans all BOs in `BO/`
+2. Detects public `async` methods
+3. Registers new ones in the DB
+4. Assigns `tx` numbers automatically
+
+### Detect Orphaned Methods
+
+If someone deleted a method from code but it's still in DB:
+
+```bash
+npm run db bo
+# ⚠️ Found 2 orphaned methods:
+#    • ProductBO.oldMethod (tx: 150)
+```
+
+### Clean Up Orphaned Methods
+
+```bash
+# First, see what would be deleted (dry-run)
+npm run db bo --prune --dry-run
+
+# If you're sure, delete
+npm run db bo --prune
+```
+
+---
+
+## 6. Essential Commands
+
+| Situation         | Command                                           |
+| ----------------- | ------------------------------------------------- |
+| **Start of day**  | `git pull && npm run db sync && npm run db bo`    |
+| **New table**     | Create file in `schemas/`, then `npm run db sync` |
+| **New BO method** | `npm run db bo`                                   |
+| **Verify state**  | `npm run db bo --dry-run`                         |
+| **Clean orphans** | `npm run db bo --prune`                           |
+| **Total reset**   | `npm run db reset --yes`                          |
+
+---
+
+## 7. Repository Structure (Large Teams)
+
+For separate Backend + Frontend teams:
+
+```
+my-company/
+├── my-app-backend/   ← ToProccess (API)
+│   ├── scripts/db/schemas/
+│   ├── BO/
+│   └── src/
+│
+└── my-app-frontend/  ← React/Vue/Angular
+    └── src/
+```
+
+### Flow for Backend Developer
+
+```bash
+cd my-app-backend
+git pull
+npm run db sync
+npm run db bo
+npm run dev
+```
+
+### Flow for Frontend Developer
+
+**Option A: Backend in Docker (Recommended)**
+
+```bash
+cd my-app-backend
+docker-compose up -d
+# Forget about backend, focus on frontend
+```
+
+**Option B: Local Backend**
+
+```bash
+cd my-app-backend
+git pull
+npm run db sync
+npm run dev
+# In another terminal
+cd my-app-frontend
+npm run dev
+```
+
+---
+
+## 8. CI/CD: Automation
+
+In your GitHub Actions / GitLab CI pipeline:
+
+```yaml
+# .github/workflows/ci.yml
+jobs:
+    test:
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Start PostgreSQL
+              run: docker-compose up -d postgres
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Sync database
+              run: npm run db sync -- --yes
+
+            - name: Register BOs
+              run: npm run db bo -- --yes
+
+            - name: Run tests
+              run: npm run verify
+```
+
+---
+
+## 9. Troubleshooting
+
+### "Relation does not exist"
+
+```
+ERROR: relation "my_table" does not exist
+```
+
+**Cause**: The table doesn't exist in your local DB.
+
+**Solution**:
+
+```bash
+npm run db sync
+```
+
+### "Duplicate key value"
+
+```
+ERROR: duplicate key value violates unique constraint
+```
+
+**Cause**: Trying to insert a record that already exists.
+
+**Solution**: Use `ON CONFLICT DO NOTHING` or `INSERT ... ON CONFLICT DO UPDATE`.
+
+### "Column already exists"
+
+**Cause**: Your `ALTER TABLE ADD COLUMN` isn't idempotent.
+
+**Solution**: Wrap in `DO $$ ... END $$;` with verification.
+
+---
+
+## 10. Best Practices
+
+### ✅ Do
+
+- Use `IF NOT EXISTS` always
+- Run `npm run db sync` after every `git pull`
+- Keep schema files small and focused
+- Use consistent numeric prefixes
+
+### ❌ Don't
+
+- Create tables manually in pgAdmin
+- Modify existing tables without schema files
+- Share SQL dumps via Slack/email
+- Use `DROP TABLE` without protection
+
+---
+
+## 11. Visual Summary
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Pedro creates  │     │   Juan does     │     │   Maria does    │
+│   50_orders.ts  │────▶│   git pull      │────▶│   git pull      │
+│                 │     │   npm run db    │     │   npm run db    │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+         │                      │                       │
+         ▼                      ▼                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     GIT (Code + Schemas)                        │
+└─────────────────────────────────────────────────────────────────┘
+         │                      │                       │
+         ▼                      ▼                       ▼
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Pedro's DB     │     │   Juan's DB     │     │   Maria's DB    │
+│   ✅ orders     │     │   ✅ orders     │     │   ✅ orders     │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
+
+---
+
+## See Also
+
+- [Database CLI (full reference)](../01-Getting-Started/CLI_DB.en.md)
+- [BO Generator](../01-Getting-Started/CLI_BO.en.md)
+- [Security System](../02-Architecture/SECURITY_SYSTEM.en.md)

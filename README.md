@@ -73,7 +73,7 @@ cp .env.example .env
 Create system tables (`security`, `session`, `audit`).
 
 ```bash
-npm run db:init
+npm run db
 ```
 
 ### 5. Start
@@ -135,7 +135,7 @@ npm run dev
 | `npm run dev`          | Development mode with `nodemon` (Hot Reload).  |
 | `npm start`            | Production mode (Runs `dist/index.js`).        |
 | `npm run verify`       | **Quality Gate**: Typecheck + Build + Tests.   |
-| `npm run db:init`      | Creates/Resets database schema.                |
+| `npm run db`           | Interactive DB CLI (sync, seed, reset).        |
 | `npm run config:check` | Validates `.env` file without starting server. |
 | `npm run bo <cmd>`     | BO CLI: `new`, `sync`, `list`.                 |
 | `npm run docs:gen`     | Generates API documentation (TypeDoc).         |

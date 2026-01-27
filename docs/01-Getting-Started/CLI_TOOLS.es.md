@@ -9,8 +9,8 @@ Hemos creado documentación exhaustiva para las herramientas más complejas:
 1.  **[Generador de BOs (npm run bo)](CLI_BO.es.md)**
     Aprende a crear módulos, servicios y repositorios automáticamente con un solo comando.
 
-2.  **[Inicializador de DB (npm run db:init)](CLI_DB_INIT.es.md)**
-    Descubre cómo bootstrapear tu base de datos, configurar esquemas y solucionar problemas de conexión.
+2.  **[CLI de Base de Datos (npm run db)](CLI_DB.es.md)**
+    La herramienta central para gestionar esquemas, sincronizar BOs, y mantener la BD al día con el equipo.
 
 ---
 
