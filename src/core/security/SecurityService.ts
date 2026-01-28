@@ -1,4 +1,12 @@
-import { IDatabase, ILogger, ISecurityService } from '../../types/core.js'
+import {
+    BODependencies,
+    IAuditService,
+    IDatabase,
+    ILogger,
+    ISecurityService,
+    ISessionService,
+    IValidator,
+} from '../../types/core.js'
 import { TransactionMapper } from '../transaction/TransactionMapper.js'
 import { PermissionGuard } from './PermissionGuard.js'
 import { TransactionExecutor } from '../transaction/TransactionExecutor.js'
@@ -14,7 +22,7 @@ import { TransactionExecutor } from '../transaction/TransactionExecutor.js'
  *
  * @example
  * ```typescript
- * const security = new SecurityService({ db, log, config, msgs })
+ * const security = new SecurityService({ db, log, config, msgs, audit, session, validator })
  * await security.init() // Carga permisos y mapeos
  *
  * // Uso típico en Dispatcher:
@@ -37,14 +45,22 @@ export class SecurityService implements ISecurityService {
     /** Indica si el sistema de seguridad ha cargado correctamente */
     public isReady: boolean = false
     /** Promesa que resuelve cuando la inicialización completa */
-    public ready: Promise<boolean>
+    public ready!: Promise<boolean>
 
     /**
      * Crea una instancia de SecurityService.
      *
      * @param deps - Dependencias de infraestructura
      */
-    constructor(deps: { db: IDatabase; log: ILogger; config: any; msgs: any }) {
+    constructor(deps: {
+        db: IDatabase
+        log: ILogger
+        config: any
+        msgs: any
+        audit: IAuditService
+        session: ISessionService
+        validator: IValidator
+    }) {
         this.log = deps.log
         this.config = deps.config
         this.msgs = deps.msgs
@@ -52,10 +68,19 @@ export class SecurityService implements ISecurityService {
         // Initialize sub-components
         this.mapper = new TransactionMapper(deps.db, deps.log)
         this.guard = new PermissionGuard(deps.db, deps.log)
-        this.executor = new TransactionExecutor(deps.config, deps.log)
 
-        this.ready = this.init()
-        this.ready.catch(() => {})
+        // Construct BO Dependencies package (injecting self as security)
+        const boDeps: BODependencies = {
+            db: deps.db,
+            log: deps.log,
+            config: deps.config,
+            msgs: deps.msgs,
+            audit: deps.audit,
+            session: deps.session,
+            validator: deps.validator,
+            security: this,
+        }
+        this.executor = new TransactionExecutor(boDeps)
     }
 
     private get serverErrors() {
@@ -70,17 +95,23 @@ export class SecurityService implements ISecurityService {
      * @throws {Error} Si falla la carga de datos iniciales
      */
     async init(): Promise<boolean> {
-        try {
-            await Promise.all([this.guard.load(), this.mapper.load()])
-            this.isReady = true
-            return true
-        } catch (err: unknown) {
-            this.log.show({
-                type: this.log.TYPE_ERROR,
-                msg: `${this.serverErrors.serverError.msg}, SecurityService.init: ${err instanceof Error ? err.message : String(err)}`,
-            })
-            throw err
-        }
+        if (this.ready) return this.ready
+
+        this.ready = (async () => {
+            try {
+                await Promise.all([this.guard.load(), this.mapper.load()])
+                this.isReady = true
+                return true
+            } catch (err: unknown) {
+                this.log.show({
+                    type: this.log.TYPE_ERROR,
+                    msg: `${this.serverErrors.serverError.msg}, SecurityService.init: ${err instanceof Error ? err.message : String(err)}`,
+                })
+                throw err
+            }
+        })()
+
+        return this.ready
     }
 
     /**

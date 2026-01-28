@@ -3,13 +3,14 @@
 
 async function main() {
     // Initialize runtime globals first.
-    await import(new URL('../dist/src/globals.js', import.meta.url) as any)
+    // Initialize runtime globals first via foundation
+    await import(new URL('../dist/src/foundation.js', import.meta.url) as any)
 
     await import(new URL('../dist/src/helpers/sanitize.js', import.meta.url) as any)
 
     // These modules should be importable from dist without throwing.
-    // These modules should be importable from dist without throwing.
-    await import(new URL('../dist/src/helpers/http-validators.js', import.meta.url) as any)
+    // http-validators removed
+
     await import(new URL('../dist/src/helpers/sanitize.js', import.meta.url) as any)
     await import(new URL('../dist/src/helpers/http-responses.js', import.meta.url) as any)
 

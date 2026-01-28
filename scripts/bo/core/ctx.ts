@@ -1,4 +1,4 @@
-import { IDatabaseService, ILogger } from '../../../src/core/interfaces/services.js'
+import type { IDatabase, ILogger } from '../../../src/types/core.js'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
@@ -11,7 +11,7 @@ export interface BoConfig {
 }
 
 export class Context {
-    public db: IDatabaseService
+    public db: IDatabase
     public log: ILogger
     public config: BoConfig
 
@@ -42,7 +42,7 @@ export class Context {
             // For now, assume migration to use unified `npm run db` CLI?
             // Or stick to `src/globals` logic?
             // Let's stick to importing globals.js in index.ts for simplicity.
-            await import('../../../src/globals.js')
+            await import('../../../src/foundation.js')
             this.db = (globalThis as any).db
             this.log = (globalThis as any).log
         }

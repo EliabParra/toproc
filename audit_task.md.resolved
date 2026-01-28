@@ -1,0 +1,30 @@
+# Task: Codebase Audit & Modernization
+
+## Objective
+Perform a comprehensive analysis of the codebase to identify legacy code, unused artifacts, and modernization opportunities.
+
+## Deep Scan
+- [ ] Map entire file structure <!-- id: 0 -->
+- [ ] **Legacy Patterns Search** <!-- id: 1 -->
+    - [ ] `var` usage
+    - [ ] CommonJS (`require`, `module.exports`)
+    - [ ] Loose typing (`any`)
+    - [ ] Legacy comments (`TODO`, `FIXME`, deprecated headers)
+    - [ ] `console.log` overuse (should use Logger)
+- [ ] **Architecture Review** <!-- id: 2 -->
+    - [ ] `src/core` (Base classes, Dispatcher)
+    - [ ] `src/foundation.ts` (Bootstrap logic)
+    - [ ] `BO/` (Auth and potential others)
+    - [ ] `scripts/` (Build and CLI tools)
+- [ ] **Unused Code Detection** <!-- id: 3 -->
+    - [ ] Orphaned files
+    - [ ] Unused exports (via static analysis or sampling)
+
+## Modernization Proposals
+- [ ] Refactor opportunities (e.g., new TS features, better error handling)
+- [ ] Performance optimizations
+- [ ] Security improvements
+
+## Deliverables
+- [ ] `code_audit_report.md`
+- [ ] Refactoring plan for identified issues

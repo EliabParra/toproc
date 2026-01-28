@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs'
 import { createTestDispatcher } from './_helpers/service-factory.mjs'
 import { createCsrfProtection, createCsrfTokenHandler } from '../src/express/middleware/csrf.js'
 import { AppValidator } from '../src/core/validation/AppValidator.js'
-import { LegacyValidatorAdapter } from '../src/core/validation/integration/LegacyValidatorAdapter.js'
+// TestValidatorAdapter removed - using AppValidator directly
 
 import { withGlobals } from './_helpers/global-state.mjs'
 
@@ -82,7 +82,7 @@ test('register requires email verification before login', async () => {
         globalThis.msgs = makeTestMsgs()
         const i18nStub = { t: (k) => k }
         globalThis.validator = new AppValidator(i18nStub)
-        globalThis.v = new LegacyValidatorAdapter(globalThis.validator)
+        globalThis.v = globalThis.validator
 
         const PUBLIC_PROFILE_ID = 999
         const SESSION_PROFILE_ID = 1
@@ -292,7 +292,11 @@ test('register requires email verification before login', async () => {
                 return ['register', 'requestEmailVerification', 'verifyEmail'].includes(method_na)
             },
             executeMethod: async ({ method_na, params }) => {
-                return await auth[method_na](params)
+                if (method_na === 'register') return await auth.register(params)
+                if (method_na === 'requestEmailVerification')
+                    return await auth.requestEmailVerification(params)
+                if (method_na === 'verifyEmail') return await auth.verifyEmail(params)
+                throw new Error(`Method ${method_na} not mocked explicitly`)
             },
         }
 

@@ -1,4 +1,4 @@
-import { ILogger } from '../../types/core.js'
+import { BODependencies } from '../../types/core.js'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
@@ -15,7 +15,7 @@ import { pathToFileURL } from 'node:url'
  *
  * @example
  * ```typescript
- * const executor = new TransactionExecutor(config, log)
+ * const executor = new TransactionExecutor(deps)
  * const result = await executor.execute('User', 'get', { id: 1 })
  * ```
  */
@@ -25,13 +25,9 @@ export class TransactionExecutor {
     /**
      * Crea una instancia de TransactionExecutor.
      *
-     * @param config - Configuración global de la aplicación (requiere config.bo.path)
-     * @param log - Servicio de logging
+     * @param deps - Dependencias de negocio (BODependencies)
      */
-    constructor(
-        private config: any,
-        private log: ILogger
-    ) {}
+    constructor(private deps: BODependencies) {}
 
     private instanceKey(object: string, method: string) {
         return `${object}_${method}`
@@ -69,7 +65,7 @@ export class TransactionExecutor {
      * @returns {string} Ruta absoluta sin extensión
      */
     private resolveBOPath(objectName: string): string {
-        const boConfigPath = this.config.bo.path || '../../BO/'
+        const boConfigPath = this.deps.config.bo.path || '../../BO/'
         let relativePath = boConfigPath
 
         // Normalize 'BO' folder detection
@@ -113,7 +109,10 @@ export class TransactionExecutor {
                 if (typeof ctor !== 'function') {
                     throw new Error(`Clase de BO no encontrada: ${objectName}BO`)
                 }
-                const instance = new (ctor as new () => Record<string, unknown>)()
+                // Inyección automática de dependencias (Phase 4)
+                const instance = new (ctor as new (
+                    deps: BODependencies
+                ) => Record<string, unknown>)(this.deps)
 
                 this.instances.set(key, instance)
                 const fn = instance?.[methodName]
@@ -122,8 +121,8 @@ export class TransactionExecutor {
                 }
                 return await (fn as (p: any) => Promise<any>)(params)
             } catch (err: any) {
-                this.log.show({
-                    type: this.log.TYPE_ERROR,
+                this.deps.log.show({
+                    type: this.deps.log.TYPE_ERROR,
                     msg: `Fallo en ejecución de TransactionExecutor: ${err.message}`,
                     ctx: { objectName, methodName, path: basePath },
                 })

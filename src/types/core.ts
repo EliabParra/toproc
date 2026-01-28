@@ -27,7 +27,9 @@ export interface IValidator {
     validate<T>(
         data: unknown,
         schema: unknown
-    ): { valid: boolean; data?: T; errors?: { path: string; message: string }[] }
+    ):
+        | { valid: true; data: T; errors?: never }
+        | { valid: false; data?: never; errors: { path: string; message: string; code?: string }[] }
 
     // Legacy support
     getAlerts?(): string[]
@@ -189,4 +191,18 @@ export interface IAuditService {
             details?: Record<string, unknown>
         }
     ): Promise<void>
+}
+/**
+ * Dependencias inyectables para Business Objects (BO).
+ * Este objeto agrupa todos los servicios necesarios para la lógica de negocio.
+ */
+export interface BODependencies {
+    db: IDatabase
+    log: ILogger
+    config: IConfig
+    msgs: any
+    audit: IAuditService
+    security: ISecurityService
+    session: ISessionService
+    validator: IValidator
 }

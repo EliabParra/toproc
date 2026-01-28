@@ -88,10 +88,10 @@ npm run dev
 
 ### 🚀 01. Primeros Pasos
 
-- [Introducción y Estructura](docs/00-Introduction/OVERVIEW.es.md)
-- [Instalación y Setup](docs/01-Getting-Started/INSTALLATION.es.md)
+- [Introducción y Estructura](docs/00-Introduction/FILE_STRUCTURE.es.md)
+- [Instalación y Setup](docs/01-Getting-Started/MANUAL_INSTALLATION.es.md)
 - [Configuración de Entorno (.env)](docs/01-Getting-Started/ENVIRONMENT.es.md)
-- [Tu Primer Business Object](docs/05-Guides/CREATING_BOS.es.md)
+- [Tu Primer Business Object](docs/05-Guides/CREATE_NEW_MODULE.es.md)
 - [CLI Tools (db, bo)](docs/01-Getting-Started/CLI_TOOLS.es.md)
 
 ### 🏛️ 02. Arquitectura

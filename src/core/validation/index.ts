@@ -1,3 +1,3 @@
 export * from './AppValidator.js'
-export * from './integration/LegacyValidatorAdapter.js'
+// LegacyValidatorAdapter removed - use AppValidator directly
 export * from './types.js'

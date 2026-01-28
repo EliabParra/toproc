@@ -49,7 +49,7 @@ export class AuthCommand {
             exists = true
         } catch {}
 
-        if (exists) {
+        if (exists && !opts.isDryRun) {
             console.log('⚠️ Auth module already exists at BO/Auth/'.yellow)
             const overwrite = await this.interactor.confirm('Overwrite existing files?', false)
             if (!overwrite) {
@@ -74,11 +74,13 @@ export class AuthCommand {
         console.log('')
 
         // Confirm generation
-        const proceed = await this.interactor.confirm('Generate Auth module?', true)
-        if (!proceed) {
-            console.log('Cancelled.'.gray)
-            this.interactor.close()
-            return
+        if (!opts.isDryRun) {
+            const proceed = await this.interactor.confirm('Generate Auth module?', true)
+            if (!proceed) {
+                console.log('Cancelled.'.gray)
+                this.interactor.close()
+                return
+            }
         }
 
         if (opts.isDryRun) {
@@ -103,9 +105,10 @@ export class AuthCommand {
 
         // Generate files with new naming convention
         const files = [
-            { 
+            {
                 path: path.join(authDir, 'AuthBO.ts'),
-                content: AuthPreset.bo(), icon: '📦'
+                content: AuthPreset.bo(),
+                icon: '📦',
             },
             {
                 path: path.join(authDir, 'Auth.Service.ts'),

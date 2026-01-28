@@ -37,7 +37,6 @@ function redactSecretsInString(s: string): string {
 // ...
 // Helper imports - assuming we can import them from original locations or duplicates
 // Ideally we should move these helpers to src/utils or src/helpers in clean architecture
-import { parseLoginBody, parseLoginVerifyBody } from '../helpers/http-validators.js'
 
 /**
  * Gestor de sesiones de usuario.
@@ -130,14 +129,63 @@ export class SessionManager implements ISessionService {
                 v: this.v,
             }
 
-            const parsed = parseLoginBody(req.body, ctxHelper as any, { minPasswordLen: 8 })
-            if (parsed.ok === false) {
+            // Inline validation logic from legacy http-validators
+            const body = req.body
+            const alerts: string[] = []
+
+            if (!body || typeof body !== 'object' || Array.isArray(body)) {
+                alerts.push(this.v.getMessage('object', { value: body, label: 'body' }))
+            } else {
+                const hasIdentifier =
+                    typeof (body as any).identifier === 'string' ||
+                    typeof (body as any).email === 'string' ||
+                    typeof (body as any).username === 'string'
+
+                if (!hasIdentifier) {
+                    const value =
+                        (body as any).identifier ?? (body as any).email ?? (body as any).username
+                    alerts.push(this.v.getMessage('string', { value, label: 'identifier' }))
+                }
+
+                if (typeof (body as any).password !== 'string') {
+                    alerts.push(
+                        this.v.getMessage('string', {
+                            value: (body as any).password,
+                            label: 'password',
+                        })
+                    )
+                } else if ((body as any).password.length < 8) {
+                    alerts.push(
+                        this.v.getMessage('length', {
+                            value: (body as any).password,
+                            label: 'password',
+                            min: 8,
+                        })
+                    )
+                }
+            }
+
+            if (alerts.length > 0) {
                 return res.status(this.clientErrors.invalidParameters.code).send({
                     msg: this.clientErrors.invalidParameters.msg,
                     code: this.clientErrors.invalidParameters.code,
-                    alerts: parsed.alerts,
+                    alerts: alerts,
                 })
             }
+
+            // Normalize body
+            const b = body as {
+                identifier?: string
+                email?: string
+                username?: string
+                password: string
+            }
+            const identifier =
+                typeof b.identifier === 'string'
+                    ? b.identifier
+                    : typeof b.email === 'string'
+                      ? b.email
+                      : (b.username as string)
 
             if (this.sessionExists(req)) {
                 return res.status(this.clientErrors.sessionExists.code).send({
@@ -146,8 +194,7 @@ export class SessionManager implements ISessionService {
                 })
             }
 
-            const body = parsed.body
-            const identifier = body.identifier
+            // b and identifier are already defined above
             const queryName = looksLikeEmail(identifier) ? 'getUserByEmail' : 'getUserByUsername'
             const result = await this.db.exe('security', queryName, [identifier])
             if (!result?.rows || result.rows.length === 0) {
@@ -159,7 +206,7 @@ export class SessionManager implements ISessionService {
             const user = result.rows[0]
             const storedHash = user.user_pw || user.password || user.password_hash // Support legacy/refactored columns
             const ok =
-                typeof storedHash === 'string' && (await bcrypt.compare(body.password, storedHash))
+                typeof storedHash === 'string' && (await bcrypt.compare(b.password, storedHash))
             if (!ok)
                 return res
                     .status(this.clientErrors.usernameOrPasswordIncorrect.code)

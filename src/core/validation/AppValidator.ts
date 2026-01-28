@@ -1,4 +1,4 @@
-import { z, ZodObject, ZodError } from 'zod'
+import { z, ZodObject, ZodError, ZodType } from 'zod'
 import { ValidationResult, ValidationError } from './types.js'
 import { I18nService } from '../i18n/I18nService.js'
 
@@ -70,7 +70,7 @@ export class AppValidator {
      *     await userService.create(result.data)
      * } else {
      */
-    validate<T>(data: T, schema: ZodObject): ValidationResult<T> {
+    validate<T>(data: unknown, schema: ZodType): ValidationResult<T> {
         const result = schema.safeParse(data)
         const resultData = result.data as T
 
@@ -147,6 +147,21 @@ export class AppValidator {
             }
 
             return { message }
+            return { message }
         })
+    }
+
+    /**
+     * Legacy compatibility wrapper for http-validators.ts
+     */
+    getMessage(kind: string, params: any = {}): string {
+        if (kind === 'length') {
+            if (params.min) return this.i18n.t('alerts.lengthMin', params)
+            if (params.max) return this.i18n.t('alerts.lengthMax', params)
+        }
+        // Fallback or direct map
+        const key = `alerts.${kind}`
+        // Ideally we should check if key exists or return default
+        return this.i18n.t(key, params) || `${params.label || 'Value'} must be ${kind}`
     }
 }

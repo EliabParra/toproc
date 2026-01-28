@@ -23,7 +23,7 @@ export type BODependencies = {
     log: ILogger
     /** Configuración de la aplicación */
     config: IConfig
-    /** Instancia del validador (AppValidator o LegacyValidatorAdapter) */
+    /** Instancia del validador (AppValidator con Zod) */
     v: IValidator
     /** Servicio i18n opcional para localización de mensajes */
     i18n?: II18nService
@@ -86,13 +86,14 @@ export abstract class BaseBO {
      *
      * @param deps - Dependencias requeridas inyectadas por el Dispatcher
      */
-    constructor(deps: BODependencies) {
-        this.db = deps.db
-        this.log = deps.log
-        this.config = deps.config
-        this.v = deps.v
-        this.i18n = deps.i18n
-        this.msgs = deps.msgs
+    constructor(deps?: Partial<BODependencies>) {
+        const g = globalThis as any
+        this.db = deps?.db ?? g.db
+        this.log = deps?.log ?? g.log
+        this.config = deps?.config ?? g.config
+        this.v = deps?.v ?? g.v
+        this.i18n = deps?.i18n ?? g.i18n
+        this.msgs = deps?.msgs ?? g.msgs
     }
 
     /**

@@ -6,7 +6,7 @@ Total Business Objects: **1**
 
 | Object Name | Description | Path |
 | :--- | :--- | :--- |
-| **Auth** | Business Object de Autenticación. | [`BO/Auth/AuthBO.ts`](../../BO/Auth/AuthBO.ts) |
+| **Auth** | No description | [`BO/Auth/AuthBO.ts`](../../BO/Auth/AuthBO.ts) |
 
 
 ## Transactions (TX)

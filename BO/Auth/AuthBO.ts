@@ -6,6 +6,7 @@ import {
     RegisterInput,
     VerifyEmailInput,
     ResetPasswordInput,
+    VerifyPasswordResetInput,
     ResetPasswordConfirmInput,
 } from './Auth.Schemas.js'
 import { AuthMessages } from './Auth.Messages.js'
@@ -14,9 +15,9 @@ import { isAuthError } from './Auth.Errors.js'
 export class AuthBO extends BaseBO {
     private service: AuthService
 
-    constructor(deps: BODependencies) {
+    constructor(deps?: BODependencies) {
         super(deps)
-        this.service = new AuthService(this.log, this.config)
+        this.service = new AuthService(this.log, this.config, this.db)
     }
 
     async register(params: RegisterInput): Promise<ApiResponse> {
@@ -50,11 +51,28 @@ export class AuthBO extends BaseBO {
             const vRes = this.validate<ResetPasswordInput>(params, AuthSchemas.resetPassword)
             if (!vRes.ok) return this.validationError(vRes.alerts)
 
-            await this.service.requestPasswordReset(vRes.data.email)
+            await this.service.requestPasswordReset(vRes.data.identifier)
             return this.success(null, AuthMessages.PASSWORD_RESET_SENT)
         } catch (err) {
+            console.error(err)
             if (isAuthError(err)) return this.error(err.message, err.code)
             return this.error('Error solicitando reset de password')
+        }
+    }
+
+    async verifyPasswordReset(params: VerifyPasswordResetInput): Promise<ApiResponse> {
+        try {
+            const vRes = this.validate<VerifyPasswordResetInput>(
+                params,
+                AuthSchemas.verifyPasswordReset
+            )
+            if (!vRes.ok) return this.validationError(vRes.alerts)
+
+            await this.service.verifyPasswordReset(vRes.data.token, vRes.data.code)
+            return this.success(null, 'Token válido')
+        } catch (err) {
+            if (isAuthError(err)) return this.error(err.message, err.code)
+            return this.error('Token inválido o expirado')
         }
     }
 

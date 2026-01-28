@@ -1,0 +1,42 @@
+# Codebase Audit Report
+
+## 1. Executive Summary
+The codebase has recently undergone a major refactor to Dependency Injection (DI), significantly improving architecture. However, several legacy patterns and loose typing issues remain.
+
+## 2. High-Priority Issues (Architectural)
+
+### 2.1. Global Fallbacks in [BaseBO](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/src/core/base/BaseBO.ts#65-208)
+[src/core/base/BaseBO.ts](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/src/core/base/BaseBO.ts) still falls back to global variables (`g.db`, `g.log`, etc.) if dependencies are not injected.
+*   **Risk:** Hides DI errors.
+*   **Recommendation:** Remove the fallback and enforce injection. If `deps` are missing in constructor, throw an error.
+
+### 2.2. Legacy Globals in [foundation.ts](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/src/foundation.ts)
+[src/foundation.ts](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/src/foundation.ts) still assigns `db`, [log](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/test/integration/security.service.test.mjs#37-38), etc., to `globalThis`.
+*   **Risk:** Encourages usage of globals which bypasses the architecture.
+*   **Recommendation:** Remove these assignments once [BaseBO](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/src/core/base/BaseBO.ts#65-208) fallbacks are removed.
+
+## 3. Code Quality (TypeScript)
+
+### 3.1. Extensive `any` usage
+A scan revealed widespread use of `any` in:
+*   [src/types/globals.d.ts](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/src/types/globals.d.ts): `const queries: any`, `const msgs: any`.
+*   [src/types/vendor.d.ts](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/src/types/vendor.d.ts): `const express: any`, `const cors: any`.
+*   **Recommendation:** Create proper interfaces for `IQueries`, `IMsgs` and use `@types/express`.
+
+### 3.2. CommonJS / ESM Hybrid
+[src/foundation.ts](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/src/foundation.ts) uses `createRequire` to load JSON.
+*   **Recommendation:** Use `fs/promises` to read JSON or standard imports if possible (though `createRequire` is stable for JSON).
+
+## 4. Components Analysis
+
+### 4.1. Auth Module
+*   [Auth.SocialAuth.ts](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/BO/Auth/Auth.SocialAuth.ts) is specific but empty (Placeholder).
+*   [AuthBO](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/BO/Auth/AuthBO.ts#15-95) and [AuthService](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/BO/Auth/Auth.Service.ts#13-174) are modernized.
+
+### 4.2. Scripts
+(Pending analysis of `scripts/` folder)
+
+## 5. Next Steps
+1.  **Strictify Types:** Replace `any` in core types.
+2.  **Remove Globals:** Cut the cord in [BaseBO](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/src/core/base/BaseBO.ts#65-208) and [src/foundation.ts](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/src/foundation.ts).
+3.  **Cleanup:** Remove unused [d.ts](file:///c:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/src/types/http.d.ts) if they are covered by `@types/*`.

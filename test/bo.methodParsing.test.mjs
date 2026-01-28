@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { parseMethodsFromBO } from '../scripts/bo.ts'
+import { parseMethodsFromBO } from '../scripts/bo/templates/bo.ts'
 
 test('bo.parseMethodsFromBO extracts async method names', () => {
     const content = `
@@ -14,5 +14,6 @@ export class PersonBO {
 `
 
     const methods = parseMethodsFromBO(content).sort()
-    assert.deepEqual(methods, ['_helper', 'createPerson', 'getPerson'])
+    // Implementation intentionally skips methods starting with _
+    assert.deepEqual(methods, ['createPerson', 'getPerson'])
 })

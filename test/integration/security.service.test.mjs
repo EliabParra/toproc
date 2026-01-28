@@ -34,8 +34,15 @@ describe('SecurityService Integration', async () => {
             log: mockLog,
             config: mockConfig,
             msgs: mockMsgs,
+            audit: { log: async () => {} },
+            session: {
+                sessionExists: () => false,
+                createSession: async () => {},
+                destroySession: () => {},
+            },
+            validator: { validate: () => ({ valid: true, data: {} }) },
         })
-        await security.ready
+        await security.init()
     })
 
     it('should load permissions and tx maps', () => {

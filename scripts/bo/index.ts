@@ -64,8 +64,8 @@ const MENU_OPTIONS = [
     { key: 'exit', label: '❌ Exit', value: 'exit' },
 ]
 
-async function parseArgs(args: string[]) {
-    const opts = {
+export async function parseArgs(args: string[]) {
+    const opts: Record<string, any> = {
         command: args[0] || '',
         name: '',
         isDryRun: args.includes('--dry') || args.includes('-d'),
@@ -89,6 +89,16 @@ async function parseArgs(args: string[]) {
     if (methodsIdx !== -1 && args[methodsIdx + 1]) {
         opts.methods = args[methodsIdx + 1]
     }
+
+    // Extract perms flags
+    const profileIdx = args.indexOf('--profile')
+    if (profileIdx !== -1) opts['profile'] = args[profileIdx + 1]
+
+    const allowIdx = args.indexOf('--allow')
+    if (allowIdx !== -1) opts['allow'] = args[allowIdx + 1]
+
+    const denyIdx = args.indexOf('--deny')
+    if (denyIdx !== -1) opts['deny'] = args[denyIdx + 1]
 
     return opts
 }
@@ -184,7 +194,7 @@ async function main() {
                 break
 
             case 'perms':
-                await new PermsCommand(ctx).run()
+                await new PermsCommand(ctx).run(opts.name || undefined, opts)
                 break
 
             case 'analyze':
@@ -212,4 +222,10 @@ async function main() {
     }
 }
 
-main()
+import { pathToFileURL } from 'node:url'
+
+const isMainModule = import.meta.url === pathToFileURL(process.argv[1]).href
+
+if (isMainModule) {
+    main()
+}

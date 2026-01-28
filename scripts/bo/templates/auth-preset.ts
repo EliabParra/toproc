@@ -42,9 +42,9 @@ import { isAuthError } from './Auth.Errors.js'
 export class AuthBO extends BaseBO {
     private service: AuthService
 
-    constructor(deps: BODependencies) {
+    constructor(deps?: BODependencies) {
         super(deps)
-        this.service = new AuthService(this.log, this.config)
+        this.service = new AuthService(this.log, this.config, this.db)
     }
 
     async register(params: RegisterInput): Promise<ApiResponse> {
@@ -106,7 +106,7 @@ export class AuthBO extends BaseBO {
 
     service: () => `import { createHash, randomBytes } from 'node:crypto'
 import bcrypt from 'bcryptjs'
-import type { ILogger, IConfig } from '../../src/types/core.js'
+import type { ILogger, IConfig, IDatabase } from '../../src/types/core.js'
 import { EmailService } from '../../src/email/EmailService.js'
 import { AuthRepository, UserRow } from './Auth.Repository.js'
 import type { User, RegisterData } from './Auth.Types.js'
@@ -118,32 +118,35 @@ function sha256Hex(value: string): string {
 
 export class AuthService {
     private emailService: EmailService
+    private repo: AuthRepository
 
     constructor(
         private readonly log: ILogger,
-        private readonly config: IConfig
+        private readonly config: IConfig,
+        db: IDatabase
     ) {
         this.emailService = new EmailService({ log: this.log, config: this.config })
+        this.repo = new AuthRepository(db)
     }
 
     async register(data: RegisterData): Promise<User> {
         this.log.show({ type: this.log.TYPE_INFO, msg: 'Creating new user: ' + data.email })
 
-        const exists = await AuthRepository.getUserBaseByEmail(data.email)
+        const exists = await this.repo.getUserBaseByEmail(data.email)
         if (exists) {
             throw new AuthEmailExistsError(data.email)
         }
 
         const hash = await bcrypt.hash(data.password, 10)
 
-        const user = await AuthRepository.insertUser({
+        const user = await this.repo.insertUser({
             username: data.name ?? null,
             email: data.email,
             passwordHash: hash,
         })
 
         const sessionProfileId = Number((this.config as any)?.auth?.sessionProfileId ?? 1)
-        await AuthRepository.upsertUserProfile({
+        await this.repo.upsertUserProfile({
             userId: user.user_id,
             profileId: sessionProfileId,
         })
@@ -158,9 +161,9 @@ export class AuthService {
     async requestEmailVerification(identifier: string): Promise<void> {
         let user: UserRow | null = null
         if (identifier.includes('@')) {
-            user = await AuthRepository.getUserByEmail(identifier)
+            user = await this.repo.getUserByEmail(identifier)
         } else {
-            user = await AuthRepository.getUserByUsername(identifier)
+            user = await this.repo.getUserByUsername(identifier)
         }
 
         if (user && user.user_em) {
@@ -174,30 +177,30 @@ export class AuthService {
         )
         const tokenHash = sha256Hex(token)
 
-        const otp = await AuthRepository.getActiveOneTimeCodeForPurposeAndTokenHash({
+        const otp = await this.repo.getActiveOneTimeCodeForPurposeAndTokenHash({
             purpose,
             tokenHash,
         })
 
         if (!otp) throw new AuthTokenInvalidError()
 
-        await AuthRepository.setUserEmailVerified(otp.user_id)
-        await AuthRepository.consumeOneTimeCode(otp.code_id)
+        await this.repo.setUserEmailVerified(otp.user_id)
+        await this.repo.consumeOneTimeCode(otp.code_id)
     }
 
     async requestPasswordReset(email: string): Promise<void> {
-        const user = await AuthRepository.getUserByEmail(email)
+        const user = await this.repo.getUserByEmail(email)
         if (!user || !user.user_em) return
 
         const purpose = String((this.config as any)?.auth?.passwordResetPurpose ?? 'password_reset')
         const expiresSeconds = 900
 
-        await AuthRepository.invalidateActivePasswordResetsForUser(user.user_id)
+        await this.repo.invalidateActivePasswordResetsForUser(user.user_id)
 
         const token = randomBytes(32).toString('hex')
         const tokenHash = sha256Hex(token)
 
-        await AuthRepository.insertPasswordReset({
+        await this.repo.insertPasswordReset({
             userId: user.user_id,
             tokenHash,
             sentTo: user.user_em,
@@ -214,13 +217,13 @@ export class AuthService {
 
     async resetPassword(token: string, newPassword: string): Promise<void> {
         const tokenHash = sha256Hex(token)
-        const reset = await AuthRepository.getPasswordResetByTokenHash(tokenHash)
+        const reset = await this.repo.getPasswordResetByTokenHash(tokenHash)
 
         if (!reset || reset.used_at) throw new AuthTokenInvalidError()
 
         const hash = await bcrypt.hash(newPassword, 10)
-        await AuthRepository.updateUserPassword({ userId: reset.user_id, passwordHash: hash })
-        await AuthRepository.markPasswordResetUsed(reset.reset_id)
+        await this.repo.updateUserPassword({ userId: reset.user_id, passwordHash: hash })
+        await this.repo.markPasswordResetUsed(reset.reset_id)
     }
 
     private async sendVerificationEmail(userId: number, emailAddr: string) {
@@ -232,7 +235,7 @@ export class AuthService {
         const token = randomBytes(32).toString('hex')
         const tokenHash = sha256Hex(token)
 
-        await AuthRepository.insertOneTimeCode({
+        await this.repo.insertOneTimeCode({
             userId,
             purpose,
             codeHash: tokenHash,
@@ -271,10 +274,6 @@ Auth Repository
 
 import { IDatabase } from '../../src/types/core.js'
 
-// IMPORTANT: This uses global 'db' instance for static methods or injected db.
-// Since existing methods use static, we keep it static for now, but cleaner usage is DI.
-const db = (globalThis as any).db as IDatabase
-
 export type UserRow = {
     user_id: number
     user_na?: string | null
@@ -303,32 +302,34 @@ export type PasswordResetRow = {
 }
 
 export class AuthRepository {
+    constructor(private db: IDatabase) {}
+
     // --- Users
-    static async getUserByEmail(email: string): Promise<UserRow | null> {
-        const r = (await db.exe('security', 'getUserByEmail', [email])) as { rows?: UserRow[] }
+    async getUserByEmail(email: string): Promise<UserRow | null> {
+        const r = (await this.db.exe('security', 'getUserByEmail', [email])) as { rows?: UserRow[] }
         return r.rows?.[0] ?? null
     }
 
-    static async getUserByUsername(username: string): Promise<UserRow | null> {
-        const r = (await db.exe('security', 'getUserByUsername', [username])) as {
+    async getUserByUsername(username: string): Promise<UserRow | null> {
+        const r = (await this.db.exe('security', 'getUserByUsername', [username])) as {
             rows?: UserRow[]
         }
         return r.rows?.[0] ?? null
     }
 
-    static async getUserBaseByEmail(email: string): Promise<UserRow | null> {
-        const r = (await db.exe('security', 'getUserBaseByEmail', [email])) as {
+    async getUserBaseByEmail(email: string): Promise<UserRow | null> {
+        const r = (await this.db.exe('security', 'getUserBaseByEmail', [email])) as {
             rows?: UserRow[]
         }
         return r.rows?.[0] ?? null
     }
 
-    static async insertUser(params: {
+    async insertUser(params: {
         username: string | null
         email: string | null
         passwordHash: string
     }): Promise<{ user_id: number }> {
-        const r = (await db.exe('security', 'insertUser', [params.username, params.email, params.passwordHash])) as {
+        const r = (await this.db.exe('security', 'insertUser', [params.username, params.email, params.passwordHash])) as {
             rows?: Array<{ user_id: number }>
         }
         const row = r.rows?.[0]
@@ -336,24 +337,24 @@ export class AuthRepository {
         return row
     }
 
-    static async upsertUserProfile({ userId, profileId }: { userId: number; profileId: number }) {
-        await db.exe('security', 'upsertUserProfile', [userId, profileId])
+    async upsertUserProfile({ userId, profileId }: { userId: number; profileId: number }) {
+        await this.db.exe('security', 'upsertUserProfile', [userId, profileId])
         return true
     }
 
-    static async setUserEmailVerified(userId: number) {
-        await db.exe('security', 'setUserEmailVerified', [userId])
+    async setUserEmailVerified(userId: number) {
+        await this.db.exe('security', 'setUserEmailVerified', [userId])
         return true
     }
 
     // --- Password reset
-    static async insertPasswordReset(params: {
+    async insertPasswordReset(params: {
         userId: number
         tokenHash: string
         sentTo: string
         expiresSeconds: number
     }): Promise<void> {
-        await db.exe('security', 'insertPasswordReset', [
+        await this.db.exe('security', 'insertPasswordReset', [
             params.userId,
             params.tokenHash,
             params.sentTo,
@@ -363,32 +364,32 @@ export class AuthRepository {
         ])
     }
 
-    static async invalidateActivePasswordResetsForUser(userId: number): Promise<boolean> {
-        await db.exe('security', 'invalidateActivePasswordResetsForUser', [userId])
+    async invalidateActivePasswordResetsForUser(userId: number): Promise<boolean> {
+        await this.db.exe('security', 'invalidateActivePasswordResetsForUser', [userId])
         return true
     }
 
-    static async getPasswordResetByTokenHash(tokenHash: string): Promise<PasswordResetRow | null> {
-        const r = (await db.exe('security', 'getPasswordResetByTokenHash', [tokenHash])) as {
+    async getPasswordResetByTokenHash(tokenHash: string): Promise<PasswordResetRow | null> {
+        const r = (await this.db.exe('security', 'getPasswordResetByTokenHash', [tokenHash])) as {
             rows?: PasswordResetRow[]
         }
         return r.rows?.[0] ?? null
     }
 
-    static async markPasswordResetUsed(resetId: number): Promise<boolean> {
-        await db.exe('security', 'markPasswordResetUsed', [resetId])
+    async markPasswordResetUsed(resetId: number): Promise<boolean> {
+        await this.db.exe('security', 'markPasswordResetUsed', [resetId])
         return true
     }
 
     // --- One-time codes
-    static async insertOneTimeCode(params: {
+    async insertOneTimeCode(params: {
         userId: number
         purpose: string
         codeHash: string
         expiresSeconds: number
         meta?: any
     }): Promise<boolean> {
-        await db.exe('security', 'insertOneTimeCode', [
+        await this.db.exe('security', 'insertOneTimeCode', [
             params.userId,
             params.purpose,
             params.codeHash,
@@ -398,24 +399,24 @@ export class AuthRepository {
         return true
     }
 
-    static async consumeOneTimeCode(codeId: number): Promise<boolean> {
-        await db.exe('security', 'consumeOneTimeCode', [codeId])
+    async consumeOneTimeCode(codeId: number): Promise<boolean> {
+        await this.db.exe('security', 'consumeOneTimeCode', [codeId])
         return true
     }
 
-    static async getActiveOneTimeCodeForPurposeAndTokenHash(params: {
+    async getActiveOneTimeCodeForPurposeAndTokenHash(params: {
         purpose: string
         tokenHash: string
     }): Promise<OneTimeCodeRow | null> {
-        const r = (await db.exe('security', 'getActiveOneTimeCodeForPurposeAndTokenHash', [
+        const r = (await this.db.exe('security', 'getActiveOneTimeCodeForPurposeAndTokenHash', [
             params.purpose,
             params.tokenHash,
         ])) as { rows?: OneTimeCodeRow[] }
         return r.rows?.[0] ?? null
     }
 
-    static async updateUserPassword(params: { userId: number; passwordHash: string }): Promise<boolean> {
-        await db.exe('security', 'updateUserPassword', [params.userId, params.passwordHash])
+    async updateUserPassword(params: { userId: number; passwordHash: string }): Promise<boolean> {
+        await this.db.exe('security', 'updateUserPassword', [params.userId, params.passwordHash])
         return true
     }
 }

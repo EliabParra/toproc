@@ -21,7 +21,7 @@ const RULES: Rule[] = [
         msg: 'Use ILogger (this.log.show) instead of console.log',
         pattern: /console\.log\(/,
         severity: 'warning',
-        exclude: /scripts|test/, // Allow in scripts/tests
+        exclude: /scripts|test|logger/,
     },
     {
         id: 'no-req-body',

@@ -18,7 +18,7 @@ test('bo CLI perms --dry allow is DB-safe', () => {
         [
             '--import',
             'tsx',
-            'scripts/bo.ts',
+            'scripts/bo/index.ts',
             'perms',
             '--profile',
             '1',
@@ -44,7 +44,7 @@ test('bo CLI perms --dry deny is DB-safe', () => {
         [
             '--import',
             'tsx',
-            'scripts/bo.ts',
+            'scripts/bo/index.ts',
             'perms',
             '--profile',
             '2',
@@ -67,7 +67,7 @@ test('bo CLI perms rejects invalid method format', () => {
         [
             '--import',
             'tsx',
-            'scripts/bo.ts',
+            'scripts/bo/index.ts',
             'perms',
             '--profile',
             '1',
@@ -88,7 +88,7 @@ test('bo CLI perms rejects invalid profile', () => {
         [
             '--import',
             'tsx',
-            'scripts/bo.ts',
+            'scripts/bo/index.ts',
             'perms',
             '--profile',
             '0',

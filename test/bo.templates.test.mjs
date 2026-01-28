@@ -59,9 +59,9 @@ test('templateTypes genera interfaces', () => {
 test('templateMessages genera mensajes en español', () => {
     const out = templateMessages('Product', ['get', 'create', 'delete'])
     assert.match(out, /ProductMessages/)
-    assert.match(out, /GET:.*encontrado/)
-    assert.match(out, /CREATE:.*creado exitosamente/)
-    assert.match(out, /DELETE:.*eliminado exitosamente/)
+    assert.match(out, /GET:.*Obtenido exitosamente/)
+    assert.match(out, /CREATE:.*Creado exitosamente/)
+    assert.match(out, /DELETE:.*Eliminado exitosamente/)
     assert.match(out, /NOT_FOUND:.*no encontrado/)
 })
 

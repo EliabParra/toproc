@@ -24,91 +24,120 @@ function makeMsgs() {
 }
 
 test('Security.init loads permissions + tx map and sets isReady', async () => {
-    await withGlobals(['config', 'msgs', 'log', 'db'], async () => {
-        globalThis.config = {
-            app: { lang: 'en' },
-            bo: { path: '../../BO/' },
+    await withGlobals(
+        ['config', 'msgs', 'log', 'db', 'audit', 'session', 'validator'],
+        async () => {
+            globalThis.config = {
+                app: { lang: 'en' },
+                bo: { path: '../../BO/' },
+            }
+            globalThis.msgs = makeMsgs()
+
+            const logs = []
+            globalThis.log = {
+                TYPE_ERROR: 'error',
+                TYPE_INFO: 'info',
+                show: (e) => logs.push(e),
+            }
+
+            globalThis.db = {
+                exe: async (schema, queryName) => {
+                    assert.equal(schema, 'security')
+                    if (queryName === 'loadPermissions') {
+                        return { rows: [{ profile_id: 1, method_na: 'm', object_na: 'o' }] }
+                    }
+                    if (queryName === 'loadDataTx') {
+                        return {
+                            rows: [{ tx_nu: 100, object_na: 'Order', method_na: 'createOrder' }],
+                        }
+                    }
+                    throw new Error(`Unexpected query: ${queryName}`)
+                },
+            }
+
+            // Mocks for Phase 1 DI
+            globalThis.audit = { log: async () => {} }
+            globalThis.session = {
+                sessionExists: () => false,
+                createSession: async () => {},
+                destroySession: () => {},
+            }
+            globalThis.validator = { validate: () => ({ valid: true, data: {} }) }
+
+            const security = new SecurityService(globalThis)
+            await security.init()
+
+            assert.equal(security.isReady, true)
+
+            assert.equal(
+                security.getPermissions({ profile_id: 1, method_na: 'm', object_na: 'o' }),
+                true
+            )
+            assert.equal(
+                security.getPermissions({ profile_id: 2, method_na: 'm', object_na: 'o' }),
+                false
+            )
+
+            assert.deepEqual(security.getDataTx(100), {
+                object_na: 'Order',
+                method_na: 'createOrder',
+            })
+            assert.equal(security.getDataTx(999), false)
+
+            const errors = logs.filter(
+                (l) => l?.type === 'error' || l?.type === globalThis.log.TYPE_ERROR
+            )
+            assert.equal(errors.length, 0)
         }
-        globalThis.msgs = makeMsgs()
-
-        const logs = []
-        globalThis.log = {
-            TYPE_ERROR: 'error',
-            TYPE_INFO: 'info',
-            show: (e) => logs.push(e),
-        }
-
-        globalThis.db = {
-            exe: async (schema, queryName) => {
-                assert.equal(schema, 'security')
-                if (queryName === 'loadPermissions') {
-                    return { rows: [{ profile_id: 1, method_na: 'm', object_na: 'o' }] }
-                }
-                if (queryName === 'loadDataTx') {
-                    return { rows: [{ tx_nu: 100, object_na: 'Order', method_na: 'createOrder' }] }
-                }
-                throw new Error(`Unexpected query: ${queryName}`)
-            },
-        }
-
-        const security = new SecurityService(globalThis)
-        await security.ready
-
-        assert.equal(security.isReady, true)
-
-        assert.equal(
-            security.getPermissions({ profile_id: 1, method_na: 'm', object_na: 'o' }),
-            true
-        )
-        assert.equal(
-            security.getPermissions({ profile_id: 2, method_na: 'm', object_na: 'o' }),
-            false
-        )
-
-        assert.deepEqual(security.getDataTx(100), { object_na: 'Order', method_na: 'createOrder' })
-        assert.equal(security.getDataTx(999), false)
-
-        const errors = logs.filter(
-            (l) => l?.type === 'error' || l?.type === globalThis.log.TYPE_ERROR
-        )
-        assert.equal(errors.length, 0)
-    })
+    )
 })
 
 test('Security.init captures initError and rejects ready when DB fails', async () => {
-    await withGlobals(['config', 'msgs', 'log', 'db'], async () => {
-        globalThis.config = { app: { lang: 'en' }, bo: { path: '../../BO/' } }
-        globalThis.msgs = makeMsgs()
+    await withGlobals(
+        ['config', 'msgs', 'log', 'db', 'audit', 'session', 'validator'],
+        async () => {
+            globalThis.config = { app: { lang: 'en' }, bo: { path: '../../BO/' } }
+            globalThis.msgs = makeMsgs()
 
-        const logs = []
-        globalThis.log = {
-            TYPE_ERROR: 'error',
-            TYPE_INFO: 'info',
-            show: (e) => logs.push(e),
+            const logs = []
+            globalThis.log = {
+                TYPE_ERROR: 'error',
+                TYPE_INFO: 'info',
+                show: (e) => logs.push(e),
+            }
+
+            globalThis.db = {
+                exe: async (schema, queryName) => {
+                    if (schema !== 'security') throw new Error('wrong schema')
+                    if (queryName === 'loadPermissions') throw new Error('db down')
+                    if (queryName === 'loadDataTx') return { rows: [] }
+                    throw new Error(`Unexpected query: ${queryName}`)
+                },
+            }
+
+            // Mocks for Phase 1 DI
+            globalThis.audit = { log: async () => {} }
+            globalThis.session = {
+                sessionExists: () => false,
+                createSession: async () => {},
+                destroySession: () => {},
+            }
+            globalThis.validator = { validate: () => ({ valid: true, data: {} }) }
+
+            const security = new SecurityService(globalThis)
+
+            let err
+            try {
+                await security.init()
+            } catch (e) {
+                err = e
+            }
+
+            assert.ok(err)
+            assert.equal(security.isReady, false)
+            assert.ok(logs.some((l) => String(l?.msg ?? '').includes('SecurityService.init')))
         }
-
-        globalThis.db = {
-            exe: async (schema, queryName) => {
-                if (schema !== 'security') throw new Error('wrong schema')
-                if (queryName === 'loadPermissions') throw new Error('db down')
-                if (queryName === 'loadDataTx') return { rows: [] }
-                throw new Error(`Unexpected query: ${queryName}`)
-            },
-        }
-
-        const security = new SecurityService(globalThis)
-
-        let err
-        try {
-            await security.ready
-        } catch (e) {
-            err = e
-        }
-
-        assert.ok(err)
-        assert.equal(security.isReady, false)
-        assert.ok(logs.some((l) => String(l?.msg ?? '').includes('SecurityService.init')))
-    })
+    )
 })
 
 test('Security.executeMethod dynamically imports BO and caches the instance', async () => {
@@ -132,12 +161,72 @@ test('Security.executeMethod dynamically imports BO and caches the instance', as
             'utf8'
         )
 
-        await withGlobals(['config', 'msgs', 'log', 'db'], async () => {
-            globalThis.__securityBoCtorCount = 0
+        await withGlobals(
+            ['config', 'msgs', 'log', 'db', 'audit', 'session', 'validator'],
+            async () => {
+                globalThis.__securityBoCtorCount = 0
 
+                globalThis.config = { app: { lang: 'en' }, bo: { path: '../../BO/' } }
+                globalThis.msgs = makeMsgs()
+                globalThis.log = { TYPE_ERROR: 'error', TYPE_INFO: 'info', show: () => {} }
+                globalThis.db = {
+                    exe: async (schema, queryName) => {
+                        if (schema !== 'security') throw new Error('wrong schema')
+                        if (queryName === 'loadPermissions') return { rows: [] }
+                        if (queryName === 'loadDataTx') return { rows: [] }
+                        throw new Error(`Unexpected query: ${queryName}`)
+                    },
+                }
+
+                // Mocks for Phase 1 DI
+                globalThis.audit = { log: async () => {} }
+                globalThis.session = {
+                    sessionExists: () => false,
+                    createSession: async () => {},
+                    destroySession: () => {},
+                }
+                globalThis.validator = { validate: () => ({ valid: true, data: {} }) }
+
+                const security = new SecurityService(globalThis)
+                await security.init()
+
+                const r1 = await security.executeMethod({
+                    object_na: objectName,
+                    method_na: 'ping',
+                    params: { a: 1 },
+                })
+                const r2 = await security.executeMethod({
+                    object_na: objectName,
+                    method_na: 'ping',
+                    params: { a: 2 },
+                })
+
+                assert.deepEqual(r1, { code: 200, msg: 'ok', data: { a: 1 } })
+                assert.deepEqual(r2, { code: 200, msg: 'ok', data: { a: 2 } })
+
+                assert.equal(globalThis.__securityBoCtorCount, 1)
+            }
+        )
+    } finally {
+        await fs.rm(baseDir, { recursive: true, force: true })
+        delete globalThis.__securityBoCtorCount
+    }
+})
+
+test('Security.executeMethod returns serverError and logs when BO import fails', async () => {
+    await withGlobals(
+        ['config', 'msgs', 'log', 'db', 'audit', 'session', 'validator'],
+        async () => {
             globalThis.config = { app: { lang: 'en' }, bo: { path: '../../BO/' } }
             globalThis.msgs = makeMsgs()
-            globalThis.log = { TYPE_ERROR: 'error', TYPE_INFO: 'info', show: () => {} }
+
+            const logs = []
+            globalThis.log = {
+                TYPE_ERROR: 'error',
+                TYPE_INFO: 'info',
+                show: (e) => logs.push(e),
+            }
+
             globalThis.db = {
                 exe: async (schema, queryName) => {
                     if (schema !== 'security') throw new Error('wrong schema')
@@ -147,61 +236,27 @@ test('Security.executeMethod dynamically imports BO and caches the instance', as
                 },
             }
 
+            // Mocks for Phase 1 DI
+            globalThis.audit = { log: async () => {} }
+            globalThis.session = {
+                sessionExists: () => false,
+                createSession: async () => {},
+                destroySession: () => {},
+            }
+            globalThis.validator = { validate: () => ({ valid: true, data: {} }) }
+
             const security = new SecurityService(globalThis)
-            await security.ready
+            await security.init()
 
-            const r1 = await security.executeMethod({
-                object_na: objectName,
-                method_na: 'ping',
-                params: { a: 1 },
+            const r = await security.executeMethod({
+                object_na: 'DoesNotExist',
+                method_na: 'nope',
+                params: {},
             })
-            const r2 = await security.executeMethod({
-                object_na: objectName,
-                method_na: 'ping',
-                params: { a: 2 },
-            })
-
-            assert.deepEqual(r1, { code: 200, msg: 'ok', data: { a: 1 } })
-            assert.deepEqual(r2, { code: 200, msg: 'ok', data: { a: 2 } })
-
-            assert.equal(globalThis.__securityBoCtorCount, 1)
-        })
-    } finally {
-        await fs.rm(baseDir, { recursive: true, force: true })
-        delete globalThis.__securityBoCtorCount
-    }
-})
-
-test('Security.executeMethod returns serverError and logs when BO import fails', async () => {
-    await withGlobals(['config', 'msgs', 'log', 'db'], async () => {
-        globalThis.config = { app: { lang: 'en' }, bo: { path: '../../BO/' } }
-        globalThis.msgs = makeMsgs()
-
-        const logs = []
-        globalThis.log = {
-            TYPE_ERROR: 'error',
-            TYPE_INFO: 'info',
-            show: (e) => logs.push(e),
+            assert.deepEqual(r, globalThis.msgs.en.errors.server.serverError)
+            assert.ok(
+                logs.some((l) => String(l?.msg ?? '').includes('SecurityService.executeMethod'))
+            )
         }
-
-        globalThis.db = {
-            exe: async (schema, queryName) => {
-                if (schema !== 'security') throw new Error('wrong schema')
-                if (queryName === 'loadPermissions') return { rows: [] }
-                if (queryName === 'loadDataTx') return { rows: [] }
-                throw new Error(`Unexpected query: ${queryName}`)
-            },
-        }
-
-        const security = new SecurityService(globalThis)
-        await security.ready
-
-        const r = await security.executeMethod({
-            object_na: 'DoesNotExist',
-            method_na: 'nope',
-            params: {},
-        })
-        assert.deepEqual(r, globalThis.msgs.en.errors.server.serverError)
-        assert.ok(logs.some((l) => String(l?.msg ?? '').includes('SecurityService.executeMethod')))
-    })
+    )
 })

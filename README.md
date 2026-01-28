@@ -88,10 +88,10 @@ npm run dev
 
 ### 🚀 01. Getting Started
 
-- [Overview & Structure](docs/00-Introduction/OVERVIEW.en.md)
-- [Installation](docs/01-Getting-Started/INSTALLATION.en.md)
+- [Overview & Structure](docs/00-Introduction/FILE_STRUCTURE.en.md)
+- [Installation](docs/01-Getting-Started/MANUAL_INSTALLATION.en.md)
 - [Environment Config (.env)](docs/01-Getting-Started/ENVIRONMENT.en.md)
-- [Your First Business Object](docs/05-Guides/CREATING_BOS.en.md)
+- [Your First Business Object](docs/05-Guides/CREATE_NEW_MODULE.en.md)
 - [CLI Tools](docs/01-Getting-Started/CLI_TOOLS.en.md)
 
 ### 🏛️ 02. Architecture

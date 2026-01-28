@@ -64,7 +64,7 @@ async function main() {
 
     mdContent += `\n\n## Transactions (TX)\n\n`
     mdContent += `Valid transactions are defined in the database \`security.methods\` table.\n`
-    mdContent += `Use \`npm run bo -- list\` to see the active runtime mapping.\n`
+    mdContent += `Use \`npm run bo list\` to see the active runtime mapping.\n`
 
     fs.writeFileSync(outputPath, mdContent)
     console.log(`✅ Documentation generated at: ${outputPath}`)

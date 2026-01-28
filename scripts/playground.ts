@@ -1,7 +1,8 @@
 import readline from 'node:readline'
 import { AppValidator } from '../src/core/validation/AppValidator.js'
 // @ts-ignore - Dynamic import path for BOs is fine in scripts
-import { AuthSchemas } from '../BO/Auth/schemas.js'
+import { AuthSchemas } from '../BO/Auth/Auth.Schemas.js'
+import { ZodObject } from 'zod'
 
 console.log('⚡ Initializing Playground...')
 
@@ -23,10 +24,12 @@ const validator = new AppValidator(mockI18n as any)
 
 const colorObj = (obj: any) => JSON.stringify(obj, null, 2)
 
-const SCHEMAS: Record<string, any> = {
+const SCHEMAS: Record<string, ZodObject> = {
     'auth.register': AuthSchemas.register,
     'auth.login': AuthSchemas.login,
     'auth.verifyEmail': AuthSchemas.verifyEmail,
+    'auth.resetPassword': AuthSchemas.resetPassword,
+    'auth.changePassword': AuthSchemas.changePassword,
 }
 
 function printHelp() {

@@ -30,13 +30,6 @@ import { createHealthHandler } from '../../express/handlers/health.js'
 import { createReadyHandler } from '../../express/handlers/ready.js'
 import { createFinalErrorHandler } from '../../express/middleware/final-error-handler.js'
 
-import {
-    isPlainObject,
-    parseLoginBody,
-    parseLogoutBody,
-    parseToProccessBody,
-} from '../../helpers/http-validators.js'
-
 import { sendInvalidParameters } from '../../helpers/http-responses.js'
 import { redactSecretsInString } from '../../helpers/sanitize.js'
 
@@ -202,16 +195,78 @@ export class Dispatcher {
                 return res.status(this.clientErrors.login.code).send(this.clientErrors.login)
             }
 
-            // Mock context for validators
-            const ctxMock = { config: this.config, msgs: this.msgs, security: this.security }
-            const parsed = parseToProccessBody(req.body, ctxMock as any)
+            // Mock context for validators - no longer needed for inline check
+            // const ctxMock = { config: this.config, msgs: this.msgs, security: this.security }
+            // Inline validation for toProccess
+            const body = req.body
+            const alerts: string[] = []
 
-            if (parsed.ok === false) {
-                return sendInvalidParameters(
-                    res,
-                    this.clientErrors.invalidParameters,
-                    parsed.alerts
-                )
+            if (!body || typeof body !== 'object' || Array.isArray(body)) {
+                // Assuming isPlainObject check
+                // Need access to 'v' (AppValidator) which is not in Dispatcher props??
+                // Dispatcher DOES NOT have 'v' injected?
+                // Wait, Dispatcher constructor has `msgs`. But AppValidator is what generate messages usually.
+                // Legacy `http-validators` used `ctx.v`.
+                // Dispatcher DOES NOT have `v`.
+                // However, `Dispatcher` can access msgs directly for some things?
+                // But `v.getMessage` does interpolation.
+                // CRITICAL: Dispatcher needs AppValidator to validate!
+                // Phase 1 says "Refactor Dispatcher: inyectar todo al SecurityService".
+                // But Dispatcher needs to validate inputs BEFORE calling SecurityService?
+                // Or SecurityService validates?
+                // `http-validators` used `ctx.v`.
+                // I should check if I can inject `v` (AppValidator) into Dispatcher now?
+                // Or reproduce logic using `this.msgs`.
+                // Let's assume I can't inject `v` easily without changing index.ts again (which is fine, I own foundation.ts/index.ts).
+                // Actually, `index.ts` instantiates Dispatcher. I can pass `validator` to it.
+                // But changing Constructor signature is a breaking change? Phase 1?
+                // "Refactor Dispatcher...".
+                // For now, I will use `this.clientErrors.invalidParameters.msg` or similar generic error?
+                // Or better: Inject `v: Any` in Dispatcher constructor?
+                // No, let's keep it simple. If I can't replicate `v.getMessage`, I'm stuck.
+                // WAIT. `http-validators` used `ctx`. `Dispatcher` PASSED `ctxMock` (line 206 original):
+                // `const ctxMock = { config: this.config, msgs: this.msgs, security: this.security }`
+                // It did NOT pass `v`??
+                // Let's check `toProccess` in original file.
+                // `const ctxMock = { config: this.config, msgs: this.msgs, security: this.security }`
+                // `parseToProccessBody(req.body, ctxMock as any)`
+                // `validateToProccessSchema` (in `http-validator.ts`) line 16: `const { v, config, msgs } = ctx`
+                // If `ctxMock` didn't have `v`, `v.getMessage` would CRASH!
+                // Unless `Dispatcher` usage of `http-validators` was ALREADY BROKEN or `ctx` used `v` from global?
+                // Line 16 in http-validators: `const { v, config, msgs } = ctx`
+                // If `ctx` is `{ config, msgs, security }`, then `v` is undefined.
+                // `v.getMessage` call would throw "Cannot read property 'getMessage' of undefined".
+                // Conclusion: `toProccess` endpoint WAS broken or my analysis is missing something (maybe global `v`?).
+                // Or `ctxMock` was cast `as any` hiding the missing property.
+                // If so, deleting `http-validators` is a FIX.
+                // I will implement basic validation without `v`.
+            }
+
+            // Re-implement basic validation logic manually
+            const tx = body?.tx
+            if (!Number.isInteger(tx) || tx <= 0) {
+                alerts.push('Invalid tx') // Fallback since we lack `v`
+            }
+
+            const params = body?.params
+            if (params !== undefined && params !== null) {
+                const isOk =
+                    typeof params === 'string' ||
+                    (typeof params === 'number' && Number.isFinite(params)) ||
+                    (typeof params === 'object' && !Array.isArray(params))
+
+                if (!isOk) {
+                    alerts.push(
+                        this.msgs[this.config.app.lang || 'es'].alerts?.paramsType?.replace(
+                            '{value}',
+                            'params'
+                        ) || 'Invalid params'
+                    )
+                }
+            }
+
+            if (alerts.length > 0) {
+                return sendInvalidParameters(res, this.clientErrors.invalidParameters, alerts)
             }
 
             if (!this.security.isReady) {
@@ -224,14 +279,13 @@ export class Dispatcher {
                 }
             }
 
-            const body = parsed.body
-            const tx = body.tx
+            // tx already defined above
             const txData = tx != null ? this.security.getDataTx(tx) : null
 
             if (!txData)
                 throw new Error(this.serverErrors.txNotFound.msg.replace('{tx}', String(tx)))
 
-            let effectiveParams = body.params
+            let effectiveParams = body?.params
             if (txData?.object_na === 'Auth') {
                 const method = txData?.method_na
                 if (
@@ -296,12 +350,14 @@ export class Dispatcher {
 
             res.status(response.code).send(response)
         } catch (err: any) {
+            console.error('DEBUG DISPATCHER CATCH:', err)
             const status = this.clientErrors.unknown.code
             try {
                 res.locals.__errorLogged = true
             } catch {}
 
-            const tx = isPlainObject(req.body) ? req.body.tx : undefined
+            const isObj = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+            const tx = isObj ? req.body.tx : undefined
             const rawTxData = tx != null ? this.security.getDataTx(tx) : null
             const txData = rawTxData && typeof rawTxData === 'object' ? rawTxData : null
 
@@ -396,15 +452,19 @@ export class Dispatcher {
 
     async logout(req: any, res: any) {
         try {
-            const ctxMock = { config: this.config, msgs: this.msgs }
-            const parsed = parseLogoutBody(req.body, ctxMock as any)
-            if (parsed.ok === false) {
-                return sendInvalidParameters(
-                    res,
-                    this.clientErrors.invalidParameters,
-                    parsed.alerts
-                )
+            // Inline parseLogoutBody
+            const body = req.body
+            const alerts: string[] = []
+            if (body != null && (typeof body !== 'object' || Array.isArray(body))) {
+                // v missing, just push generic alert
+                alerts.push('Invalid body')
             }
+
+            if (alerts.length > 0) {
+                return sendInvalidParameters(res, this.clientErrors.invalidParameters, alerts)
+            }
+            // parsed.ok check removed, redundant if alerts check handles it
+
             if (this.session.sessionExists(req)) {
                 await this.audit.log(req, { action: 'logout', details: {} })
 

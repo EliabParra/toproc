@@ -12,6 +12,9 @@
  * - {Nombre}.Errors.ts
  */
 
+export * from './types.js'
+export * from './messages.js'
+
 /**
  * Extrae métodos async públicos de un archivo BO
  *
