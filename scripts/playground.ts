@@ -1,5 +1,5 @@
 import readline from 'node:readline'
-import { AppValidator } from '../src/core/validation/AppValidator.js'
+import { AppValidator } from '../src/core/AppValidator.js'
 // @ts-ignore - Dynamic import path for BOs is fine in scripts
 import { AuthSchemas } from '../BO/Auth/Auth.Schemas.js'
 import { ZodObject } from 'zod'

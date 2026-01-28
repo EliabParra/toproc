@@ -21,13 +21,16 @@ export const AuthSchemas = {
         token: z.string().min(1, AuthMessages.VALIDATION.TOKEN_REQUIRED),
     }),
 
+    requestEmailVerification: z.object({
+        identifier: z.string().min(1, AuthMessages.VALIDATION.EMAIL_REQUIRED),
+    }),
+
     resetPassword: z.object({
-        identifier: z.string().min(1, AuthMessages.VALIDATION.EMAIL_INVALID),
+        email: z.string().email(AuthMessages.VALIDATION.EMAIL_INVALID),
     }),
 
     verifyPasswordReset: z.object({
         token: z.string().min(1, AuthMessages.VALIDATION.TOKEN_REQUIRED),
-        code: z.string().optional(),
     }),
 
     resetPasswordConfirm: z.object({
@@ -45,6 +48,7 @@ export type LoginInput = z.infer<typeof AuthSchemas.login>
 export type RegisterInput = z.infer<typeof AuthSchemas.register>
 export type LogoutInput = z.infer<typeof AuthSchemas.logout>
 export type VerifyEmailInput = z.infer<typeof AuthSchemas.verifyEmail>
+export type RequestEmailVerificationInput = z.infer<typeof AuthSchemas.requestEmailVerification>
 export type ResetPasswordInput = z.infer<typeof AuthSchemas.resetPassword>
 export type VerifyPasswordResetInput = z.infer<typeof AuthSchemas.verifyPasswordReset>
 export type ResetPasswordConfirmInput = z.infer<typeof AuthSchemas.resetPasswordConfirm>

@@ -4,7 +4,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { SecurityService } from '../src/core/security/SecurityService.js'
+import { SecurityService } from '../src/services/SecurityService.js'
 import { withGlobals } from './_helpers/global-state.mjs'
 
 const __filename = fileURLToPath(import.meta.url)

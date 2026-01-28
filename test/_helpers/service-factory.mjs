@@ -1,7 +1,7 @@
-import { Dispatcher } from '../../src/api/dispatcher/Dispatcher.js'
-import { SessionManager } from '../../src/session/SessionManager.js'
-import { AuditService } from '../../src/audit/AuditService.js'
-import { applySessionMiddleware } from '../../src/express/session/apply-session-middleware.js'
+import { Dispatcher } from '../../src/api/Dispatcher.js'
+import { SessionManager } from '../../src/services/SessionService.js'
+import { AuditService } from '../../src/services/AuditService.js'
+import { applySessionMiddleware } from '../../src/api/http/session/apply-session-middleware.js'
 
 export function createTestDispatcher(globals) {
     const audit = new AuditService({ db: globals.db })

@@ -1,42 +1,32 @@
-export {}
+import { Request as ExpressRequest, Response as ExpressResponse } from 'express'
+import 'express-session'
 
-declare global {
-    // Minimal structural types used across src/BSS/**/*.ts during migration.
-    // Intentionally incomplete: we only model what the codebase actually reads/writes.
-
-    type ApiError = {
-        msg: string
-        code: number
-        alerts?: string[]
-        [k: string]: unknown
-    }
-
-    type AppSession = {
+declare module 'express-session' {
+    interface SessionData {
         user_id?: number
         user_na?: string
         profile_id?: number
-        destroy?: () => void
-        [k: string]: unknown
+        [key: string]: any
+    }
+}
+
+declare global {
+    namespace Express {
+        interface Request {
+            requestId?: string
+            requestStartMs?: number
+        }
     }
 
-    type AppRequest = {
-        body?: unknown
-        headers?: Record<string, string | string[] | undefined>
-        method?: string
-        originalUrl?: string
-        ip?: string
-        requestId?: string
-        requestStartMs?: number
-        session?: AppSession
-        get?: (name: string) => string | undefined
-        [k: string]: unknown
+    // Restore global aliases as interfaces to ensure visibility
+    interface AppRequest extends ExpressRequest {
+        session?: import('express-session').Session & import('express-session').SessionData
     }
+    interface AppResponse extends ExpressResponse {}
 
-    type AppResponse = {
-        locals?: any
-        status: (code: number) => AppResponse
-        send: (body: any) => any
-        cookie?: (name: string, value: any, options?: any) => any
-        [k: string]: unknown
+    interface ApiError {
+        code: number
+        msg: string
+        [key: string]: any
     }
 }

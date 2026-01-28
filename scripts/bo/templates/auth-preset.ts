@@ -26,14 +26,16 @@ export const AuthPreset = {
     // Plantillas
     // ============================================================
 
-    bo: () => `import { BaseBO, BODependencies } from '../../src/core/base/BaseBO.js'
-import { ApiResponse } from '../../src/core/response/ApiResponse.js'
+    bo: () => `import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
+import { ApiResponse } from '../../src/types/ApiResponse.js'
 import { AuthService } from './Auth.Service.js'
 import {
     AuthSchemas,
     RegisterInput,
     VerifyEmailInput,
+    RequestEmailVerificationInput,
     ResetPasswordInput,
+    VerifyPasswordResetInput,
     ResetPasswordConfirmInput,
 } from './Auth.Schemas.js'
 import { AuthMessages } from './Auth.Messages.js'
@@ -48,66 +50,67 @@ export class AuthBO extends BaseBO {
     }
 
     async register(params: RegisterInput): Promise<ApiResponse> {
-        try {
-            const vRes = this.validate<RegisterInput>(params, AuthSchemas.register)
-            if (!vRes.ok) return this.validationError(vRes.alerts)
-
-            await this.service.register(vRes.data)
+        return this.exec<RegisterInput, void>(params, AuthSchemas.register, async (data) => {
+            await this.service.register(data)
             return this.created(null, AuthMessages.REGISTER_SUCCESS)
-        } catch (err) {
-            if (isAuthError(err)) return this.error(err.message, err.code)
-            return this.error('Error desconocido en registro')
-        }
+        })
     }
 
     async verifyEmail(params: VerifyEmailInput): Promise<ApiResponse> {
-        try {
-            const vRes = this.validate<VerifyEmailInput>(params, AuthSchemas.verifyEmail)
-            if (!vRes.ok) return this.validationError(vRes.alerts)
-
-            await this.service.verifyEmail(vRes.data.token)
+        return this.exec<VerifyEmailInput, void>(params, AuthSchemas.verifyEmail, async (data) => {
+            await this.service.verifyEmail(data.token)
             return this.success(null, AuthMessages.EMAIL_VERIFIED)
-        } catch (err) {
-            if (isAuthError(err)) return this.error(err.message, err.code)
-            return this.error('Error en verificación de email')
-        }
+        })
+    }
+
+    async requestEmailVerification(params: RequestEmailVerificationInput): Promise<ApiResponse> {
+        return this.exec<RequestEmailVerificationInput, void>(
+            params,
+            AuthSchemas.requestEmailVerification,
+            async (data) => {
+                await this.service.requestEmailVerification(data.identifier)
+                return this.success(null, AuthMessages.VERIFICATION_SENT)
+            }
+        )
     }
 
     async requestPasswordReset(params: ResetPasswordInput): Promise<ApiResponse> {
-        try {
-            const vRes = this.validate<ResetPasswordInput>(params, AuthSchemas.resetPassword)
-            if (!vRes.ok) return this.validationError(vRes.alerts)
-
-            await this.service.requestPasswordReset(vRes.data.email)
+        return this.exec<ResetPasswordInput, void>(params, AuthSchemas.resetPassword, async (data) => {
+            await this.service.requestPasswordReset(data.email)
             return this.success(null, AuthMessages.PASSWORD_RESET_SENT)
-        } catch (err) {
-            if (isAuthError(err)) return this.error(err.message, err.code)
-            return this.error('Error solicitando reset de password')
-        }
+        })
+    }
+
+    async verifyPasswordReset(params: VerifyPasswordResetInput): Promise<ApiResponse> {
+        return this.exec<VerifyPasswordResetInput, void>(
+            params,
+            AuthSchemas.verifyPasswordReset,
+            async (data) => {
+                // Just verification of token existence/validity
+                await this.service.verifyPasswordResetToken(data.token)
+                return this.success(null, AuthMessages.TOKEN_VALID)
+            }
+        )
     }
 
     async resetPassword(params: ResetPasswordConfirmInput): Promise<ApiResponse> {
-        try {
-            const vRes = this.validate<ResetPasswordConfirmInput>(
-                params,
-                AuthSchemas.resetPasswordConfirm
-            )
-            if (!vRes.ok) return this.validationError(vRes.alerts)
-
-            await this.service.resetPassword(vRes.data.token, vRes.data.newPassword)
-            return this.success(null, AuthMessages.PASSWORD_CHANGED)
-        } catch (err) {
-            if (isAuthError(err)) return this.error(err.message, err.code)
-            return this.error('Error cambiando password')
-        }
+        return this.exec<ResetPasswordConfirmInput, void>(
+            params,
+            AuthSchemas.resetPasswordConfirm,
+            async (data) => {
+                await this.service.resetPassword(data.token, data.newPassword)
+                return this.success(null, AuthMessages.PASSWORD_CHANGED)
+            }
+        )
     }
 }
 `,
 
     service: () => `import { createHash, randomBytes } from 'node:crypto'
 import bcrypt from 'bcryptjs'
-import type { ILogger, IConfig, IDatabase } from '../../src/types/core.js'
-import { EmailService } from '../../src/email/EmailService.js'
+import { BOService } from '../../src/core/business-objects/BOService.js'
+import type { IConfig, IDatabase } from '../../src/types/core.js'
+import { EmailService } from '../../src/services/EmailService.js'
 import { AuthRepository, UserRow } from './Auth.Repository.js'
 import type { User, RegisterData } from './Auth.Types.js'
 import { AuthEmailExistsError, AuthTokenInvalidError } from './Auth.Errors.js'
@@ -116,15 +119,12 @@ function sha256Hex(value: string): string {
     return createHash('sha256').update(value, 'utf8').digest('hex')
 }
 
-export class AuthService {
+export class AuthService extends BOService {
     private emailService: EmailService
     private repo: AuthRepository
 
-    constructor(
-        private readonly log: ILogger,
-        private readonly config: IConfig,
-        db: IDatabase
-    ) {
+    constructor(log: any, config: IConfig, db: IDatabase) {
+        super(log, config, db)
         this.emailService = new EmailService({ log: this.log, config: this.config })
         this.repo = new AuthRepository(db)
     }
@@ -224,6 +224,12 @@ export class AuthService {
         const hash = await bcrypt.hash(newPassword, 10)
         await this.repo.updateUserPassword({ userId: reset.user_id, passwordHash: hash })
         await this.repo.markPasswordResetUsed(reset.reset_id)
+    }
+
+    async verifyPasswordResetToken(token: string): Promise<void> {
+        const tokenHash = sha256Hex(token)
+        const reset = await this.repo.getPasswordResetByTokenHash(tokenHash)
+        if (!reset || reset.used_at) throw new AuthTokenInvalidError()
     }
 
     private async sendVerificationEmail(userId: number, emailAddr: string) {
@@ -453,6 +459,10 @@ export const AuthSchemas = {
         email: z.string().email(AuthMessages.VALIDATION.EMAIL_INVALID),
     }),
 
+    verifyPasswordReset: z.object({
+        token: z.string().min(1, AuthMessages.VALIDATION.TOKEN_REQUIRED),
+    }),
+
     resetPasswordConfirm: z.object({
         token: z.string().min(1, AuthMessages.VALIDATION.TOKEN_REQUIRED),
         newPassword: z.string().min(8, AuthMessages.VALIDATION.PASSWORD_TOO_SHORT),
@@ -470,6 +480,7 @@ export type LogoutInput = z.infer<typeof AuthSchemas.logout>
 export type VerifyEmailInput = z.infer<typeof AuthSchemas.verifyEmail>
 export type RequestEmailVerificationInput = z.infer<typeof AuthSchemas.requestEmailVerification>
 export type ResetPasswordInput = z.infer<typeof AuthSchemas.resetPassword>
+export type VerifyPasswordResetInput = z.infer<typeof AuthSchemas.verifyPasswordReset>
 export type ResetPasswordConfirmInput = z.infer<typeof AuthSchemas.resetPasswordConfirm>
 export type ChangePasswordInput = z.infer<typeof AuthSchemas.changePassword>
 `,
@@ -540,6 +551,8 @@ export interface RegisterResult {
     EMAIL_VERIFIED: 'Email verificado exitosamente',
     PASSWORD_RESET_SENT: 'Enlace de recuperación enviado',
     PASSWORD_CHANGED: 'Contraseña actualizada exitosamente',
+    VERIFICATION_SENT: 'Enlace de verificación enviado',
+    TOKEN_VALID: 'Token válido',
 
     USER_NOT_FOUND: 'Usuario no encontrado',
     INVALID_CREDENTIALS: 'Credenciales inválidas',
@@ -566,38 +579,18 @@ export type AuthMessageKey = keyof typeof AuthMessages
 export type AuthValidationKey = keyof typeof AuthMessages.VALIDATION
 `,
 
-    errors: () => `import { AuthMessages } from './Auth.Messages.js'
+    errors: () => `import { BOError } from '../../src/core/errors/BOError.js'
+import { AuthMessages } from './Auth.Messages.js'
 
-export class AuthError extends Error {
-    readonly tag: string
-    readonly code: number
-    readonly details?: Record<string, unknown>
-
+export class AuthError extends BOError {
     constructor(
         message: string,
         tag: string,
         code: number = 500,
         details?: Record<string, unknown>
     ) {
-        super(message)
+        super(message, tag, code, details)
         this.name = 'AuthError'
-        this.tag = tag
-        this.code = code
-        this.details = details
-
-        if (Error.captureStackTrace) {
-            Error.captureStackTrace(this, AuthError)
-        }
-    }
-
-    toJSON() {
-        return {
-            name: this.name,
-            message: this.message,
-            tag: this.tag,
-            code: this.code,
-            details: this.details,
-        }
     }
 }
 

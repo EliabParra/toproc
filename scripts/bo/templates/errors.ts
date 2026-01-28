@@ -34,37 +34,31 @@ import { ${pascalName}Messages } from './${pascalName}.Messages.js'
  * Clase base de error para el dominio ${pascalName}
  * Extiende Error estándar con código y status HTTP
  */
-export class ${pascalName}Error extends Error {
-    readonly code: string
-    readonly status: number
-    readonly details?: Record<string, unknown>
+import { BOError } from '../../src/core/errors/BOError.js'
+import { ${pascalName}Messages } from './${pascalName}.Messages.js'
 
+// ============================================================
+// Clase Base de Error
+// ============================================================
+
+/**
+ * Clase base de error para el dominio ${pascalName}
+ * Extiende BOError con código y status HTTP
+ */
+export class ${pascalName}Error extends BOError {
     constructor(
         message: string,
         code: string,
         status: number = 500,
         details?: Record<string, unknown>
     ) {
-        super(message)
+        // Tag format example: PRODUCT_ERROR
+        super(message, '${upperName}_ERROR', status, details)
         this.name = '${pascalName}Error'
-        this.code = code
-        this.status = status
-        this.details = details
-        
-        // Mantiene el stack trace correcto (motores V8)
-        if (Error.captureStackTrace) {
-            Error.captureStackTrace(this, ${pascalName}Error)
-        }
-    }
-
-    toJSON() {
-        return {
-            name: this.name,
-            message: this.message,
-            code: this.code,
-            status: this.status,
-            details: this.details,
-        }
+        // Override code with the specific string code from generic BOError number code if needed, 
+        // but BOError primarily uses number. We can map string code to tag or details if we want strict compatibility.
+        // For this template, we'll keep the custom properties but extend BOError.
+        (this as any).codeString = code 
     }
 }
 

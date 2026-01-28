@@ -1,7 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { sqlMaxParamIndex, buildParamsArray, prepareNamedParams } from '../src/db/DBComponent.js'
+import {
+    sqlMaxParamIndex,
+    buildParamsArray,
+    prepareNamedParams,
+} from '../src/services/DatabaseService.js'
 
 test('sqlMaxParamIndex detects highest $n placeholder', () => {
     assert.equal(sqlMaxParamIndex('select $1, $2, $2, $10'), 10)

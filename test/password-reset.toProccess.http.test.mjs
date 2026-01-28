@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url'
 import fs from 'node:fs/promises'
 
 import { createTestDispatcher } from './_helpers/service-factory.mjs'
-import { createCsrfProtection } from '../src/express/middleware/csrf.js'
-import { AppValidator } from '../src/core/validation/AppValidator.js'
+import { createCsrfProtection } from '../src/api/http/middleware/csrf.js'
+import { AppValidator } from '../src/core/AppValidator.js'
 // TestValidatorAdapter removed - using AppValidator directly
 
 import { withGlobals } from './_helpers/global-state.mjs'
@@ -324,7 +324,13 @@ test('password reset works via /toProccess without session (public profile)', as
         ])
 
         const { AuthBO } = await import('../BO/Auth/AuthBO.ts')
-        const auth = new AuthBO()
+        const auth = new AuthBO({
+            db: globalThis.db,
+            log: globalThis.log,
+            config: globalThis.config,
+            v: globalThis.validator,
+            msgs: globalThis.msgs,
+        })
 
         globalThis.security = {
             isReady: true,
@@ -361,7 +367,7 @@ test('password reset works via /toProccess without session (public profile)', as
         // 1) Request reset
         const r1 = await agent
             .post('/toProccess')
-            .send({ tx: 1, params: { identifier: 'u@example.com' } })
+            .send({ tx: 1, params: { email: 'u@example.com' } })
 
         if (r1.status !== 200) {
             process.stderr.write('DEBUG 500 BODY: ' + JSON.stringify(r1.body, null, 2) + '\n')
@@ -412,12 +418,12 @@ test('password reset works via /toProccess without session (public profile)', as
         for (let i = 0; i < 4; i++) {
             const ok = await agent
                 .post('/toProccess')
-                .send({ tx: 1, params: { identifier: 'u@example.com' } })
+                .send({ tx: 1, params: { email: 'u@example.com' } })
             assert.equal(ok.status, 200)
         }
         const limited = await agent
             .post('/toProccess')
-            .send({ tx: 1, params: { identifier: 'u@example.com' } })
+            .send({ tx: 1, params: { email: 'u@example.com' } })
         assert.equal(limited.status, 429)
 
         // Intentionally no cleanup: do not delete workspace BOs.

@@ -33,7 +33,11 @@ Unlike traditional MVC frameworks, Toproc does not expose resources (REST Endpoi
 ### 🧩 Robust Architecture & DI
 
 - **TypeScript Strict**: Static typing throughout the lifecycle (Zod -> Service -> Repository).
-- **Dependency Injection**: Business Objects (`BO`) receive their dependencies (`db`, `email`, `log`), facilitating unit testing.
+- **Dependency Injection**: Business Objects (`BO`) receive their dependencies (`db`, `email`, `log`) via `BOService` base class, facilitating unit testing.
+- **Smart Abstractions**:
+    - `BaseBO`: Handles validation/execution flow (`.exec()`).
+    - `CrudBO`: Auto-implements standard CRUD operations.
+    - `BOService`: Provides typed access to core resources.
 - **Zod Deep Integration**: Input validation, `.env` typing, and automatic sanitization.
 
 ### 🔋 "Batteries Included"

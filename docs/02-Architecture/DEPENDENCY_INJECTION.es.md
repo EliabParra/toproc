@@ -1,54 +1,65 @@
 # Inyección de Dependencias y Lazy Loading
 
-Explicación técnica de cómo el framework gestiona la memoria y los objetos.
+Explicación técnica de cómo el framework gestiona la memoria y las dependencias de los objetos de negocio.
 
-## El Contenedor (`IContainer`)
+## Gestión de Dependencias (`BOService`)
 
-Este objeto es la "sangre" del sistema. Fluye por todos lados.
+En versiones anteriores usábamos un contenedor global. Ahora, utilizamos **Inyección de Dependencias Explícita** a través de la clase base `BOService`.
 
 ```typescript
-export interface IContainer {
-    config: IConfig // Configuración global (cargada de .env)
-    log: ILogger // Instancia del Logger
-    db: IDatabase // Conexión activa a Postgres
-    audit: IAuditService // Servicio de auditoría
-    // ... otros servicios core
+// src/core/business-objects/BOService.ts
+export class BOService {
+    constructor(
+        protected readonly log: ILogger,
+        protected readonly config: IConfig,
+        protected readonly db: IDatabase
+    ) {}
 }
 ```
 
-El `Dispatcher` crea este contenedor una vez (o lo reutiliza) y se lo pasa al `SecurityService`, que a su vez se lo pasa al `BusinessObject`.
+### Cómo fluye
+
+1. **Dispatcher**: Crea instancias de `db`, `log` y `config`.
+2. **Business Object (BO)**: Recibe estas dependencias en su constructor (`BODependencies`).
+3. **Capa de Servicio**: El BO las pasa al `Service`, que extiende `BOService`.
 
 **Beneficio**:
-Si mañana quieres agregar un servicio de "Notificaciones Push" disponible para todos, solo lo agregas al Container en `Dispatcher` y automáticamente todos los BOs tienen acceso a `this.container.push`.
+
+- **Seguridad de Tipos**: Sin contenedores "any" mágicos. Sabes exactamente de qué depende un Servicio.
+- **Testabilidad**: Puedes mockear fácilmente `db` o `log` al hacer unit testing de un Servicio.
+- **Claridad**: Las dependencias son explícitas en el constructor.
 
 ## Lazy Loading (Carga Perezosa)
 
-Node.js es rápido, pero cargar 5000 archivos al inicio haría que el servidor tardara minutos en arrancar (pobre `npm run dev`).
-
-Para evitar esto, implementamos Lazy Loading en el `TransactionExecutor`.
+Node.js es rápido, pero cargar miles de archivos al inicio haría que el servidor tardara en arrancar. Para evitar esto, implementamos Lazy Loading.
 
 ### Cómo funciona (`TransactionExecutor.ts`)
 
 ```typescript
-// Pseudocódigo simplificado
+// Concepto Simplificado
 async execute(objectName, method, params) {
-    // 1. Construir ruta del archivo
-    const path = `./BO/${objectName}/${objectName}BO.js`;
+    // 1. Construir ruta del archivo dinámicamente
+    const path = `../../BO/${objectName}/${objectName}BO.js`
 
-    // 2. Importar DINÁMICAMENTE (solo ahora se lee el disco)
-    const module = await import(path);
-    const BOClass = module[`${objectName}BO`];
+    // 2. Importar DINÁMICAMENTE (solo se importa cuando se solicita)
+    const module = await import(path)
+    const BOClass = module[`${objectName}BO`]
 
-    // 3. Instanciar e Inyectar
-    const instance = new BOClass(this.container);
+    // 3. Instanciar e Inyectar Dependencias Core
+    const instance = new BOClass({
+        db: this.db,
+        log: this.log,
+        config: this.config,
+        v: this.validator
+    })
 
     // 4. Ejecutar
-    return instance[method](params);
+    return instance[method](params)
 }
 ```
 
 ### Ventajas
 
-1.  **Inicio Instantáneo**: El servidor arranca en milisegundos, sin importar si tienes 10 o 1000 BOs.
-2.  **Aislamiento de Errores**: Si un BO tiene un error de sintaxis, no rompe el servidor hasta que alguien intenta usar ESE BO específico.
-3.  **Menor Memoria**: Node.js puede liberar memoria de módulos poco usados (dependiendo del Garbage Collector).
+1.  **Inicio Instantáneo**: El servidor arranca en milisegundos, sin importar el tamaño del código.
+2.  **Aislamiento de Errores**: Un error de sintaxis en un BO específico no rompe todo el servidor hasta que ese BO es realmente invocado.
+3.  **Eficiencia**: La memoria se asigna solo para contextos activos.

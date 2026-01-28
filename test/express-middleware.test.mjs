@@ -2,8 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
 
-import { applyRequestLogger } from '../src/express/middleware/request-logger.js'
-import { createFinalErrorHandler } from '../src/express/middleware/final-error-handler.js'
+import { applyRequestLogger } from '../src/api/http/middleware/request-logger.js'
+import { createFinalErrorHandler } from '../src/api/http/middleware/final-error-handler.js'
 
 // --- applyRequestLogger tests ---
 test('applyRequestLogger adds middleware to app', () => {

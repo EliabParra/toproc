@@ -6,17 +6,17 @@ async function main() {
     // Initialize runtime globals first via foundation
     await import(new URL('../dist/src/foundation.js', import.meta.url) as any)
 
-    await import(new URL('../dist/src/helpers/sanitize.js', import.meta.url) as any)
+    await import(new URL('../dist/src/utils/sanitize.js', import.meta.url) as any)
 
     // These modules should be importable from dist without throwing.
     // http-validators removed
 
-    await import(new URL('../dist/src/helpers/sanitize.js', import.meta.url) as any)
-    await import(new URL('../dist/src/helpers/http-responses.js', import.meta.url) as any)
+    await import(new URL('../dist/src/utils/sanitize.js', import.meta.url) as any)
+    await import(new URL('../dist/src/utils/http-responses.js', import.meta.url) as any)
 
-    await import(new URL('../dist/src/api/dispatcher/Dispatcher.js', import.meta.url) as any)
-    await import(new URL('../dist/src/core/security/SecurityService.js', import.meta.url) as any)
-    await import(new URL('../dist/src/session/SessionManager.js', import.meta.url) as any)
+    await import(new URL('../dist/src/api/Dispatcher.js', import.meta.url) as any)
+    await import(new URL('../dist/src/services/SecurityService.js', import.meta.url) as any)
+    await import(new URL('../dist/src/services/SessionService.js', import.meta.url) as any)
 
     console.log('dist smoke: ok')
 }

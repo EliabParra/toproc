@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { SessionManager } from '../src/session/SessionManager.js'
+import { SessionManager } from '../src/services/SessionService.js'
 
 // Helper to create mock dependencies
 function createMockDeps(overrides = {}) {

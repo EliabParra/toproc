@@ -134,13 +134,15 @@ export interface ISecurityService {
     }): Promise<{ code: number; msg: string; [key: string]: any }>
 }
 
+import { Request, Response } from 'express'
+
 /**
  * Servicio de gestión de sesiones.
  */
 export interface ISessionService {
-    sessionExists(req: any): boolean
-    createSession(req: any, res: any): Promise<any>
-    destroySession(req: any): void
+    sessionExists(req: AppRequest): boolean
+    createSession(req: AppRequest, res: AppResponse): Promise<any>
+    destroySession(req: AppRequest): void
 }
 
 /**
@@ -180,7 +182,7 @@ export interface IContainer {
  */
 export interface IAuditService {
     log(
-        req: any,
+        req: AppRequest,
         args: {
             action: string
             object_na?: string | null

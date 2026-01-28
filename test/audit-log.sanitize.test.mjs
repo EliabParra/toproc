@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { AuditService } from '../src/audit/AuditService.js'
+import { AuditService } from '../src/services/AuditService.js'
 
 test('AuditService.log redacts secrets in details before insert', async () => {
     const calls = []

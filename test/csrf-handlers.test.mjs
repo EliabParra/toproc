@@ -5,8 +5,8 @@ import {
     ensureCsrfToken,
     createCsrfTokenHandler,
     createCsrfProtection,
-} from '../src/express/middleware/csrf.js'
-import { createHealthHandler } from '../src/express/handlers/health.js'
+} from '../src/api/http/middleware/csrf.js'
+import { createHealthHandler } from '../src/api/http/handlers/health.js'
 
 // --- ensureCsrfToken tests ---
 test('ensureCsrfToken returns null if no session', () => {

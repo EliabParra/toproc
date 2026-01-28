@@ -2,8 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { z } from 'zod'
 
-import { BaseBO } from '../src/core/base/BaseBO.js'
-import { AppValidator } from '../src/core/validation/AppValidator.js'
+import { BaseBO } from '../src/core/business-objects/BaseBO.js'
+import { AppValidator } from '../src/core/AppValidator.js'
 
 // Create concrete test implementation
 class TestBO extends BaseBO {

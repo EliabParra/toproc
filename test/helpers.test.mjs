@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { redactSecretsInString, redactSecrets } from '../src/helpers/sanitize.js'
-import { errorMessage } from '../src/helpers/error.js'
+import { redactSecretsInString, redactSecrets } from '../src/utils/sanitize.js'
+import { errorMessage } from '../src/utils/error.js'
 
 // --- redactSecretsInString tests ---
 test('redactSecretsInString redacts password in query string', () => {

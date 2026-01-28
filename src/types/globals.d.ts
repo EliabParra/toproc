@@ -53,25 +53,13 @@ declare global {
         [k: string]: unknown
     }
 
-    // Populated by src/globals.js at process startup
-    const config: AppConfig
-    const log: AppLog
-    const db: AppDb
-    const queries: any
-    const msgs: any
-    const v: any
-    const security: AppSecurity
+    // Global 'require' is still useful in some contexts (legacy)
     const require: any
 
     interface GlobalThis {
+        // Only keep truly global things if strictly necessary, otherwise clean state
         require: any
-        config: AppConfig
-        log: AppLog
-        db: AppDb
-        queries: any
-        msgs: any
-        v: any
-        security?: AppSecurity
+        __alerts?: any[] // Used in tests
     }
 
     type AppContext = {

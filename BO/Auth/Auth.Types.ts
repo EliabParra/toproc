@@ -1,11 +1,3 @@
-/**
- * Definiciones de tipos para Auth
- */
-
-// ============================================================
-// Tipos de Entidad
-// ============================================================
-
 export interface User {
     userId: number
     email: string
@@ -38,10 +30,6 @@ export interface AuthToken {
     expiresAt: Date
 }
 
-// ============================================================
-// Tipos de Entrada
-// ============================================================
-
 export interface UserCredentials {
     loginId: string
     password: string
@@ -57,23 +45,6 @@ export interface PasswordResetData {
     token: string
     newPassword: string
 }
-
-export interface VerifyEmailData {
-    token: string
-}
-
-export interface RequestPasswordResetData {
-    email: string
-}
-
-export interface ResetPasswordConfirmData {
-    token: string
-    newPassword: string
-}
-
-// ============================================================
-// Tipos de Respuesta
-// ============================================================
 
 export interface LoginResult {
     user: UserSummary

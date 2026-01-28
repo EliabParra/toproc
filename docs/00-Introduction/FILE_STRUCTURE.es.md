@@ -47,7 +47,7 @@ El motor del framework. Se divide en áreas muy específicas:
 #### `src/api/`
 
 - **Dispatcher**: El cerebro que decide qué BO ejecutar.
-- **Routes**: Definición de rutas Express (aunque principalmente usamos una sola ruta `/toProccess`).
+- **HTTP**: Servidor Express, middlewares y rutas (`src/api/http`).
 
 #### `src/config/`
 
@@ -58,49 +58,23 @@ El motor del framework. Se divide en áreas muy específicas:
 
 Aquí están las clases base que extienden los BOs.
 
-- `BaseBO`: Clase padre con métodos `ok()`, `error()`, `validate()`.
-- `Transaction`: Interfaces para el sistema transaccional.
-- `Security`: `SecurityService` y guards.
+- `business-objects/`: `BaseBO`, `CrudBO`, `BOService`.
+- `errors/`: `BOError` y tipos de errores estándar.
 
-#### `src/db/`
+#### `src/services/` (Infraestructura y Utilidades)
 
-- Abstracción de base de datos (PostgreSQL).
-- Manejo del `Pool` de conexiones.
-- Helper `QueryExec` para facilitar consultas.
+Capa consolidada para todos los servicios técnicos (Base de datos, Email, Logging, etc.).
 
-#### `src/express/`
-
-- Configuración del servidor HTTP.
-- **Middlewares**:
-    - `SecurityMiddleware`: Verifica tokens.
-    - `RequestLogger`: Loguea cada petición.
-    - `Helmet/Cors`: Seguridad HTTP estándar.
-
-#### `src/infra/`
-
-Servicios que conectan con "el mundo exterior".
-
+- `DatabaseService`: Abstracción de PostgreSQL.
 - `EmailService`: Envío de correos (SMTP/Log).
-- `AuditService`: Registro de eventos en DB.
-
-#### `src/i18n/`
-
-- Archivos JSON con traducciones (`es.json`, `en.json`).
-- Servicio de carga de locales.
-
-#### `src/logger/`
-
-- Configuración de Winston/Pino (el logger que usemos).
-- Rotación de logs.
-
-#### `src/session/`
-
-- Gestión de estado de usuarios (Redis/DB).
-- Serialización de sesiones.
+- `SecurityService`: Lógica de autenticación y autorización.
+- `SessionService`: Gestión de sesiones de usuario.
+- `LoggerService`: Logging estructurado.
+- `I18nService`: Internacionalización.
 
 #### `src/types/`
 
-- Archivos `.d.ts` y definiciones de TypeScript globales para que el compilador no se queje.
+- Archivos `.d.ts` y definiciones de TypeScript globales.
 
 ---
 

@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { applyRequestId } from '../src/express/middleware/request-id.js'
-import { applyCorsIfEnabled } from '../src/express/middleware/cors.js'
+import { applyRequestId } from '../src/api/http/middleware/request-id.js'
+import { applyCorsIfEnabled } from '../src/api/http/middleware/cors.js'
 
 // --- applyRequestId tests ---
 test('applyRequestId adds middleware to app', () => {

@@ -1,10 +1,11 @@
-import { BaseBO, BODependencies } from '../../src/core/base/BaseBO.js'
-import { ApiResponse } from '../../src/core/response/ApiResponse.js'
+import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
+import { ApiResponse } from '../../src/types/ApiResponse.js'
 import { AuthService } from './Auth.Service.js'
 import {
     AuthSchemas,
     RegisterInput,
     VerifyEmailInput,
+    RequestEmailVerificationInput,
     ResetPasswordInput,
     VerifyPasswordResetInput,
     ResetPasswordConfirmInput,
@@ -21,74 +22,57 @@ export class AuthBO extends BaseBO {
     }
 
     async register(params: RegisterInput): Promise<ApiResponse> {
-        try {
-            const vRes = this.validate<RegisterInput>(params, AuthSchemas.register)
-            if (!vRes.ok) return this.validationError(vRes.alerts)
-
-            await this.service.register(vRes.data)
+        return this.exec<RegisterInput, void>(params, AuthSchemas.register, async (data) => {
+            await this.service.register(data)
             return this.created(null, AuthMessages.REGISTER_SUCCESS)
-        } catch (err) {
-            if (isAuthError(err)) return this.error(err.message, err.code)
-            return this.error('Error desconocido en registro')
-        }
+        })
     }
 
     async verifyEmail(params: VerifyEmailInput): Promise<ApiResponse> {
-        try {
-            const vRes = this.validate<VerifyEmailInput>(params, AuthSchemas.verifyEmail)
-            if (!vRes.ok) return this.validationError(vRes.alerts)
-
-            await this.service.verifyEmail(vRes.data.token)
+        return this.exec<VerifyEmailInput, void>(params, AuthSchemas.verifyEmail, async (data) => {
+            await this.service.verifyEmail(data.token)
             return this.success(null, AuthMessages.EMAIL_VERIFIED)
-        } catch (err) {
-            if (isAuthError(err)) return this.error(err.message, err.code)
-            return this.error('Error en verificación de email')
-        }
+        })
+    }
+
+    async requestEmailVerification(params: RequestEmailVerificationInput): Promise<ApiResponse> {
+        return this.exec<RequestEmailVerificationInput, void>(
+            params,
+            AuthSchemas.requestEmailVerification,
+            async (data) => {
+                await this.service.requestEmailVerification(data.identifier)
+                return this.success(null, AuthMessages.VERIFICATION_SENT)
+            }
+        )
     }
 
     async requestPasswordReset(params: ResetPasswordInput): Promise<ApiResponse> {
-        try {
-            const vRes = this.validate<ResetPasswordInput>(params, AuthSchemas.resetPassword)
-            if (!vRes.ok) return this.validationError(vRes.alerts)
-
-            await this.service.requestPasswordReset(vRes.data.identifier)
+        return this.exec<ResetPasswordInput, void>(params, AuthSchemas.resetPassword, async (data) => {
+            await this.service.requestPasswordReset(data.email)
             return this.success(null, AuthMessages.PASSWORD_RESET_SENT)
-        } catch (err) {
-            console.error(err)
-            if (isAuthError(err)) return this.error(err.message, err.code)
-            return this.error('Error solicitando reset de password')
-        }
+        })
     }
 
     async verifyPasswordReset(params: VerifyPasswordResetInput): Promise<ApiResponse> {
-        try {
-            const vRes = this.validate<VerifyPasswordResetInput>(
-                params,
-                AuthSchemas.verifyPasswordReset
-            )
-            if (!vRes.ok) return this.validationError(vRes.alerts)
-
-            await this.service.verifyPasswordReset(vRes.data.token, vRes.data.code)
-            return this.success(null, 'Token válido')
-        } catch (err) {
-            if (isAuthError(err)) return this.error(err.message, err.code)
-            return this.error('Token inválido o expirado')
-        }
+        return this.exec<VerifyPasswordResetInput, void>(
+            params,
+            AuthSchemas.verifyPasswordReset,
+            async (data) => {
+                // Just verification of token existence/validity
+                await this.service.verifyPasswordResetToken(data.token)
+                return this.success(null, AuthMessages.TOKEN_VALID)
+            }
+        )
     }
 
     async resetPassword(params: ResetPasswordConfirmInput): Promise<ApiResponse> {
-        try {
-            const vRes = this.validate<ResetPasswordConfirmInput>(
-                params,
-                AuthSchemas.resetPasswordConfirm
-            )
-            if (!vRes.ok) return this.validationError(vRes.alerts)
-
-            await this.service.resetPassword(vRes.data.token, vRes.data.newPassword)
-            return this.success(null, AuthMessages.PASSWORD_CHANGED)
-        } catch (err) {
-            if (isAuthError(err)) return this.error(err.message, err.code)
-            return this.error('Error cambiando password')
-        }
+        return this.exec<ResetPasswordConfirmInput, void>(
+            params,
+            AuthSchemas.resetPasswordConfirm,
+            async (data) => {
+                await this.service.resetPassword(data.token, data.newPassword)
+                return this.success(null, AuthMessages.PASSWORD_CHANGED)
+            }
+        )
     }
 }

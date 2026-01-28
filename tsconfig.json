@@ -4,13 +4,14 @@
         "lib": ["ES2022"],
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
+        "resolveJsonModule": true,
 
         "allowJs": false,
 
         "strict": true,
         "skipLibCheck": true,
 
-        "types": ["node"],
+        // "types": ["node"], // Removed to allow auto-discovery of express, etc.
 
         "noEmit": true
     },

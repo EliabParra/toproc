@@ -1,4 +1,4 @@
-function getFrontendMode() {
+function getFrontendMode(config: any) {
     const raw = String((config as any)?.app?.frontendMode ?? 'pages')
         .trim()
         .toLowerCase()
@@ -9,6 +9,9 @@ function getFrontendMode() {
 type RegisterFrontendHostingArgs = {
     session: any
     stage: 'preApi' | 'postApi'
+    config: any
+    msgs: any
+    log: any
 }
 
 /**
@@ -20,20 +23,20 @@ type RegisterFrontendHostingArgs = {
  */
 export async function registerFrontendHosting(
     app: any,
-    { session, stage }: RegisterFrontendHostingArgs
+    { session, stage, config, msgs, log }: RegisterFrontendHostingArgs
 ) {
-    const mode = getFrontendMode()
+    const mode = getFrontendMode(config)
 
     if (mode === 'none') return
 
     if (stage === 'preApi' && mode === 'pages') {
         const { registerPagesHosting } = await import('./pages.adapter.js')
-        await registerPagesHosting(app, { session })
+        await registerPagesHosting(app, { session, config, msgs, log })
         return
     }
 
     if (stage === 'postApi' && mode === 'spa') {
         const { registerSpaHosting } = await import('./spa.adapter.js')
-        await registerSpaHosting(app)
+        await registerSpaHosting(app, { config })
     }
 }

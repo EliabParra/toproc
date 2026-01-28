@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { z } from 'zod'
 
-import { AppValidator } from '../src/core/validation/AppValidator.js'
+import { AppValidator } from '../src/core/AppValidator.js'
 
 function createValidator() {
     const i18nStub = { t: (k, params) => `${k}:${JSON.stringify(params)}` }

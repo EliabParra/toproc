@@ -1,7 +1,7 @@
 import express from 'express'
 import path from 'node:path'
 
-async function ensureSpaDistPathIfNeeded() {
+async function ensureSpaDistPathIfNeeded(config: any) {
     const hasPath =
         (typeof process.env.SPA_DIST_PATH === 'string' &&
             process.env.SPA_DIST_PATH.trim().length > 0) ||
@@ -36,7 +36,7 @@ async function ensureSpaDistPathIfNeeded() {
     process.env.SPA_DIST_PATH = entered
 }
 
-function resolveSpaDistPath() {
+function resolveSpaDistPath(config: any) {
     const fromEnv = process.env.SPA_DIST_PATH
     if (fromEnv && String(fromEnv).trim().length > 0) return path.resolve(String(fromEnv))
 
@@ -55,10 +55,10 @@ function resolveSpaDistPath() {
  *
  * @param app - Instancia de Express
  */
-export async function registerSpaHosting(app: any) {
-    await ensureSpaDistPathIfNeeded()
+export async function registerSpaHosting(app: any, { config }: { config: any }) {
+    await ensureSpaDistPathIfNeeded(config)
 
-    const distPath = resolveSpaDistPath()
+    const distPath = resolveSpaDistPath(config)
     if (!distPath) {
         throw new Error(
             'SPA mode enabled but no dist path configured. Set SPA_DIST_PATH (env) or config.app.spaDistPath to a folder containing index.html.'

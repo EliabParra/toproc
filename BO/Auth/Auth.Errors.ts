@@ -1,39 +1,15 @@
-/**
- * Clases de Error para Auth
- */
-
+import { BOError } from '../../src/core/errors/BOError.js'
 import { AuthMessages } from './Auth.Messages.js'
 
-export class AuthError extends Error {
-    readonly tag: string
-    readonly code: number
-    readonly details?: Record<string, unknown>
-
+export class AuthError extends BOError {
     constructor(
         message: string,
         tag: string,
         code: number = 500,
         details?: Record<string, unknown>
     ) {
-        super(message)
+        super(message, tag, code, details)
         this.name = 'AuthError'
-        this.tag = tag
-        this.code = code
-        this.details = details
-
-        if (Error.captureStackTrace) {
-            Error.captureStackTrace(this, AuthError)
-        }
-    }
-
-    toJSON() {
-        return {
-            name: this.name,
-            message: this.message,
-            tag: this.tag,
-            code: this.code,
-            details: this.details,
-        }
     }
 }
 

@@ -1,94 +1,88 @@
-# Business Objects (BO): La Anatomía del Negocio
+# Business Objects (BO): Anatomía del Negocio
 
 El Business Object (BO) es la clase suprema en nuestra arquitectura. Es donde tu código "hace cosas".
 
 ## Anatomía de un BO
 
-Todo BO debe heredar de `BaseBO`. Esto le da superpoderes (acceso a DB, Logger, Config, etc.) sin tener que importarlos manualmente.
+Todo BO debe heredar de `BaseBO`. Esto le da superpoderes (acceso a DB, Logger, Config, etc.) y métodos de ejecución estandarizados.
 
 ```typescript
-import { BaseBO, BODependencies } from '../../core/base/BaseBO'
-import { UserSchema } from './schemas'
+import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
+import { UserSchemas, CreateUserInput } from './User.Schemas.js'
+import { UserService } from './User.Service.js'
 
 export class UserBO extends BaseBO {
-    constructor(deps: BODependencies) {
-        // Al llamar super(deps), inyectamos todas las herramientas automáticamente
+    private service: UserService
+
+    constructor(deps?: BODependencies) {
         super(deps)
+        this.service = new UserService(this.log, this.config, this.db)
     }
 
-    // Este método se convertirá en una Transacción (ej. tx: 101)
-    async createUser(params: unknown) {
-        // ... lógica ...
+    // Método Estándar
+    async createUser(params: CreateUserInput): Promise<ApiResponse> {
+        return this.exec<CreateUserInput, void>(params, UserSchemas.create, async (data) => {
+            // 'data' ya está validada aquí
+            await this.service.create(data)
+            return this.created(null, 'Usuario Creado')
+        })
     }
 }
 ```
 
-## Las Herramientas Inyectadas (`this`)
+## El Patrón `.exec()`
 
-Al estar dentro de un BO, tienes acceso inmediato a:
+En lugar de escribir bloques repetitivos `try/catch` y `validate`, usa `this.exec()`.
 
-| Propiedad     | Tipo           | Descripción                   | Ejemplo de Uso           |
-| :------------ | :------------- | :---------------------------- | :----------------------- |
-| `this.db`     | `IDatabase`    | Acceso directo a Postgres.    | `await this.db.exe(...)` |
-| `this.log`    | `ILogger`      | Logger estructurado.          | `this.log.info('Hola')`  |
-| `this.config` | `IConfig`      | Variables de entorno tipadas. | `this.config.app.port`   |
-| `this.v`      | `AppValidator` | Validador Zod.                | `this.validate(...)`     |
-| `this.i18n`   | `I18nService`  | Traducciones.                 | `this.i18n.t('hello')`   |
+**Maneja por ti**:
 
-## Patrón de Respuesta Estandarizado
+1. **Validación**: Verifica `params` contra el schema Zod. Retorna 400 si es inválido.
+2. **Ejecución**: Corre tu función callback.
+3. **Manejo de Errores**: Captura errores, verifica si son `BOError` y devuelve los códigos 4xx/500 apropiados.
 
-Nunca, bajo ninguna circunstancia, escribas `res.send(...)` dentro de un BO.
-Un BO no sabe que existe HTTP. En su lugar, el BO **retorna** un objeto de respuesta uniforme.
+## Herramientas Inyectadas
 
-### 1. `this.success(data, msg?)`
+Dentro de un BO, tienes acceso a:
 
-Retorna código `200`. Úsalo para GET, PUT, DELETE exitosos.
+| Propiedad     | Tipo        | Descripción                   |
+| :------------ | :---------- | :---------------------------- |
+| `this.db`     | `IDatabase` | Acceso directo a Postgres.    |
+| `this.log`    | `ILogger`   | Logger estructurado.          |
+| `this.config` | `IConfig`   | Variables de entorno tipadas. |
+
+## CrudBO: Desarrollo Rápido
+
+Para recursos CRUD estándar, extiende `CrudBO`.
 
 ```typescript
-return this.success({ id: 5 }, 'Usuario Encontrado')
-// Genera: { ok: true, data: { id: 5 }, msg: 'Usuario Encontrado' }
+export class ProductBO extends CrudBO<Product, CreateProduct, UpdateProduct> {
+    constructor(deps?: BODependencies) {
+        super('products', 'product_id', deps) // Tabla, columna ID
+    }
+
+    // Auto-genera: get, list, delete.
+    // Solo implementas métodos especializados.
+}
 ```
 
-### 2. `this.created(data, msg?)`
+## Servicios y BOError
 
-Retorna código `201`. Úsalo solo para POST (Creación).
+Para mantener el código limpio:
 
-```typescript
-return this.created({ id: 6 })
-// Genera: { ok: true, data: { id: 6 }, code: 201 }
-```
-
-### 3. `this.error(msg, code, alerts?)`
-
-Retorna errores controlados.
+- **BO**: Orquesta (HTTP -> BO -> Service).
+- **Service**: Extiende `BOService`. Contiene lógica de negocio pura.
+- **BOError**: Úsalo para errores de dominio.
 
 ```typescript
-return this.error('Usuario no activo', 403)
-```
-
-### 4. `this.validationError(alerts)`
-
-Retorna código `400` automáticamente.
-
-```typescript
-return this.validationError(['El email es inválido'])
-```
-
----
-
-## Servicios y Repositorios
-
-Para mantener el BO limpio (Clean Code), se recomienda separar responsabilidades:
-
-- **BO**: Solo Valida y Orquesta.
-- **Service**: Contiene la lógica compleja (if/else, cálculos).
-- **Repository**: Solo toca SQL.
-
-```typescript
-// BO
-const data = this.validate(params, schema).data;
-this.service.calcularImpuestos(data);
-
 // Service
-calcularImpuestos(data) { return data.price * 1.16; }
+import { BOService } from '../../src/core/business-objects/BOService.js'
+
+export class UserService extends BOService {
+    async create(data: UserData) {
+        if (await this.repo.exists(data.email)) {
+            throw new UserAlreadyExistsError() // Extiende BOError
+        }
+        // ...
+    }
+}
 ```

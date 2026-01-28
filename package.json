@@ -45,6 +45,11 @@
     "devDependencies": {
         "@types/bcrypt": "^6.0.0",
         "@types/bcryptjs": "^2.4.6",
+        "@types/connect-pg-simple": "^7.0.3",
+        "@types/cors": "^2.8.19",
+        "@types/express": "^5.0.6",
+        "@types/express-session": "^1.18.2",
+        "@types/helmet": "^0.0.48",
         "@types/node": "^25.0.3",
         "@types/nodemailer": "^7.0.4",
         "@types/pg": "^8.16.0",

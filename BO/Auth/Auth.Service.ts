@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto'
 import bcrypt from 'bcryptjs'
-import type { ILogger, IConfig, IDatabase } from '../../src/types/core.js'
-import { EmailService } from '../../src/email/EmailService.js'
+import { BOService } from '../../src/core/business-objects/BOService.js'
+import type { IConfig, IDatabase } from '../../src/types/core.js'
+import { EmailService } from '../../src/services/EmailService.js'
 import { AuthRepository, UserRow } from './Auth.Repository.js'
 import type { User, RegisterData } from './Auth.Types.js'
 import { AuthEmailExistsError, AuthTokenInvalidError } from './Auth.Errors.js'
@@ -10,15 +11,12 @@ function sha256Hex(value: string): string {
     return createHash('sha256').update(value, 'utf8').digest('hex')
 }
 
-export class AuthService {
+export class AuthService extends BOService {
     private emailService: EmailService
     private repo: AuthRepository
 
-    constructor(
-        private readonly log: ILogger,
-        private readonly config: IConfig,
-        db: IDatabase
-    ) {
+    constructor(log: any, config: IConfig, db: IDatabase) {
+        super(log, config, db)
         this.emailService = new EmailService({ log: this.log, config: this.config })
         this.repo = new AuthRepository(db)
     }
@@ -82,19 +80,13 @@ export class AuthService {
         await this.repo.consumeOneTimeCode(otp.code_id)
     }
 
-    async requestPasswordReset(identifier: string): Promise<void> {
-        let user: UserRow | null = null
-        if (identifier.includes('@')) {
-            user = await this.repo.getUserByEmail(identifier)
-        } else {
-            user = await this.repo.getUserByUsername(identifier)
-        }
+    async requestPasswordReset(email: string): Promise<void> {
+        const user = await this.repo.getUserByEmail(email)
         if (!user || !user.user_em) return
 
         const purpose = String((this.config as any)?.auth?.passwordResetPurpose ?? 'password_reset')
         const expiresSeconds = 900
 
-        // Invalidate previous
         await this.repo.invalidateActivePasswordResetsForUser(user.user_id)
 
         const token = randomBytes(32).toString('hex')
@@ -110,16 +102,9 @@ export class AuthService {
         await this.emailService.sendPasswordReset({
             to: user.user_em,
             token,
-            code: '000000', // Placeholder if not used
+            code: '000000',
             appName: (this.config as any)?.app?.name,
         })
-    }
-
-    async verifyPasswordReset(token: string, code?: string): Promise<void> {
-        const tokenHash = sha256Hex(token)
-        const reset = await this.repo.getPasswordResetByTokenHash(tokenHash)
-
-        if (!reset || reset.used_at) throw new AuthTokenInvalidError()
     }
 
     async resetPassword(token: string, newPassword: string): Promise<void> {
@@ -131,6 +116,12 @@ export class AuthService {
         const hash = await bcrypt.hash(newPassword, 10)
         await this.repo.updateUserPassword({ userId: reset.user_id, passwordHash: hash })
         await this.repo.markPasswordResetUsed(reset.reset_id)
+    }
+
+    async verifyPasswordResetToken(token: string): Promise<void> {
+        const tokenHash = sha256Hex(token)
+        const reset = await this.repo.getPasswordResetByTokenHash(tokenHash)
+        if (!reset || reset.used_at) throw new AuthTokenInvalidError()
     }
 
     private async sendVerificationEmail(userId: number, emailAddr: string) {
@@ -145,7 +136,7 @@ export class AuthService {
         await this.repo.insertOneTimeCode({
             userId,
             purpose,
-            codeHash: tokenHash, // storing tokenHash as codeHash for simplicity if Repo allows
+            codeHash: tokenHash,
             expiresSeconds,
             meta: { tokenHash },
         })

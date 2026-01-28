@@ -4,8 +4,8 @@ import request from 'supertest'
 import bcrypt from 'bcryptjs'
 
 import { createTestDispatcher } from './_helpers/service-factory.mjs'
-import { createCsrfProtection, createCsrfTokenHandler } from '../src/express/middleware/csrf.js'
-import { AppValidator } from '../src/core/validation/AppValidator.js'
+import { createCsrfProtection, createCsrfTokenHandler } from '../src/api/http/middleware/csrf.js'
+import { AppValidator } from '../src/core/AppValidator.js'
 // TestValidatorAdapter removed - using AppValidator directly
 
 import { withGlobals } from './_helpers/global-state.mjs'
@@ -280,7 +280,13 @@ test('register requires email verification before login', async () => {
         ])
 
         const { AuthBO } = await import('../BO/Auth/AuthBO.ts')
-        const auth = new AuthBO()
+        const auth = new AuthBO({
+            db: globalThis.db,
+            log: globalThis.log,
+            config: globalThis.config,
+            v: globalThis.validator,
+            msgs: globalThis.msgs,
+        })
 
         globalThis.security = {
             isReady: true,

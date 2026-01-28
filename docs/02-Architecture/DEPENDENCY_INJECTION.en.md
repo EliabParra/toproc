@@ -1,54 +1,65 @@
 # Dependency Injection & Lazy Loading
 
-Technical explanation of how the framework manages memory and objects.
+Technical explanation of how the framework manages memory and business object dependencies.
 
-## The Container (`IContainer`)
+## Dependency Management (`BOService`)
 
-This object is the "blood" of the system. It flows everywhere.
+In previous versions, we used a global container. Now, we use **Explicit Dependency Injection** via the `BOService` base class.
 
 ```typescript
-export interface IContainer {
-    config: IConfig // Global config (loaded from .env)
-    log: ILogger // Logger instance
-    db: IDatabase // Active Postgres connection
-    audit: IAuditService // Audit service
-    // ... other core services
+// src/core/business-objects/BOService.ts
+export class BOService {
+    constructor(
+        protected readonly log: ILogger,
+        protected readonly config: IConfig,
+        protected readonly db: IDatabase
+    ) {}
 }
 ```
 
-The `Dispatcher` creates this container once (or reuses it) and passes it to `SecurityService`, which passes it to `BusinessObject`.
+### How it flows
+
+1. **Dispatcher**: Creates instances of `db`, `log`, and `config`.
+2. **Business Object (BO)**: Receives these dependencies in its constructor (`BODependencies`).
+3. **Service Layer**: The BO passes them to the `Service`, which extends `BOService`.
 
 **Benefit**:
-If tomorrow you want to add a "Push Notifications" service available to everyone, you just add it to the Container in `Dispatcher` and automatically all BOs have access to `this.container.push`.
+
+- **Type Safety**: No magic "any" container. You know exactly what a Service depends on.
+- **Testability**: You can easily mock `db` or `log` when unit testing a Service.
+- **Clarity**: Dependencies are explicit in the constructor.
 
 ## Lazy Loading
 
-Node.js is fast, but loading 5000 files at startup would make the server take minutes to boot (poor `npm run dev`).
-
-To avoid this, we implement Lazy Loading in `TransactionExecutor`.
+Node.js is fast, but loading thousands of files at startup would slow down boot time. To avoid this, we implement Lazy Loading for Business Objects.
 
 ### How it works (`TransactionExecutor.ts`)
 
 ```typescript
-// Simplified pseudocode
+// Simplified Concept
 async execute(objectName, method, params) {
-    // 1. Build file path
-    const path = `./BO/${objectName}/${objectName}BO.js`;
+    // 1. Build file path dynamically
+    const path = `../../BO/${objectName}/${objectName}BO.js`
 
-    // 2. DYNAMIC Import (disk is read only now)
-    const module = await import(path);
-    const BOClass = module[`${objectName}BO`];
+    // 2. DYNAMIC Import (only imports when requested)
+    const module = await import(path)
+    const BOClass = module[`${objectName}BO`]
 
-    // 3. Instantiate & Inject
-    const instance = new BOClass(this.container);
+    // 3. Instantiate & Inject Core Dependencies
+    const instance = new BOClass({
+        db: this.db,
+        log: this.log,
+        config: this.config,
+        v: this.validator
+    })
 
     // 4. Execute
-    return instance[method](params);
+    return instance[method](params)
 }
 ```
 
 ### Advantages
 
-1.  **Instant Boot**: Server starts in milliseconds, regardless of whether you have 10 or 1000 BOs.
-2.  **Error Isolation**: If a BO has a syntax error, it doesn't break the server until someone tries to use THAT specific BO.
-3.  **Less Memory**: Node.js can release memory from unused modules (depending on Garbage Collector).
+1.  **Instant Boot**: Server starts in milliseconds, regardless of codebase size.
+2.  **Error Isolation**: A specific syntax error in one BO won't crash the entire server until that BO is actually called.
+3.  **Efficiency**: Memory is allocated only for active contexts.

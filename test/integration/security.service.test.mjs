@@ -1,7 +1,7 @@
 import { describe, it, before, after } from 'node:test'
 import assert from 'node:assert'
 import { container } from '../../src/core/Container.js'
-import { SecurityService } from '../../src/core/security/SecurityService.js'
+import { SecurityService } from '../../src/services/SecurityService.js'
 
 // Mock dependencies
 const mockDb = {

@@ -116,7 +116,7 @@ export class AuthCommand {
                 icon: '🧠',
             },
             {
-                path: path.join(authDir, ' Auth.Repository.ts'),
+                path: path.join(authDir, 'Auth.Repository.ts'),
                 content: AuthPreset.repository(),
                 icon: '🗄️',
             },

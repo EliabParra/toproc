@@ -47,7 +47,7 @@ The framework engine. Divided into very specific areas:
 #### `src/api/`
 
 - **Dispatcher**: The brain deciding which BO to execute.
-- **Routes**: Express route definitions (though we mainly use a single route `/toProccess`).
+- **HTTP**: Express server, middlewares, and routes (`src/api/http`).
 
 #### `src/config/`
 
@@ -58,49 +58,23 @@ The framework engine. Divided into very specific areas:
 
 Here are the base classes that BOs extend.
 
-- `BaseBO`: Parent class with `ok()`, `error()`, `validate()` methods.
-- `Transaction`: Interfaces for the transactional system.
-- `Security`: `SecurityService` and guards.
+- `business-objects/`: `BaseBO`, `CrudBO`, `BOService`.
+- `errors/`: `BOError` and standard error types.
 
-#### `src/db/`
+#### `src/services/` (Infrastructure & Utilities)
 
-- Database abstraction (PostgreSQL).
-- Connection `Pool` management.
-- `QueryExec` helper to facilitate queries.
+Consolidated layer for all technical services (Database, Email, Logging, etc.).
 
-#### `src/express/`
-
-- HTTP Server configuration.
-- **Middlewares**:
-    - `SecurityMiddleware`: Verifies tokens.
-    - `RequestLogger`: Logs every request.
-    - `Helmet/Cors`: Standard HTTP security.
-
-#### `src/infra/`
-
-Services connecting to "the outside world".
-
+- `DatabaseService`: Abstraction for PostgreSQL.
 - `EmailService`: Sending emails (SMTP/Log).
-- `AuditService`: Recording events in DB.
-
-#### `src/i18n/`
-
-- JSON files with translations (`es.json`, `en.json`).
-- Locale loading service.
-
-#### `src/logger/`
-
-- Winston/Pino configuration (whichever logger we use).
-- Log rotation.
-
-#### `src/session/`
-
-- User state management (Redis/DB).
-- Session serialization.
+- `SecurityService`: Authentication and authorization logic.
+- `SessionService`: User session management.
+- `LoggerService`: Structured logging.
+- `I18nService`: Internationalization.
 
 #### `src/types/`
 
-- `.d.ts` files and global TypeScript definitions so the compiler doesn't complain.
+- `.d.ts` files and global TypeScript definitions.
 
 ---
 

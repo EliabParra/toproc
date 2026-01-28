@@ -1,23 +1,31 @@
 // Bootstrap: Inicialización de servicios core.
 // Reemplaza al antiguo globals.ts
 import 'dotenv/config'
-import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { container } from './core/Container.js'
 import { ConfigLoader } from './config/index.js'
-import { I18nService } from './core/i18n/I18nService.js'
-import { FeatureFlags } from './core/flags/FeatureFlags.js'
-import { AppValidator } from './core/validation/AppValidator.js'
-import { AppLogger } from './logger/AppLogger.js'
-import { SecurityService } from './core/security/SecurityService.js'
-import { SessionManager } from './session/SessionManager.js'
-import { EmailService } from './email/EmailService.js'
-import { Dispatcher } from './api/dispatcher/Dispatcher.js'
-import { AuditService } from './audit/AuditService.js'
+import { I18nService } from './services/I18nService.js'
+import { FeatureFlags } from './config/FeatureFlags.js'
+import { AppValidator } from './core/AppValidator.js'
+import { AppLogger } from './services/LoggerService.js'
+import { SecurityService } from './services/SecurityService.js'
+import { SessionManager } from './services/SessionService.js'
+import { EmailService } from './services/EmailService.js'
+import { Dispatcher } from './api/Dispatcher.js'
+import { AuditService } from './services/AuditService.js'
 
-// Helper: require for JSON imports
-const require = createRequire(import.meta.url)
+import { readFile } from 'node:fs/promises'
+
+// Helper: Load JSON
+async function loadJson(relativePath: string) {
+    const p = new URL(relativePath, import.meta.url)
+    return JSON.parse(await readFile(p, 'utf-8'))
+}
+
+async function loadJsonAbsolute(absPath: string) {
+    return JSON.parse(await readFile(absPath, 'utf-8'))
+}
 
 function mergeQueries(base: any, extra: any) {
     if (!extra || typeof extra !== 'object') return base
@@ -46,12 +54,12 @@ const config = ConfigLoader.load(repoPath('.'))
 container.register('config', config)
 
 // 2. Load Queries
-const baseQueries = require('./config/queries.json')
+const baseQueries = await loadJson('./config/queries.json')
 let queries = baseQueries
 
 if (process.env.QUERIES_EXTRA_PATH) {
     const extraPath = resolveRepoRelative(process.env.QUERIES_EXTRA_PATH)
-    if (extraPath) queries = mergeQueries(queries, require(extraPath))
+    if (extraPath) queries = mergeQueries(queries, await loadJsonAbsolute(extraPath))
 }
 container.register('queries', queries)
 
@@ -79,15 +87,11 @@ const appLogger = new AppLogger({ config })
 container.register('log', appLogger)
 
 // 7. Database
-const { default: DBComponent } = await import('./db/DBComponent.js')
+const { default: DBComponent } = await import('./services/DatabaseService.js')
 const db = new DBComponent({ config, msgs, queries, log: appLogger })
 container.register('db', db)
 
-// Legacy Gloabl Support (Required until Phase 2: Repositories Refactor)
-;(globalThis as any).db = db
-;(globalThis as any).log = appLogger
-;(globalThis as any).config = config
-;(globalThis as any).validator = validator
+// Legacy Globals removed: Use DI everywhere!
 
 // 8. Service Layer Initialization
 
@@ -136,4 +140,4 @@ const dispatcher = new Dispatcher({
 })
 
 // Export services
-export { container, dispatcher, appLogger as log, db, config, validator, session, security }
+export { container, dispatcher, appLogger as log, db, config, validator, session, security, msgs }

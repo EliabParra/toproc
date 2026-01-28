@@ -4,8 +4,8 @@ import express from 'express'
 import request from 'supertest'
 
 import { createTestDispatcher } from './_helpers/service-factory.mjs'
-import { createCsrfProtection, createCsrfTokenHandler } from '../src/express/middleware/csrf.js'
-import { AppValidator } from '../src/core/validation/AppValidator.js'
+import { createCsrfProtection, createCsrfTokenHandler } from '../src/api/http/middleware/csrf.js'
+import { AppValidator } from '../src/core/AppValidator.js'
 // TestValidatorAdapter removed - using AppValidator directly
 
 import { withGlobals } from './_helpers/global-state.mjs'

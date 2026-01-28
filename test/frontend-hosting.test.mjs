@@ -7,8 +7,7 @@ import path from 'node:path'
 import os from 'node:os'
 
 import { registerFrontendHosting } from '../src/frontend-adapters/index.js'
-import { routes } from '../src/router/routes.js'
-import { withGlobals } from './_helpers/global-state.mjs'
+import { routes } from '../src/api/http/router/routes.js'
 
 function makeMsgs() {
     return {
@@ -22,85 +21,81 @@ function makeMsgs() {
     }
 }
 
+const mockLog = { TYPE_ERROR: 'error', show: () => {} }
+const mockConfig = { app: { lang: 'en' } }
+const mockMsgs = makeMsgs()
+
 test('buildPagesRouter redirects when validateIsAuth=true and session missing', async () => {
-    await withGlobals(['config', 'msgs', 'log'], async () => {
-        globalThis.config = { app: { lang: 'en' } }
-        globalThis.msgs = makeMsgs()
-        globalThis.log = { TYPE_ERROR: 'error', show: () => {} }
+    const { buildPagesRouter } = await import('../src/api/http/router/pages.js')
 
-        const { buildPagesRouter } = await import('../src/router/pages.js')
+    const added = { name: 'private', path: '/private', view: 'index', validateIsAuth: true }
 
-        const added = { name: 'private', path: '/private', view: 'index', validateIsAuth: true }
-        routes.push(added)
+    const app = express()
+    const session = { sessionExists: () => false }
+    app.use(
+        buildPagesRouter({
+            session,
+            config: mockConfig,
+            msgs: mockMsgs,
+            log: mockLog,
+            routes: [added],
+        })
+    )
 
-        try {
-            const app = express()
-            const session = { sessionExists: () => false }
-            app.use(buildPagesRouter({ session }))
-
-            const res = await request(app).get('/private')
-            assert.equal(res.status, 302)
-            assert.ok(String(res.headers.location).startsWith('/?returnTo='))
-        } finally {
-            routes.pop()
-        }
-    })
+    const res = await request(app).get('/private')
+    assert.equal(res.status, 302)
+    assert.ok(String(res.headers.location).startsWith('/?returnTo='))
 })
 
 test('buildPagesRouter serves page when authenticated', async () => {
-    await withGlobals(['config', 'msgs', 'log'], async () => {
-        globalThis.config = { app: { lang: 'en' } }
-        globalThis.msgs = makeMsgs()
-        globalThis.log = { TYPE_ERROR: 'error', show: () => {} }
+    const { buildPagesRouter } = await import('../src/api/http/router/pages.js')
 
-        const { buildPagesRouter } = await import('../src/router/pages.js')
+    const added = { name: 'private', path: '/private', view: 'index', validateIsAuth: true }
 
-        const added = { name: 'private', path: '/private', view: 'index', validateIsAuth: true }
-        routes.push(added)
+    const app = express()
+    const session = { sessionExists: () => true }
+    app.use(
+        buildPagesRouter({
+            session,
+            config: mockConfig,
+            msgs: mockMsgs,
+            log: mockLog,
+            routes: [added],
+        })
+    )
 
-        try {
-            const app = express()
-            const session = { sessionExists: () => true }
-            app.use(buildPagesRouter({ session }))
-
-            const res = await request(app).get('/private')
-            assert.equal(res.status, 200)
-            assert.ok(String(res.headers['content-type']).includes('text/html'))
-            assert.ok(String(res.text).toLowerCase().includes('<html'))
-        } finally {
-            routes.pop()
-        }
-    })
+    const res = await request(app).get('/private')
+    assert.equal(res.status, 200)
+    assert.ok(String(res.headers['content-type']).includes('text/html'))
+    assert.ok(String(res.text).toLowerCase().includes('<html'))
 })
 
 test('registerFrontendHosting does nothing when stage does not match', async () => {
-    await withGlobals(['config'], async () => {
-        globalThis.config = { app: { frontendMode: 'invalid' } }
+    const config = { app: { frontendMode: 'invalid' } }
 
-        const app = express()
-        await registerFrontendHosting(app, { stage: 'postApi', session: {} })
-
-        // No throw = OK. This covers mode fallback + stage mismatch.
-        assert.equal(typeof app, 'function')
+    const app = express()
+    await registerFrontendHosting(app, {
+        stage: 'postApi',
+        session: {},
+        config,
+        msgs: mockMsgs,
+        log: mockLog,
     })
+
+    // No throw = OK. This covers mode fallback + stage mismatch.
+    assert.equal(typeof app, 'function')
 })
 
 test('registerPagesHosting mounts static + pages router', async () => {
-    await withGlobals(['config', 'msgs', 'log'], async () => {
-        globalThis.config = { app: { lang: 'en' } }
-        globalThis.msgs = makeMsgs()
-        globalThis.log = { TYPE_ERROR: 'error', show: () => {} }
+    const { registerPagesHosting } = await import('../src/frontend-adapters/pages.adapter.js')
 
-        const { registerPagesHosting } = await import('../src/frontend-adapters/pages.adapter.js')
+    const app = express()
+    const session = { sessionExists: () => true }
+    await registerPagesHosting(app, { session, config: mockConfig, msgs: mockMsgs, log: mockLog })
 
-        const app = express()
-        const session = { sessionExists: () => true }
-        await registerPagesHosting(app, { session })
-
-        const res = await request(app).get('/').set('Accept', 'text/html')
-        assert.equal(res.status, 200)
-        assert.ok(String(res.text).toLowerCase().includes('<html'))
-    })
+    const res = await request(app).get('/').set('Accept', 'text/html')
+    assert.equal(res.status, 200)
+    assert.ok(String(res.text).toLowerCase().includes('<html'))
 })
 
 test('registerFrontendHosting spa mode serves index.html fallback for html requests', async () => {
@@ -115,19 +110,23 @@ test('registerFrontendHosting spa mode serves index.html fallback for html reque
         )
         process.env.SPA_DIST_PATH = tmpDir
 
-        await withGlobals(['config'], async () => {
-            globalThis.config = { app: { frontendMode: 'spa' } }
+        const config = { app: { frontendMode: 'spa' } }
 
-            const app = express()
-            await registerFrontendHosting(app, { stage: 'postApi', session: {} })
-
-            const res = await request(app).get('/anything').set('Accept', 'text/html')
-            assert.equal(res.status, 200)
-            assert.ok(String(res.text).includes('SPA OK'))
-
-            const res2 = await request(app).get('/anything').set('Accept', 'application/json')
-            assert.equal(res2.status, 404)
+        const app = express()
+        await registerFrontendHosting(app, {
+            stage: 'postApi',
+            session: {},
+            config,
+            msgs: mockMsgs,
+            log: mockLog,
         })
+
+        const res = await request(app).get('/anything').set('Accept', 'text/html')
+        assert.equal(res.status, 200)
+        assert.ok(String(res.text).includes('SPA OK'))
+
+        const res2 = await request(app).get('/anything').set('Accept', 'application/json')
+        assert.equal(res2.status, 404)
     } finally {
         if (prev == null) delete process.env.SPA_DIST_PATH
         else process.env.SPA_DIST_PATH = prev
@@ -140,14 +139,18 @@ test('registerFrontendHosting spa mode throws when SPA_DIST_PATH is missing (non
     try {
         delete process.env.SPA_DIST_PATH
 
-        await withGlobals(['config'], async () => {
-            globalThis.config = { app: { frontendMode: 'spa' } }
-            const app = express()
+        const config = { app: { frontendMode: 'spa' } }
+        const app = express()
 
-            await assert.rejects(async () => {
-                await registerFrontendHosting(app, { stage: 'postApi', session: {} })
-            }, /SPA_DIST_PATH/i)
-        })
+        await assert.rejects(async () => {
+            await registerFrontendHosting(app, {
+                stage: 'postApi',
+                session: {},
+                config,
+                msgs: mockMsgs,
+                log: mockLog,
+            })
+        }, /SPA_DIST_PATH/i)
     } finally {
         if (prev != null) process.env.SPA_DIST_PATH = prev
     }

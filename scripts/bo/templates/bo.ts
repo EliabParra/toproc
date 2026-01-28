@@ -157,7 +157,8 @@ export function templateService(objectName: string) {
     const cleanName = objectName.replace(/BO$/, '')
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
 
-    return `import { ILogger, IConfig } from '../../src/types/core.js'
+    return `import { BOService } from '../../src/core/business-objects/BOService.js'
+import { ILogger, IConfig, IDatabase } from '../../src/types/core.js'
 import { ${pascalName}Repository } from './${pascalName}.Repository.js'
 import type { ${pascalName}, ${pascalName}Summary } from './${pascalName}.Types.js'
 import { ${pascalName}NotFoundError } from './${pascalName}.Errors.js'
@@ -168,12 +169,15 @@ import { ${pascalName}NotFoundError } from './${pascalName}.Errors.js'
  * Contiene lógica de negocio pura, libre de concerns HTTP.
  * Lanza errores específicos del dominio desde ./${pascalName}.Errors.js
  */
-export class ${pascalName}Service {
+export class ${pascalName}Service extends BOService {
     constructor(
         private readonly repo: ${pascalName}Repository,
-        private readonly log: ILogger,
-        private readonly config: IConfig
-    ) {}
+        log: ILogger,
+        config: IConfig,
+        db: IDatabase
+    ) {
+        super(log, config, db)
+    }
 
     /**
      * Obtiene todos los ${pascalName.toLowerCase()}s
@@ -254,24 +258,16 @@ export function templateBO(className: string, methods: string[]) {
      * @returns ApiResponse con el resultado
      */
     async ${m}(params: unknown): Promise<ApiResponse> {
-        try {
-            const vRes = this.validate<z.infer<typeof ${pascalName}Schemas.${m}>>(
-                params,
-                ${pascalName}Schemas.${m}
-            )
-            if (!vRes.ok) return this.validationError(vRes.alerts)
-
-            // TODO: Implementar lógica de negocio
-            // const result = await this.service.${m}(vRes.data)
-            
-            return this.${isCreate ? 'created' : 'success'}(null, ${pascalName}Messages.${m.toUpperCase()})
-        } catch (err) {
-            if (is${pascalName}Error(err)) {
-                return this.error(err.message, err.code, err.status)
+        return this.exec<z.infer<typeof ${pascalName}Schemas.${m}>, any>(
+            params,
+            ${pascalName}Schemas.${m},
+            async (data) => {
+                // TODO: Implementar lógica de negocio
+                // const result = await this.service.${m}(data)
+                
+                return this.${isCreate ? 'created' : 'success'}(null, ${pascalName}Messages.${m.toUpperCase()})
             }
-            this.log.show({ type: this.log.TYPE_ERROR, msg: \`${boClassName}.${m}: \${err}\` })
-            return this.error('Error desconocido')
-        }
+        )
     }`
         })
         .join('\n\n')
@@ -306,7 +302,7 @@ export class ${boClassName} extends BaseBO {
             v: (globalThis as any).validator,
         })
         const repo = new ${pascalName}Repository(this.db)
-        this.service = new ${pascalName}Service(repo, this.log, this.config)
+        this.service = new ${pascalName}Service(repo, this.log, this.config, this.db)
     }
 
 ${methodStubs}

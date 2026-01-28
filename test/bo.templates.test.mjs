@@ -20,7 +20,9 @@ test('templateBO genera arquitectura 7 archivos con nomenclatura Name.Type.ts', 
     assert.match(out, /import { OrderMessages } from '\.\/Order\.Messages\.js'/)
     assert.match(out, /isOrderError, handleOrderError/)
     assert.match(out, /from '\.\/Order\.Errors\.js'/)
-    assert.match(out, /this\.validate<z\.infer<typeof OrderSchemas\.getOrder>>/)
+    // Now uses exec
+    assert.match(out, /this\.exec/)
+    assert.match(out, /OrderSchemas\.getOrder/)
 })
 
 test('templateSchemas genera schemas con mensajes (nuevos imports)', () => {
@@ -43,7 +45,7 @@ test('templateService genera service con errores (nuevos imports)', () => {
     const out = templateService('Product')
     assert.match(out, /import { ProductNotFoundError } from '\.\/Product\.Errors\.js'/)
     assert.match(out, /import type .* from '\.\/Product\.Types\.js'/)
-    assert.match(out, /class ProductService/)
+    assert.match(out, /class ProductService extends BOService/)
     assert.match(out, /throw new ProductNotFoundError/)
 })
 
@@ -69,7 +71,8 @@ test('templateErrors genera clases de error (nuevos imports)', () => {
     const out = templateErrors('Product', ['get'])
     // Import uses new naming
     assert.match(out, /import { ProductMessages } from '\.\/Product\.Messages\.js'/)
-    assert.match(out, /class ProductError extends Error/)
+    assert.match(out, /import { BOError } from/)
+    assert.match(out, /class ProductError extends BOError/)
     assert.match(out, /class ProductNotFoundError/)
     assert.match(out, /class ProductAlreadyExistsError/)
     assert.match(out, /class ProductValidationError/)
