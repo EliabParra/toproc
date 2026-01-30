@@ -13,7 +13,7 @@
         "test:coverage": "c8 --reporter=text --reporter=text-summary --reporter=lcov node --import tsx --import ./test/setup.mjs --test",
         "build": "tsx scripts/build-dist.ts",
         "config:check": "node --import tsx scripts/config/check.ts",
-        "verify": "npm run typecheck && npm run build && tsx scripts/smoke-dist.ts && npm test",
+        "verify": "pnpm run typecheck && pnpm run build && tsx scripts/smoke-dist.ts && pnpm test",
         "start": "node --import tsx src/index.ts",
         "dev": "nodemon --legacy-watch --watch src --watch BO --watch public --ext js,ts,json,html,css --signal SIGINT --exec \"node --import tsx src/index.ts\"",
         "db": "node --import tsx scripts/db/index.ts",
