@@ -1,5 +1,4 @@
 import { BOError } from '../../src/core/errors/BOError.js'
-import { AuthMessages } from './Auth.Messages.js'
 
 export class AuthError extends BOError {
     constructor(
@@ -15,49 +14,49 @@ export class AuthError extends BOError {
 
 export class AuthNotFoundError extends AuthError {
     constructor() {
-        super(AuthMessages.USER_NOT_FOUND, 'AUTH_USER_NOT_FOUND', 404)
+        super('bo.auth.userNotFound', 'AUTH_USER_NOT_FOUND', 404)
         this.name = 'AuthNotFoundError'
     }
 }
 
 export class AuthInvalidCredentialsError extends AuthError {
     constructor() {
-        super(AuthMessages.INVALID_CREDENTIALS, 'AUTH_INVALID_CREDENTIALS', 401)
+        super('bo.auth.invalidCredentials', 'AUTH_INVALID_CREDENTIALS', 401)
         this.name = 'AuthInvalidCredentialsError'
     }
 }
 
 export class AuthEmailNotVerifiedError extends AuthError {
     constructor() {
-        super(AuthMessages.EMAIL_NOT_VERIFIED, 'AUTH_EMAIL_NOT_VERIFIED', 403)
+        super('bo.auth.emailNotVerified', 'AUTH_EMAIL_NOT_VERIFIED', 403)
         this.name = 'AuthEmailNotVerifiedError'
     }
 }
 
 export class AuthSessionExpiredError extends AuthError {
     constructor() {
-        super(AuthMessages.SESSION_EXPIRED, 'AUTH_SESSION_EXPIRED', 401)
+        super('bo.auth.sessionExpired', 'AUTH_SESSION_EXPIRED', 401)
         this.name = 'AuthSessionExpiredError'
     }
 }
 
 export class AuthTokenInvalidError extends AuthError {
     constructor() {
-        super(AuthMessages.TOKEN_INVALID, 'AUTH_TOKEN_INVALID', 400)
+        super('bo.auth.tokenInvalid', 'AUTH_TOKEN_INVALID', 400)
         this.name = 'AuthTokenInvalidError'
     }
 }
 
 export class AuthEmailExistsError extends AuthError {
     constructor(email?: string) {
-        super(AuthMessages.EMAIL_ALREADY_EXISTS, 'AUTH_EMAIL_EXISTS', 409, { email })
+        super('bo.auth.emailAlreadyExists', 'AUTH_EMAIL_EXISTS', 409, { email })
         this.name = 'AuthEmailExistsError'
     }
 }
 
 export class AuthAccountDisabledError extends AuthError {
     constructor() {
-        super(AuthMessages.ACCOUNT_DISABLED, 'AUTH_ACCOUNT_DISABLED', 403)
+        super('bo.auth.accountDisabled', 'AUTH_ACCOUNT_DISABLED', 403)
         this.name = 'AuthAccountDisabledError'
     }
 }

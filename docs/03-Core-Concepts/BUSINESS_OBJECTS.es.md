@@ -8,23 +8,30 @@ Todo BO debe heredar de `BaseBO`. Esto le da superpoderes (acceso a DB, Logger, 
 
 ```typescript
 import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
-import { UserSchemas, CreateUserInput } from './User.Schemas.js'
+import { UserRepository } from './User.Repository.js'
 import { UserService } from './User.Service.js'
+import { UserSchemas, CreateInput } from './User.Schemas.js'
+import { UserMessages } from './User.Messages.js'
 
 export class UserBO extends BaseBO {
     private service: UserService
 
-    constructor(deps?: BODependencies) {
+    constructor(deps: BODependencies) {
         super(deps)
-        this.service = new UserService(this.log, this.config, this.db)
+        const repo = new UserRepository(this.db)
+        this.service = new UserService(repo, this.log, this.config, this.db)
+    }
+
+    // Accessor tipado para mensajes i18n
+    private get m() {
+        return this.i18n.use(UserMessages)
     }
 
     // Método Estándar
-    async createUser(params: CreateUserInput): Promise<ApiResponse> {
-        return this.exec<CreateUserInput, void>(params, UserSchemas.create, async (data) => {
-            // 'data' ya está validada aquí
+    async create(params: CreateInput): Promise<ApiResponse> {
+        return this.exec<CreateInput, void>(params, UserSchemas.create, async (data) => {
             await this.service.create(data)
-            return this.created(null, 'Usuario Creado')
+            return this.created(null, this.m.createSuccess) // ← Mensaje tipado
         })
     }
 }
@@ -44,25 +51,28 @@ En lugar de escribir bloques repetitivos `try/catch` y `validate`, usa `this.exe
 
 Dentro de un BO, tienes acceso a:
 
-| Propiedad     | Tipo        | Descripción                   |
-| :------------ | :---------- | :---------------------------- |
-| `this.db`     | `IDatabase` | Acceso directo a Postgres.    |
-| `this.log`    | `ILogger`   | Logger estructurado.          |
-| `this.config` | `IConfig`   | Variables de entorno tipadas. |
+| Propiedad     | Tipo           | Descripción                       |
+| :------------ | :------------- | :-------------------------------- |
+| `this.db`     | `IDatabase`    | Acceso directo a Postgres.        |
+| `this.log`    | `ILogger`      | Logger estructurado.              |
+| `this.config` | `IConfig`      | Variables de entorno tipadas.     |
+| `this.i18n`   | `II18nService` | Servicio de internacionalización. |
+| `this.m`      | (getter)       | Mensajes tipados del BO actual.   |
 
-## CrudBO: Desarrollo Rápido
+## Estructura de 8 Archivos
 
-Para recursos CRUD estándar, extiende `CrudBO`.
+Cada BO genera **8 archivos** con la nomenclatura `{Nombre}.{Tipo}.ts`:
 
-```typescript
-export class ProductBO extends CrudBO<Product, CreateProduct, UpdateProduct> {
-    constructor(deps?: BODependencies) {
-        super('products', 'product_id', deps) // Tabla, columna ID
-    }
-
-    // Auto-genera: get, list, delete.
-    // Solo implementas métodos especializados.
-}
+```
+BO/User/
+├── 📦 UserBO.ts            # Business Object (archivo principal)
+├── 🧠 User.Service.ts      # Lógica de negocio
+├── 🗄️ User.Repository.ts   # Acceso a base de datos
+├── 🔍 User.Queries.ts      # SQL colocalizado
+├── ✅ User.Schemas.ts       # Validaciones Zod
+├── 📘 User.Types.ts         # Interfaces TypeScript
+├── 💬 User.Messages.ts      # Strings i18n (ES/EN)
+└── ❌ User.Errors.ts        # Clases de error personalizadas
 ```
 
 ## Servicios y BOError
@@ -71,7 +81,24 @@ Para mantener el código limpio:
 
 - **BO**: Orquesta (HTTP -> BO -> Service).
 - **Service**: Extiende `BOService`. Contiene lógica de negocio pura.
+- **Repository**: Usa `db.query<T>` con tipos y SQL colocalizado.
 - **BOError**: Úsalo para errores de dominio.
+
+```typescript
+// Repository
+import { IDatabase } from '../../src/types/core.js'
+import { UserQueries } from './User.Queries.js'
+import { User } from './User.Types.js'
+
+export class UserRepository {
+    constructor(private db: IDatabase) {}
+
+    async findById(id: number): Promise<User | null> {
+        const result = await this.db.query<User>(UserQueries.findById, [id])
+        return result.rows[0] ?? null
+    }
+}
+```
 
 ```typescript
 // Service

@@ -1,9 +1,0 @@
-{
-    "login": { "msg": "Sesión iniciada con éxito", "code": 200 },
-    "loginVerificationRequired": { "msg": "Verificación requerida: revisa tu email", "code": 202 },
-    "logout": { "msg": "Sesión cerrada con éxito", "code": 200 },
-    "register": { "msg": "Usuario registrado con éxito", "code": 201 },
-    "update": { "msg": "Datos actualizados con éxito", "code": 200 },
-    "delete": { "msg": "Elemento eliminado con éxito", "code": 200 },
-    "create": { "msg": "Elemento creado con éxito", "code": 201 }
-}

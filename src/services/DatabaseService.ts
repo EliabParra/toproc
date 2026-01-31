@@ -1,4 +1,4 @@
-import { Pool, type PoolClient, type QueryResult } from 'pg'
+import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg'
 import { IDatabase, ILogger, IConfig, II18nService } from '../types/core.js'
 
 export type NamedParamsOptions = {
@@ -106,33 +106,46 @@ export function prepareNamedParams(
  * Componente de acceso a base de datos (PostgreSQL).
  *
  * Encapsula la gestión de conexiones (Pool), ejecución de consultas
- * y manejo de errores. Soporta queries parametrizadas por posición
- * y por nombre.
+ * y manejo de errores. Soporta queries parametrizadas por posición.
  *
  * @example
  * ```typescript
  * const db = new DBComponent(deps)
- * const rows = await db.exe('users', 'getById', [1])
+ * const rows = await db.query('SELECT * FROM users WHERE id = $1', [1])
  * ```
  */
 export default class DBComponent implements IDatabase {
     pool: Pool
     serverErrors: any
-
-    private queries: any
     private log: ILogger
 
     /**
      * Crea una instancia de DBComponent.
      *
-     * @param deps - Dependencias (config, i18n, queries, log)
+     * @param deps - Dependencias (config, i18n, log)
      */
-    constructor(deps: { config: IConfig; i18n: II18nService; queries: any; log: ILogger }) {
-        const { config, i18n, queries, log } = deps
+    constructor(deps: { config: IConfig; i18n: II18nService; log: ILogger }) {
+        const { config, i18n, log } = deps
         this.pool = new Pool((config as any).db as any)
         this.serverErrors = i18n.get('errors.server')
-        this.queries = queries
         this.log = log
+    }
+
+    /**
+     * Executes a query from the QueryService.
+     * Preferred new method for accessing queries.
+     */
+    async query<T extends QueryResultRow = any>(
+        queryDef: string | { sql: string },
+        params?: any[]
+    ): Promise<QueryResult<T>> {
+        let sql: string
+        if (typeof queryDef === 'string') {
+            sql = queryDef
+        } else {
+            sql = queryDef.sql
+        }
+        return this.exeRaw(sql, params) as Promise<QueryResult<T>>
     }
 
     /**
@@ -154,83 +167,6 @@ export default class DBComponent implements IDatabase {
             return await client.query(sql, paramsArray as any[])
         } catch (e: any) {
             const msg = `${this.serverErrors.dbError.msg}, DBComponent.exeRaw: ${e?.message || e}`
-            this.log.show({ type: (this.log as any).TYPE_ERROR, msg })
-            const err = new Error(this.serverErrors.dbError.msg) as Error & {
-                code?: unknown
-                cause?: unknown
-            }
-            err.code = this.serverErrors.dbError.code
-            ;(err as any).cause = e
-            throw err
-        } finally {
-            try {
-                client?.release?.()
-            } catch {}
-        }
-    }
-
-    /**
-     * Ejecuta una consulta predefinida indexada por esquema y nombre.
-     *
-     * @param schema - Nombre del esquema/fichero de queries (e.g. 'security')
-     * @param query - Nombre de la query (e.g. 'getUserById')
-     * @param params - Parámetros posicionales
-     * @returns {Promise<QueryResult>} Resultado de la consulta
-     */
-    async exe(schema: string, query: string, params?: unknown): Promise<QueryResult<any>> {
-        let client: PoolClient | undefined
-        try {
-            const paramsArray = buildParamsArray(params)
-
-            client = await this.pool.connect()
-            const sql = (this.queries as any)[schema][query]
-            const res = await client.query(sql, paramsArray as any[])
-            return res
-        } catch (e: any) {
-            const msg = `${this.serverErrors.dbError.msg}, DBComponent.exe: ${e?.message || e}`
-            this.log.show({ type: (this.log as any).TYPE_ERROR, msg })
-            const err = new Error(this.serverErrors.dbError.msg) as Error & {
-                code?: unknown
-                cause?: unknown
-            }
-            err.code = this.serverErrors.dbError.code
-            ;(err as any).cause = e
-            throw err
-        } finally {
-            try {
-                client?.release?.()
-            } catch {}
-        }
-    }
-
-    /**
-     * Ejecuta una consulta con parámetros nombrados.
-     * Ofrece mayor seguridad al validar la presencia y orden de parámetros.
-     *
-     * @param schema - Esquema de queries
-     * @param query - Nombre de la query
-     * @param paramsObj - Objeto con valores
-     * @param orderKeys - Array definitorio del orden de parámetros
-     * @param opts - Opciones adicionales
-     * @returns {Promise<QueryResult>} Resultado de la consulta
-     */
-    async exeNamed(
-        schema: string,
-        query: string,
-        paramsObj: unknown,
-        orderKeys: unknown,
-        opts?: NamedParamsOptions
-    ): Promise<QueryResult<any>> {
-        let client: PoolClient | undefined
-        try {
-            const sql = (this.queries as any)?.[schema]?.[query]
-            if (typeof sql !== 'string') throw new Error(`Query not found: ${schema}.${query}`)
-
-            const paramsArray = prepareNamedParams(sql, paramsObj, orderKeys, opts)
-            client = await this.pool.connect()
-            return await client.query(sql, paramsArray as any[])
-        } catch (e: any) {
-            const msg = `${this.serverErrors.dbError.msg}, DBComponent.exeNamed: ${e?.message || e}`
             this.log.show({ type: (this.log as any).TYPE_ERROR, msg })
             const err = new Error(this.serverErrors.dbError.msg) as Error & {
                 code?: unknown

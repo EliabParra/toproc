@@ -14,6 +14,7 @@
 
 export * from './types.js'
 export * from './messages.js'
+export * from './queries.js'
 
 /**
  * Extrae métodos async públicos de un archivo BO
@@ -43,6 +44,7 @@ export function parseMethodsFromBO(fileContent: string): string[] {
 export function templateSchemas(objectName: string, methods: string[]) {
     const cleanName = objectName.replace(/BO$/, '')
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
+    const lowerName = cleanName.toLowerCase()
 
     const methodSchemas = methods
         .map((m) => {
@@ -55,11 +57,10 @@ export function templateSchemas(objectName: string, methods: string[]) {
                     lower.includes('findbyid')) &&
                 !lower.includes('getall')
 
-            let content = `        // TODO: Definir validación usando ${pascalName}Messages.VALIDATION`
+            let content = `        // TODO: Definir validación. Usa keys tipo 'bo.${lowerName}.validation.xxx'`
 
             if (isStandardWithId) {
-                content = `        id: z.coerce.number(),
-        // TODO: Definir validación adicional si es necesario`
+                content = `        id: z.coerce.number(),`
             } else if (lower.includes('getall')) {
                 content = `        // Parámetros de paginación o filtros opcionales`
             }
@@ -71,12 +72,12 @@ ${content}
         .join('\n')
 
     return `import { z } from 'zod'
-import { ${pascalName}Messages } from './${pascalName}.Messages.js'
 
 /**
  * Schemas Zod para métodos de ${pascalName}BO
  * 
- * Usa ${pascalName}Messages.VALIDATION para mensajes de error consistentes.
+ * Los mensajes de validación se traducen automáticamente si
+ * coinciden con keys en locales/es.json.
  */
 export const ${pascalName}Schemas = {
 ${methodSchemas}
@@ -98,7 +99,8 @@ export function templateRepository(objectName: string) {
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
 
     return `import { IDatabase } from '../../src/types/core.js'
-import type { ${pascalName}, ${pascalName}Summary } from './${pascalName}.Types.js'
+import type { Exists${pascalName}, ${pascalName}, ${pascalName}Summary, RowCount${pascalName} } from './${pascalName}.Types.js'
+import { ${pascalName}Queries } from './${pascalName}.Queries.js'
 
 /**
  * Repositorio para operaciones de base de datos de ${pascalName}BO.
@@ -113,53 +115,53 @@ export class ${pascalName}Repository {
      * Busca todos los ${pascalName.toLowerCase()}s
      */
     async findAll(): Promise<${pascalName}Summary[]> {
-        const result = await this.db.exe('public', '${pascalName.toLowerCase()}_findAll', [])
-        return (result.rows ?? []) as ${pascalName}Summary[]
+        const result = await this.db.query<${pascalName}Summary>(${pascalName}Queries.findAll, [])
+        return result.rows
     }
 
     /**
      * Busca ${pascalName.toLowerCase()} por ID
      */
     async findById(id: number): Promise<${pascalName} | null> {
-        const result = await this.db.exe('public', '${pascalName.toLowerCase()}_findById', [id])
-        return (result.rows?.[0] ?? null) as ${pascalName} | null
+        const result = await this.db.query<${pascalName}>(${pascalName}Queries.findById, [id])
+        return result.rows[0]
     }
 
     /**
      * Crea nuevo ${pascalName.toLowerCase()}
      */
-    async create(data: Partial<${pascalName}>): Promise<${pascalName}> {
-        const result = await this.db.exe('public', '${pascalName.toLowerCase()}_create', [
+    async create(data: Partial<${pascalName}>): Promise<${pascalName} | null> {
+        const result = await this.db.query<${pascalName}>(${pascalName}Queries.create, [
             // TODO: Mapear campos de data a parámetros del query
         ])
-        return result.rows?.[0] as ${pascalName}
+        return result.rows[0]
     }
 
     /**
      * Actualiza ${pascalName.toLowerCase()}
      */
     async update(id: number, data: Partial<${pascalName}>): Promise<${pascalName} | null> {
-        const result = await this.db.exe('public', '${pascalName.toLowerCase()}_update', [
+        const result = await this.db.query<${pascalName}>(${pascalName}Queries.update, [
             id,
             // TODO: Mapear campos de data a parámetros del query
         ])
-        return (result.rows?.[0] ?? null) as ${pascalName} | null
+        return result.rows[0]
     }
 
     /**
      * Elimina ${pascalName.toLowerCase()}
      */
     async delete(id: number): Promise<boolean> {
-        const result = await this.db.exe('public', '${pascalName.toLowerCase()}_delete', [id])
-        return (result.rowCount ?? 0) > 0
+        const result = await this.db.query<RowCount${pascalName}>(${pascalName}Queries.delete, [id])
+        return result.rowCount !== null && result.rowCount > 0
     }
 
     /**
      * Verifica si ${pascalName.toLowerCase()} existe
      */
     async exists(id: number): Promise<boolean> {
-        const result = await this.db.exe('public', '${pascalName.toLowerCase()}_exists', [id])
-        return result.rows?.[0]?.exists === true
+        const result = await this.db.query<Exists${pascalName}>(${pascalName}Queries.exists, [id])
+        return result.rows[0].exists
     }
 }
 `
@@ -219,7 +221,7 @@ export class ${pascalName}Service extends BOService {
     /**
      * Crea nuevo ${pascalName.toLowerCase()}
      */
-    async create(data: Partial<${pascalName}>): Promise<${pascalName}> {
+    async create(data: Partial<${pascalName}>): Promise<${pascalName} | null> {
         this.log.show({ type: this.log.TYPE_INFO, msg: \`Creando ${pascalName.toLowerCase()}\` })
         return this.repo.create(data)
     }
@@ -261,6 +263,7 @@ export class ${pascalName}Service extends BOService {
 export function templateBO(className: string, methods: string[]) {
     const cleanName = className.replace(/BO$/, '')
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
+    const lowerName = cleanName.toLowerCase()
     const boClassName = `${pascalName}BO`
 
     // Build Schema Imports
@@ -284,7 +287,7 @@ export function templateBO(className: string, methods: string[]) {
             let serviceCall = `await this.service.${m}(data)`
 
             if (m.toLowerCase().includes('getall')) {
-                returnType = `Array<${pascalName}>`
+                returnType = `Array<${pascalName}Summary>`
             } else if (isGet || isCreate || m.toLowerCase().includes('update')) {
                 returnType = pascalName
             } else if (isDelete) {
@@ -299,8 +302,10 @@ export function templateBO(className: string, methods: string[]) {
             } else if (isDelete) {
                 serviceCall = `await this.service.delete(data.id)`
             } else if (m.toLowerCase().includes('getall')) {
-                serviceCall = `await this.service.getAll(data)`
+                serviceCall = `await this.service.getAll()`
             }
+
+            const messageKey = `bo.${lowerName}.${m}`
 
             return `    /**
      * Operación ${methodPascal}
@@ -315,7 +320,7 @@ export function templateBO(className: string, methods: string[]) {
             async (data) => {
                 const result: ${returnType} = ${serviceCall}
                 
-                return this.${isCreate ? 'created' : 'success'}(${isDelete ? 'null' : 'result'}, ${pascalName}Messages.${m.toUpperCase()})
+                return this.${isCreate ? 'created' : 'success'}(${isDelete ? 'null' : 'result'}, this.t('${messageKey}'))
             }
         )
     }`
@@ -326,18 +331,12 @@ export function templateBO(className: string, methods: string[]) {
 import { ${pascalName}Repository } from './${pascalName}.Repository.js'
 import { ${pascalName}Service } from './${pascalName}.Service.js'
 import { ${pascalName}Schemas, ${inputTypes} } from './${pascalName}.Schemas.js'
-import { ${pascalName}Messages } from './${pascalName}.Messages.js'
-import { ${pascalName} } from './${pascalName}.Types.js'
+import { ${pascalName}, ${pascalName}Summary } from './${pascalName}.Types.js'
 
 /**
  * Business Object para el dominio ${pascalName}.
  * 
  * Orquesta transacciones de ${pascalName} y expone endpoints de API.
- * Usa:
- * - ./${pascalName}.Schemas.ts para validación de entrada
- * - ./${pascalName}.Messages.ts para strings visibles al usuario
- * - ./${pascalName}.Errors.ts para manejo de errores del dominio
- * - ./${pascalName}.Types.ts para interfaces TypeScript
  */
 export class ${boClassName} extends BaseBO {
     private service: ${pascalName}Service
@@ -346,6 +345,14 @@ export class ${boClassName} extends BaseBO {
         super(deps)
         const repo = new ${pascalName}Repository(this.db)
         this.service = new ${pascalName}Service(repo, this.log, this.config, this.db)
+    }
+
+    /**
+     * Helpers para mensajes tipados
+     */
+    private get m() {
+        // TODO: Importar y usar mensajes tipados desde locales/ si es necesario
+        return {} as any 
     }
 
 ${methodStubs}

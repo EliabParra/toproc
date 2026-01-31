@@ -1,57 +1,72 @@
 /**
- * Genera el contenido del archivo Messages (.Messages.ts)
+ * Genera el contenido del archivo de locales (Auth.Messages.ts)
  *
  * @param objectName - Nombre del objeto
  * @param methods - Lista de métodos a generar
- * @returns Contenido del archivo .Messages.ts
+ * @returns TS object definition string
  */
-export function templateMessages(objectName: string, methods: string[]) {
+export function templateLocales(objectName: string, methods: string[]) {
     const cleanName = objectName.replace(/BO$/, '')
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
 
-    // Generar claves de mensaje predeterminadas para cada método
-    const methodMessages = methods
-        .map((m) => {
-            const upper = m.toUpperCase()
-            // Provide intelligent defaults for common method names
-            let msg = 'Operación exitosa'
-            if (m.includes('create') || m.includes('register')) msg = 'Creado exitosamente'
-            if (m.includes('update')) msg = 'Actualizado exitosamente'
-            if (m.includes('delete') || m.includes('remove')) msg = 'Eliminado exitosamente'
-            if (m.includes('get') || m.includes('find') || m.includes('list'))
-                msg = 'Obtenido exitosamente'
+    // Generar claves de mensaje predeterminadas para cada método (ES)
+    const methodMessagesEs: Record<string, string> = {}
+    methods.forEach((m) => {
+        let msg = 'Operación exitosa'
+        if (m.includes('create') || m.includes('register')) msg = 'Creado exitosamente'
+        if (m.includes('update')) msg = 'Actualizado exitosamente'
+        if (m.includes('delete') || m.includes('remove')) msg = 'Eliminado exitosamente'
+        if (m.includes('get') || m.includes('find') || m.includes('list'))
+            msg = 'Obtenido exitosamente'
+        methodMessagesEs[m] = msg
+    })
 
-            return `    ${upper}: '${msg}',`
-        })
-        .join('\n')
+    // Generar claves de mensaje predeterminadas para cada método (EN)
+    const methodMessagesEn: Record<string, string> = {}
+    methods.forEach((m) => {
+        let msg = 'Operation successful'
+        if (m.includes('create') || m.includes('register')) msg = 'Created successfully'
+        if (m.includes('update')) msg = 'Updated successfully'
+        if (m.includes('delete') || m.includes('remove')) msg = 'Deleted successfully'
+        if (m.includes('get') || m.includes('find') || m.includes('list'))
+            msg = 'Retrieved successfully'
+        methodMessagesEn[m] = msg
+    })
 
-    return `/**
- * Mensajes y strings para ${pascalName}
- */
-
-export const ${pascalName}Messages = {
-    // Éxito
-${methodMessages}
-
-    // Error
-    NOT_FOUND: '${pascalName} no encontrado',
-    ALREADY_EXISTS: 'Ya existe un registro con estos datos',
-    INVALID_DATA: 'Datos inválidos',
-    CANNOT_DELETE: 'No se puede eliminar el registro',
-    PERMISSION_DENIED: 'Permiso denegado',
-    
-    // Helpers
-    notFoundById: (id: number) => \`${pascalName} con ID \${id} no encontrado\`,
-    duplicateField: (field: string, value: string) => \`${pascalName} con \${field} "\${value}" ya existe\`,
-
-    // Validación
-    VALIDATION: {
-        // TODO: Agregar mensajes de validación
-        REQUIRED_FIELD: 'Campo requerido',
+    return `export const ${pascalName}Messages = {
+    es: {
+        // Success
+        ${methods.map((m) => `${m}: '${methodMessagesEs[m]}',`).join('\n        ')}
+        
+        // Common errors
+        notFound: '${pascalName} no encontrado',
+        alreadyExists: 'Ya existe un registro con estos datos',
+        invalidData: 'Datos inválidos',
+        cannotDelete: 'No se puede eliminar el registro',
+        permissionDenied: 'Permiso denegado',
+        
+        // Validation
+        validation: {
+            requiredField: 'Campo requerido',
+            invalidFormat: 'Formato inválido',
+        },
     },
-}
-
-export type ${pascalName}MessageKey = keyof typeof ${pascalName}Messages
-export type ${pascalName}ValidationKey = keyof typeof ${pascalName}Messages.VALIDATION
-`
+    en: {
+        // Success
+        ${methods.map((m) => `${m}: '${methodMessagesEn[m]}',`).join('\n        ')}
+        
+        // Common errors
+        notFound: '${pascalName} not found',
+        alreadyExists: 'Record already exists',
+        invalidData: 'Invalid data',
+        cannotDelete: 'Cannot delete record',
+        permissionDenied: 'Permission denied',
+        
+        // Validation
+        validation: {
+            requiredField: 'Field required',
+            invalidFormat: 'Invalid format',
+        },
+    }
+}`
 }

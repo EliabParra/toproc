@@ -13,44 +13,79 @@ El sistema arranca un pool de conexiones único.
 
 ## 2. Métodos de Ejecución
 
-### A. `exeRaw(sql, params)`
+### A. `db.query<T>(sql, params)` (Recomendado)
 
-Para queries rápidas o dinámicas in-line.
+Método moderno con soporte de tipos genéricos. Las queries pueden ser strings o objetos `{ sql: string }`.
+
+```typescript
+import { UserQueries } from './User.Queries.js'
+import { User } from './User.Types.js'
+
+// Con tipado genérico
+const result = await this.db.query<User>(UserQueries.findById, [id])
+const user = result.rows[0] // ← TypeScript sabe que es User | undefined
+
+// Con SQL inline
+const count = await this.db.query<{ count: number }>('SELECT count(*) FROM users', [])
+```
+
+### B. `exeRaw(sql, params)`
+
+Para queries rápidas o dinámicas in-line (sin tipado).
 
 ```typescript
 const res = await db.exeRaw('SELECT count(*) FROM users')
 ```
 
-### B. `exe(schema, query, params)` (Parameter Store)
+---
 
-Método clásico. Las queries viven en archivos `.ts` separados.
+## 3. Queries Colocalizadas
 
-```typescript
-// src/db/queries/auth.ts -> export const getUser = "SELECT..."
-await db.exe('auth', 'getUser', [email])
-```
-
-### C. `exeNamed` (La Joya de la Corona)
-
-Resuelve el problema de los parámetros posicionales (`$1, $2... $20`).
-Permite bindear objetos validando claves.
-
-**SQL**:
-
-```sql
-INSERT INTO users (name, email) VALUES ($1, $2)
-```
-
-**Código**:
+Cada BO tiene su archivo `{Nombre}.Queries.ts` con todas las queries SQL.
 
 ```typescript
-// Validará que el objeto tenga 'name' y 'email', y los pondrá en orden correcto.
-await db.exeNamed('users', 'create', formData, ['name', 'email'])
+// User.Queries.ts
+export const UserQueries = {
+    findAll: `SELECT * FROM users ORDER BY created_at DESC`,
+
+    findById: `SELECT * FROM users WHERE user_id = $1`,
+
+    create: `
+        INSERT INTO users (name, email, password_hash)
+        VALUES ($1, $2, $3)
+        RETURNING *
+    `,
+
+    delete: `DELETE FROM users WHERE user_id = $1`,
+} as const
+
+export type UserQueryKey = keyof typeof UserQueries
+```
+
+### Uso en Repository
+
+```typescript
+import { UserQueries } from './User.Queries.js'
+import { User, UserSummary } from './User.Types.js'
+
+export class UserRepository {
+    constructor(private db: IDatabase) {}
+
+    async findAll(): Promise<UserSummary[]> {
+        const result = await this.db.query<UserSummary>(UserQueries.findAll, [])
+        return result.rows
+    }
+
+    async findById(id: number): Promise<User | null> {
+        const result = await this.db.query<User>(UserQueries.findById, [id])
+        return result.rows[0] ?? null
+    }
+}
 ```
 
 ---
 
-## 3. Transacciones (ACID)
+## 4. Transacciones (ACID)
 
 Para garantizar integridad de datos:
 

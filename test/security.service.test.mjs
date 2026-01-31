@@ -62,17 +62,18 @@ test('Security.init loads permissions + tx map and sets isReady', async () => {
             }
 
             globalThis.db = {
-                exe: async (schema, queryName) => {
-                    assert.equal(schema, 'security')
-                    if (queryName === 'loadPermissions') {
+                query: async (sql) => {
+                    // Check for permissions query
+                    if (sql.includes('permission_methods')) {
                         return { rows: [{ profile_id: 1, method_na: 'm', object_na: 'o' }] }
                     }
-                    if (queryName === 'loadDataTx') {
+                    // Check for tx/methods query
+                    if (sql.includes('security.methods')) {
                         return {
                             rows: [{ tx_nu: 100, object_na: 'Order', method_na: 'createOrder' }],
                         }
                     }
-                    throw new Error(`Unexpected query: ${queryName}`)
+                    return { rows: [] }
                 },
             }
 
@@ -128,11 +129,10 @@ test('Security.init captures initError and rejects ready when DB fails', async (
             }
 
             globalThis.db = {
-                exe: async (schema, queryName) => {
-                    if (schema !== 'security') throw new Error('wrong schema')
-                    if (queryName === 'loadPermissions') throw new Error('db down')
-                    if (queryName === 'loadDataTx') return { rows: [] }
-                    throw new Error(`Unexpected query: ${queryName}`)
+                query: async (sql) => {
+                    if (sql.includes('permission_methods')) throw new Error('db down')
+                    if (sql.includes('security.methods')) return { rows: [] }
+                    return { rows: [] }
                 },
             }
 
@@ -191,11 +191,10 @@ test('Security.executeMethod dynamically imports BO and caches the instance', as
                 globalThis.i18n = createMockI18n()
                 globalThis.log = { TYPE_ERROR: 'error', TYPE_INFO: 'info', show: () => {} }
                 globalThis.db = {
-                    exe: async (schema, queryName) => {
-                        if (schema !== 'security') throw new Error('wrong schema')
-                        if (queryName === 'loadPermissions') return { rows: [] }
-                        if (queryName === 'loadDataTx') return { rows: [] }
-                        throw new Error(`Unexpected query: ${queryName}`)
+                    query: async (sql) => {
+                        if (sql.includes('permission_methods')) return { rows: [] }
+                        if (sql.includes('security.methods')) return { rows: [] }
+                        return { rows: [] }
                     },
                 }
 
@@ -249,11 +248,10 @@ test('Security.executeMethod returns serverError and logs when BO import fails',
             }
 
             globalThis.db = {
-                exe: async (schema, queryName) => {
-                    if (schema !== 'security') throw new Error('wrong schema')
-                    if (queryName === 'loadPermissions') return { rows: [] }
-                    if (queryName === 'loadDataTx') return { rows: [] }
-                    throw new Error(`Unexpected query: ${queryName}`)
+                query: async (sql) => {
+                    if (sql.includes('permission_methods')) return { rows: [] }
+                    if (sql.includes('security.methods')) return { rows: [] }
+                    return { rows: [] }
                 },
             }
 

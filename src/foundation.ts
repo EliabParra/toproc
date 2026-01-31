@@ -53,21 +53,16 @@ function resolveRepoRelative(p: unknown) {
 const config = ConfigLoader.load(repoPath('.'))
 container.register('config', config)
 
-// 2. Load Queries
-const baseQueries = await loadJson('./config/queries.json')
-let queries = baseQueries
-
-if (process.env.QUERIES_EXTRA_PATH) {
-    const extraPath = resolveRepoRelative(process.env.QUERIES_EXTRA_PATH)
-    if (extraPath) queries = mergeQueries(queries, await loadJsonAbsolute(extraPath))
-}
-container.register('queries', queries)
-
+// 2. Initialize QueryService (Legacy removed)
+// 3. Initialize I18n (replaces legacy msgs)
 // 3. Initialize I18n (replaces legacy msgs)
 const i18n = new I18nService(config.app.lang)
-const localesPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'locales')
-i18n.loadLocale('es', path.join(localesPath, 'es'))
-i18n.loadLocale('en', path.join(localesPath, 'en'))
+import { es } from './locales/es.js'
+import { en } from './locales/en.js'
+
+i18n.register('es', es)
+i18n.register('en', en)
+
 container.register('i18n', i18n)
 
 // 4. Feature Flags
@@ -84,7 +79,7 @@ container.register('log', appLogger)
 
 // 7. Database
 const { default: DBComponent } = await import('./services/DatabaseService.js')
-const db = new DBComponent({ config, i18n, queries, log: appLogger })
+const db = new DBComponent({ config, i18n, log: appLogger })
 container.register('db', db)
 
 // 8. Service Layer Initialization

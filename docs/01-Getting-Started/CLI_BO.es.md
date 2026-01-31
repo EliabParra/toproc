@@ -1,7 +1,7 @@
 # CLI Deep Dive: Business Object Generator (`pnpm run bo`)
 
 El generador de Business Objects es tu mejor amigo para no escribir "boilerplate" (código repetitivo).
-Se encarga de crear la estructura estándar de **7 archivos** en segundos.
+Se encarga de crear la estructura estándar de **8 archivos** en segundos.
 
 ## Comando Principal
 
@@ -46,7 +46,7 @@ Si ejecutas solo `pnpm run bo`, verás un menú interactivo:
 
 ## `pnpm run bo new <Nombre>`
 
-Crea un nuevo Business Object con la estructura de 7 archivos.
+Crea un nuevo Business Object con la estructura de 8 archivos.
 
 ### Opciones
 
@@ -78,9 +78,10 @@ BO/Product/
 ├── 📦 ProductBO.ts            # Business Object (archivo principal)
 ├── 🧠 Product.Service.ts      # Lógica de negocio
 ├── 🗄️ Product.Repository.ts   # Acceso a base de datos
+├── 🔍 Product.Queries.ts      # SQL colocalizado
 ├── ✅ Product.Schemas.ts       # Validaciones Zod
 ├── 📘 Product.Types.ts         # Interfaces TypeScript
-├── 💬 Product.Messages.ts      # Strings y mensajes
+├── 💬 Product.Messages.ts      # Strings i18n (ES/EN)
 └── ❌ Product.Errors.ts        # Clases de error personalizadas
 ```
 
@@ -160,11 +161,11 @@ BO/Auth/
 ├── 📦 AuthBO.ts              # Business Object principal
 ├── 🧠 Auth.Service.ts        # Lógica de autenticación
 ├── 🗄️ Auth.Repository.ts     # Acceso a DB
+├── 🔍 Auth.Queries.ts        # SQL colocalizado
 ├── ✅ Auth.Schemas.ts         # Validaciones Zod
 ├── 📘 Auth.Types.ts           # Interfaces (User, Session, etc.)
-├── 💬 Auth.Messages.ts        # Mensajes en español
-├── ❌ Auth.Errors.ts          # Errores personalizados
-└── 🔜 Auth.SocialAuth.ts     # OAuth (próximamente)
+├── 💬 Auth.Messages.ts        # Mensajes i18n (ES/EN)
+└── ❌ Auth.Errors.ts          # Errores personalizados
 ```
 
 ---
@@ -206,18 +207,19 @@ El proyecto incluye snippets para acelerar el desarrollo. Escribe el prefijo y p
 
 ### Snippets Disponibles
 
-| Prefijo          | Descripción                             |
-| ---------------- | --------------------------------------- |
-| `tp-bo`          | Business Object completo con método     |
-| `tp-bo-method`   | Agregar método transaccional a un BO    |
-| `tp-service`     | Clase Service con repository y errors   |
-| `tp-repo-method` | Método de acceso a base de datos        |
-| `tp-schema`      | Schemas Zod con integración de messages |
-| `tp-types`       | Interfaces TypeScript para entidades    |
-| `tp-messages`    | Mensajes de éxito/error/validación      |
-| `tp-errors`      | Clases de error personalizadas          |
-| `tp-test`        | Suite de test con Node Test Runner      |
-| `tp-log`         | Logging con el sistema de logger        |
+| Prefijo          | Descripción                            |
+| ---------------- | -------------------------------------- |
+| `tp-bo`          | Business Object completo con método    |
+| `tp-bo-method`   | Agregar método transaccional a un BO   |
+| `tp-service`     | Clase Service con repository y errors  |
+| `tp-repo-method` | Método de acceso a base de datos       |
+| `tp-schema`      | Schemas Zod con claves i18n            |
+| `tp-types`       | Interfaces con secciones Entidad/Input |
+| `tp-queries`     | Archivo de SQL colocalizado            |
+| `tp-messages`    | Mensajes de éxito/error/validación     |
+| `tp-errors`      | Clases de error personalizadas         |
+| `tp-test`        | Suite de test con Node Test Runner     |
+| `tp-log`         | Logging con el sistema de logger       |
 
 ### Uso
 
@@ -232,12 +234,18 @@ El proyecto incluye snippets para acelerar el desarrollo. Escribe el prefijo y p
 // Escribe: tp-messages + Tab
 
 export const ProductMessages = {
-    GET: 'Product encontrado',
-    CREATE: 'Product creado exitosamente',
-    UPDATE: 'Product actualizado exitosamente',
-    DELETE: 'Product eliminado exitosamente',
-    NOT_FOUND: 'Product no encontrado',
-    // ...
+    es: {
+        createSuccess: 'Product creado exitosamente',
+        updateSuccess: 'Product actualizado exitosamente',
+        deleteSuccess: 'Product eliminado exitosamente',
+        notFound: 'Product no encontrado',
+    },
+    en: {
+        createSuccess: 'Product created successfully',
+        updateSuccess: 'Product updated successfully',
+        deleteSuccess: 'Product deleted successfully',
+        notFound: 'Product not found',
+    },
 }
 ```
 
@@ -264,4 +272,5 @@ La separación promueve:
 2. **Mantenibilidad**: Código organizado y predecible
 3. **Reusabilidad**: Messages y errors se pueden compartir
 4. **Tipado**: Types centralizados evitan duplicación
-5. **i18n**: Messages.ts facilita internacionalización
+5. **i18n**: Messages.ts facilita internacionalización bilingüe
+6. **SQL**: Queries.ts mantiene SQL colocalizado y tipado

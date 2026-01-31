@@ -72,8 +72,8 @@ export abstract class BaseBO {
     /** Validador para validación de entrada (soporta esquemas Zod) */
     protected readonly v: IValidator
 
-    /** Servicio i18n opcional */
-    protected readonly i18n?: II18nService
+    /** Servicio i18n */
+    protected readonly i18n: II18nService
 
     /**
      * Crea una nueva instancia de Business Object.
@@ -81,18 +81,26 @@ export abstract class BaseBO {
      * @param deps - Dependencias requeridas inyectadas por el Dispatcher
      */
     constructor(deps: Partial<BODependencies> = {}) {
-        if (!deps.db) {
-            // Note: In strict DI, we might want to throw here.
-            // For now, staying safe but strictly using what is passed or failing later.
-            // But since we removed globals, falling back to undefined is actually safer than hidden global usage.
-            // Ideally we eventually type 'deps' as required BODependencies or throw.
+        if (!deps.db || !deps.log || !deps.config || !deps.v || !deps.i18n) {
+            throw new Error('Missing required dependencies')
         }
 
-        this.db = deps.db!
-        this.log = deps.log!
-        this.config = deps.config!
-        this.v = deps.v!
+        this.db = deps.db
+        this.log = deps.log
+        this.config = deps.config
+        this.v = deps.v
         this.i18n = deps.i18n
+    }
+
+    /**
+     * Traduce una clave usando el servicio i18n inyectado.
+     * Si no hay servicio i18n, retorna la clave.
+     *
+     * @param key - Clave de traducción
+     * @param params - Parámetros de interpolación
+     */
+    protected t(key: string, params?: Record<string, any>): string {
+        return this.i18n.t(key, params)
     }
 
     /**
@@ -198,7 +206,7 @@ export abstract class BaseBO {
             return { ok: true, data: result.data }
         }
 
-        const alerts = result.errors?.map((e: { message: string }) => e.message) || [
+        const alerts = result.errors?.map((e: { message: string }) => this.t(e.message)) || [
             'Error de validación desconocido',
         ]
         return { ok: false, alerts }
@@ -229,7 +237,7 @@ export abstract class BaseBO {
 
             return await fn(vRes.data)
         } catch (error) {
-            return this.safeCatch(error)
+            return this.safeCatch(error) as any
         }
     }
 
@@ -246,7 +254,7 @@ export abstract class BaseBO {
 
         // Si es un BOError (tiene tag y code)
         if (anyErr.tag && anyErr.code) {
-            return this.error(anyErr.message, anyErr.code)
+            return this.error(this.t(anyErr.message), anyErr.code)
         }
 
         this.log.show({ type: this.log.TYPE_ERROR, msg: 'BaseBO Exception', ctx: error })

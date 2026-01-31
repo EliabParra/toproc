@@ -8,23 +8,30 @@ Every BO inherits from `BaseBO`. This gives it superpowers (access to DB, Logger
 
 ```typescript
 import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
-import { UserSchemas, CreateUserInput } from './User.Schemas.js'
+import { UserRepository } from './User.Repository.js'
 import { UserService } from './User.Service.js'
+import { UserSchemas, CreateInput } from './User.Schemas.js'
+import { UserMessages } from './User.Messages.js'
 
 export class UserBO extends BaseBO {
     private service: UserService
 
-    constructor(deps?: BODependencies) {
+    constructor(deps: BODependencies) {
         super(deps)
-        this.service = new UserService(this.log, this.config, this.db)
+        const repo = new UserRepository(this.db)
+        this.service = new UserService(repo, this.log, this.config, this.db)
+    }
+
+    // Typed i18n accessor
+    private get m() {
+        return this.i18n.use(UserMessages)
     }
 
     // Standard Method
-    async createUser(params: CreateUserInput): Promise<ApiResponse> {
-        return this.exec<CreateUserInput, void>(params, UserSchemas.create, async (data) => {
-            // 'data' is already validated here
+    async create(params: CreateInput): Promise<ApiResponse> {
+        return this.exec<CreateInput, void>(params, UserSchemas.create, async (data) => {
             await this.service.create(data)
-            return this.created(null, 'User Created')
+            return this.created(null, this.m.createSuccess) // ← Typed message
         })
     }
 }
@@ -44,25 +51,28 @@ Instead of writing repetitive `try/catch` and `validate` blocks, use `this.exec(
 
 Inside a BO, you have access to:
 
-| Property      | Type        | Description                  |
-| :------------ | :---------- | :--------------------------- |
-| `this.db`     | `IDatabase` | Direct Postgres access.      |
-| `this.log`    | `ILogger`   | Structured logger.           |
-| `this.config` | `IConfig`   | Typed environment variables. |
+| Property      | Type           | Description                    |
+| :------------ | :------------- | :----------------------------- |
+| `this.db`     | `IDatabase`    | Direct Postgres access.        |
+| `this.log`    | `ILogger`      | Structured logger.             |
+| `this.config` | `IConfig`      | Typed environment variables.   |
+| `this.i18n`   | `II18nService` | Internationalization service.  |
+| `this.m`      | (getter)       | Typed messages for current BO. |
 
-## CrudBO: Rapid Development
+## 8-File Structure
 
-For standard CRUD resources, extend `CrudBO`.
+Each BO generates **8 files** with the `{Name}.{Type}.ts` naming convention:
 
-```typescript
-export class ProductBO extends CrudBO<Product, CreateProduct, UpdateProduct> {
-    constructor(deps?: BODependencies) {
-        super('products', 'product_id', deps) // Table name, ID column
-    }
-
-    // Auto-generates: get, list, delete.
-    // You only implement specialized methods.
-}
+```
+BO/User/
+├── 📦 UserBO.ts            # Business Object (main file)
+├── 🧠 User.Service.ts      # Business logic
+├── 🗄️ User.Repository.ts   # Database access
+├── 🔍 User.Queries.ts      # Colocated SQL
+├── ✅ User.Schemas.ts       # Zod validations
+├── 📘 User.Types.ts         # TypeScript interfaces
+├── 💬 User.Messages.ts      # i18n strings (ES/EN)
+└── ❌ User.Errors.ts        # Custom error classes
 ```
 
 ## Services & BOError
@@ -71,7 +81,24 @@ To keep code clean:
 
 - **BO**: Orchestrates (HTTP -> BO -> Service).
 - **Service**: Extends `BOService`. Contains pure business logic.
+- **Repository**: Uses `db.query<T>` with types and colocated SQL.
 - **BOError**: Use this for domain errors.
+
+```typescript
+// Repository
+import { IDatabase } from '../../src/types/core.js'
+import { UserQueries } from './User.Queries.js'
+import { User } from './User.Types.js'
+
+export class UserRepository {
+    constructor(private db: IDatabase) {}
+
+    async findById(id: number): Promise<User | null> {
+        const result = await this.db.query<User>(UserQueries.findById, [id])
+        return result.rows[0] ?? null
+    }
+}
+```
 
 ```typescript
 // Service

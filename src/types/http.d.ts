@@ -18,22 +18,41 @@ declare global {
         }
     }
 
-    // Restore global aliases as interfaces to ensure visibility
     interface AppRequest extends ExpressRequest {
         session?: import('express-session').Session & import('express-session').SessionData
     }
     interface AppResponse extends ExpressResponse {}
 
-    interface ApiError {
-        code: number
-        msg: string
-        [key: string]: any
-    }
-
-    export type ApiResponse<T = any> = {
+    // Standard API Response
+    export interface ApiResponse<T = unknown> {
         code: number
         msg: string
         data?: T | null
         alerts?: string[]
+    }
+
+    // Success Response (code 200-299)
+    export interface SuccessResponse<T = unknown> extends ApiResponse<T> {
+        code: 200 | 201
+        data: T
+    }
+
+    // Error Response (code 400+)
+    export interface ErrorResponse extends ApiResponse<null> {
+        code: 400 | 401 | 403 | 404 | 500
+        data: null
+        alerts: string[]
+    }
+
+    // Common Auth Types
+    export interface LoginRequest {
+        loginId: string
+        password: string
+    }
+
+    export interface SessionUser {
+        userId: number
+        username: string
+        profileId: number
     }
 }

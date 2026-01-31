@@ -4,7 +4,7 @@ import {
     templateRepository,
     templateSchemas,
     templateTypes,
-    templateMessages,
+    templateLocales,
 } from './bo/templates/bo.js'
 import 'colors'
 
@@ -16,8 +16,8 @@ const methods = ['create', 'get', 'update', 'delete', 'list']
 console.log('\n[Types.ts]'.yellow)
 console.log(templateTypes(objectName))
 
-console.log('\n[Messages.ts]'.yellow)
-console.log(templateMessages(objectName, methods))
+console.log('\n[locales/es.json]'.yellow)
+console.log(templateLocales(objectName, methods))
 
 console.log('\n[BO.ts]'.yellow)
 console.log(templateBO(objectName, methods))

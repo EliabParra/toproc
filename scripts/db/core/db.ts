@@ -41,15 +41,6 @@ export class Database implements IDatabase {
         this.pool = new pg.Pool(cfg)
     }
 
-    async exe(
-        schema: string,
-        query: string,
-        params?: unknown
-    ): Promise<{ rows: any[]; rowCount: number | null }> {
-        // For CLI, we don't use the query store, so this is a passthrough stub
-        throw new Error('exe() is not supported in CLI mode. Use exeRaw() instead.')
-    }
-
     async exeRaw(sql: string, params?: unknown): Promise<{ rows: any[]; rowCount: number | null }> {
         this.connect()
         const paramsArray = Array.isArray(params) ? params : []
@@ -57,14 +48,12 @@ export class Database implements IDatabase {
         return { rows: result.rows, rowCount: result.rowCount }
     }
 
-    async exeNamed(
-        schema: string,
-        query: string,
-        paramsObj: unknown,
-        orderKeys: unknown[],
-        opts?: { strict?: boolean; enforceSqlArity?: boolean }
-    ): Promise<{ rows: any[]; rowCount: number | null }> {
-        throw new Error('exeNamed() is not supported in CLI mode. Use exeRaw() instead.')
+    async query<T extends Record<string, any> = any>(
+        queryDef: string | { sql: string },
+        params?: unknown[]
+    ): Promise<{ rows: T[]; rowCount: number | null }> {
+        const sql = typeof queryDef === 'string' ? queryDef : queryDef.sql
+        return (await this.exeRaw(sql, params)) as { rows: T[]; rowCount: number | null }
     }
 
     async close() {

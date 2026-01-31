@@ -5,10 +5,10 @@ import { SecurityService } from '../../src/services/SecurityService.js'
 
 // Mock dependencies
 const mockDb = {
-    exe: async (schema, query, params) => {
-        if (query === 'loadPermissions')
+    query: async (sql, params) => {
+        if (sql.includes('permission_methods'))
             return { rows: [{ profile_id: 1, method_na: 'testMethod', object_na: 'TestObject' }] }
-        if (query === 'loadDataTx')
+        if (sql.includes('security.methods'))
             return { rows: [{ tx_nu: 100, object_na: 'TestObject', method_na: 'testMethod' }] }
         return { rows: [] }
     },

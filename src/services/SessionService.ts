@@ -37,7 +37,19 @@ function redactSecretsInString(s: string): string {
 }
 // ...
 // Helper imports - assuming we can import them from original locations or duplicates
-// Ideally we should move these helpers to src/utils or src/helpers in clean architecture
+
+const SessionQueries = {
+    getUserByEmail: `
+        SELECT u.user_id, u.user_na, u.user_em, u.email_verified_at, u.user_pw, p.profile_id
+        FROM security.users u
+        LEFT JOIN security.users_profiles p ON u.user_id = p.user_id
+        WHERE u.user_em = $1
+    `,
+    getUserByUsername: `SELECT user_id, user_na, user_em, user_pw, email_verified_at FROM security.users WHERE user_na = $1`,
+    updateUserLastLogin: `
+        UPDATE security.users SET last_login_at = NOW(), updated_at = NOW() WHERE user_id = $1
+    `,
+}
 
 /**
  * Gestor de sesiones de usuario.
@@ -195,8 +207,10 @@ export class SessionManager implements ISessionService {
             }
 
             // b and identifier are already defined above
-            const queryName = looksLikeEmail(identifier) ? 'getUserByEmail' : 'getUserByUsername'
-            const result = await this.db.exe('security', queryName, [identifier])
+            const queryName = looksLikeEmail(identifier)
+                ? SessionQueries.getUserByEmail
+                : SessionQueries.getUserByUsername
+            const result = await this.db.query(queryName, [identifier])
             if (!result?.rows || result.rows.length === 0) {
                 return res
                     .status(this.clientErrors.usernameOrPasswordIncorrect.code)
@@ -231,11 +245,11 @@ export class SessionManager implements ISessionService {
             req.session!.profile_id = user.profile_id
 
             try {
-                await this.db.exe('security', 'updateUserLastLogin', [user.user_id])
+                await this.db.query(SessionQueries.updateUserLastLogin, [user.user_id])
             } catch {}
 
             try {
-                await this.db.exe('security', 'updateUserLastLogin', [user.user_id])
+                await this.db.query(SessionQueries.updateUserLastLogin, [user.user_id])
             } catch {}
 
             await this.audit.log(req, {

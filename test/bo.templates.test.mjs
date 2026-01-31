@@ -7,35 +7,37 @@ import {
     templateRepository,
     templateService,
     parseMethodsFromBO,
+    templateLocales,
 } from '../scripts/bo/templates/bo.ts'
 import { templateTypes } from '../scripts/bo/templates/types.ts'
-import { templateMessages } from '../scripts/bo/templates/messages.ts'
 import { templateErrors } from '../scripts/bo/templates/errors.ts'
 
 test('templateBO genera arquitectura 7 archivos con nomenclatura Name.Type.ts', () => {
     const out = templateBO('Order', ['getOrder'])
     assert.match(out, /extends BaseBO/)
-    // New naming: Name.Schemas.js, Name.Messages.js, Name.Errors.js
+    // New naming: Name.Schemas.js only, no Messages
     assert.match(out, /import \{ OrderSchemas.*\} from '\.\/Order\.Schemas\.js'/)
-    assert.match(out, /import \{ OrderMessages \} from '\.\/Order\.Messages\.js'/)
-    // Error imports removed from templateBO - now only in Service
+    assert.doesNotMatch(out, /OrderMessages/)
+    // Error imports removed from templateBO
     assert.match(out, /this\.exec/)
-    // Now uses exec
-    assert.match(out, /this\.exec/)
+    // Now uses exec and this.t
+    assert.match(out, /this\.t\('bo\.order\.getOrder'\)/)
     assert.match(out, /OrderSchemas\.getOrder/)
 })
 
 test('templateSchemas genera schemas con mensajes (nuevos imports)', () => {
     const out = templateSchemas('Product', ['get', 'create'])
-    assert.match(out, /import { ProductMessages } from '\.\/Product\.Messages\.js'/)
+    // No messages import
+    assert.doesNotMatch(out, /ProductMessages/)
     assert.match(out, /ProductSchemas/)
     assert.match(out, /get: z\.object/)
     assert.match(out, /create: z\.object/)
+    assert.match(out, /bo\.product\.validation/)
 })
 
 test('templateRepository genera repo con tipos (nuevos imports)', () => {
     const out = templateRepository('Product')
-    assert.match(out, /import type { Product, ProductSummary } from '\.\/Product\.Types\.js'/)
+    assert.match(out, /import type { .*Product.*ProductSummary.* } from '\.\/Product\.Types\.js'/)
     assert.match(out, /class ProductRepository/)
     assert.match(out, /findAll.*ProductSummary\[\]/)
     assert.match(out, /findById.*Product \| null/)
@@ -58,22 +60,25 @@ test('templateTypes genera interfaces', () => {
     assert.match(out, /export interface DeleteProductInput/)
 })
 
-test('templateMessages genera mensajes en español', () => {
-    const out = templateMessages('Product', ['get', 'create', 'delete'])
-    assert.match(out, /ProductMessages/)
-    assert.match(out, /GET:.*Obtenido exitosamente/)
-    assert.match(out, /CREATE:.*Creado exitosamente/)
-    assert.match(out, /DELETE:.*Eliminado exitosamente/)
-    assert.match(out, /NOT_FOUND:.*no encontrado/)
+test('templateLocales genera TS object', () => {
+    const out = templateLocales('Product', ['get', 'create', 'delete'])
+    assert.match(out, /export const ProductMessages = \{/)
+    assert.match(out, /es: \{/)
+    assert.match(out, /en: \{/)
+    assert.match(out, /get: 'Obtenido exitosamente'/)
+    assert.match(out, /create: 'Creado exitosamente'/)
+    assert.match(out, /validation: \{/)
+    assert.match(out, /notFound: 'Product no encontrado'/)
 })
 
 test('templateErrors genera clases de error (nuevos imports)', () => {
     const out = templateErrors('Product', ['get'])
-    // Import uses new naming
-    assert.match(out, /import { ProductMessages } from '\.\/Product\.Messages\.js'/)
+    // Import uses new naming - No Messages
+    assert.doesNotMatch(out, /ProductMessages/)
     assert.match(out, /import { BOError } from/)
     assert.match(out, /class ProductError extends BOError/)
     assert.match(out, /class ProductNotFoundError/)
+    assert.match(out, /bo\.product\.notFound/)
     assert.match(out, /class ProductAlreadyExistsError/)
     assert.match(out, /class ProductValidationError/)
     assert.match(out, /function handleProductError/)

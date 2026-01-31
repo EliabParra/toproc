@@ -1,7 +1,7 @@
 # CLI Deep Dive: Business Object Generator (`pnpm run bo`)
 
 The Business Object generator is your best friend for avoiding boilerplate code.
-It creates the standard **7-file structure** in seconds.
+It creates the standard **8-file structure** in seconds.
 
 ## Main Command
 
@@ -34,7 +34,7 @@ Running just `pnpm run bo` shows an interactive menu:
 
 | Command                      | Description                            |
 | ---------------------------- | -------------------------------------- |
-| `pnpm run bo new <Name>`     | Create a new Business Object (7 files) |
+| `pnpm run bo new <Name>`     | Create a new Business Object (8 files) |
 | `pnpm run bo list`           | List all registered BOs                |
 | `pnpm run bo sync [name]`    | Sync methods with database             |
 | `pnpm run bo perms [name]`   | Manage permissions for a BO            |
@@ -46,7 +46,7 @@ Running just `pnpm run bo` shows an interactive menu:
 
 ## `pnpm run bo new <Name>`
 
-Creates a new Business Object with the 7-file structure.
+Creates a new Business Object with the 8-file structure.
 
 ### Options
 
@@ -78,9 +78,10 @@ BO/Product/
 ├── 📦 ProductBO.ts            # Business Object (main file)
 ├── 🧠 Product.Service.ts      # Business logic
 ├── 🗄️ Product.Repository.ts   # Database access
+├── 🔍 Product.Queries.ts      # Colocated SQL
 ├── ✅ Product.Schemas.ts       # Zod validations
 ├── 📘 Product.Types.ts         # TypeScript interfaces
-├── 💬 Product.Messages.ts      # User-facing strings
+├── 💬 Product.Messages.ts      # i18n strings (ES/EN)
 └── ❌ Product.Errors.ts        # Custom error classes
 ```
 
@@ -147,7 +148,7 @@ Shows a permission matrix:
 
 ## `pnpm run bo auth`
 
-Generates the complete authentication module with the 7-file structure.
+Generates the complete authentication module with the 8-file structure.
 
 ```bash
 pnpm run bo auth
@@ -160,11 +161,11 @@ BO/Auth/
 ├── 📦 AuthBO.ts              # Main Business Object
 ├── 🧠 Auth.Service.ts        # Auth logic
 ├── 🗄️ Auth.Repository.ts     # DB access
+├── 🔍 Auth.Queries.ts        # Colocated SQL
 ├── ✅ Auth.Schemas.ts         # Zod validations
 ├── 📘 Auth.Types.ts           # Interfaces (User, Session, etc.)
-├── 💬 Auth.Messages.ts        # User-facing messages
-├── ❌ Auth.Errors.ts          # Custom errors
-└── 🔜 Auth.SocialAuth.ts     # OAuth (coming soon)
+├── 💬 Auth.Messages.ts        # i18n messages (ES/EN)
+└── ❌ Auth.Errors.ts          # Custom errors
 ```
 
 ---
@@ -212,8 +213,9 @@ The project includes snippets to speed up development. Type the prefix and press
 | `tp-bo-method`   | Add transactional method to a BO         |
 | `tp-service`     | Service class with repository and errors |
 | `tp-repo-method` | Database access method                   |
-| `tp-schema`      | Zod schemas with messages integration    |
-| `tp-types`       | TypeScript interfaces for entities       |
+| `tp-schema`      | Zod schemas with i18n keys               |
+| `tp-types`       | Interfaces with Entity/Input sections    |
+| `tp-queries`     | Colocated SQL file                       |
 | `tp-messages`    | Success/error/validation messages        |
 | `tp-errors`      | Custom error classes                     |
 | `tp-test`        | Test suite with Node Test Runner         |
@@ -232,12 +234,18 @@ The project includes snippets to speed up development. Type the prefix and press
 // Type: tp-messages + Tab
 
 export const ProductMessages = {
-    GET: 'Product found',
-    CREATE: 'Product created successfully',
-    UPDATE: 'Product updated successfully',
-    DELETE: 'Product deleted successfully',
-    NOT_FOUND: 'Product not found',
-    // ...
+    es: {
+        createSuccess: 'Product creado exitosamente',
+        updateSuccess: 'Product actualizado exitosamente',
+        deleteSuccess: 'Product eliminado exitosamente',
+        notFound: 'Product no encontrado',
+    },
+    en: {
+        createSuccess: 'Product created successfully',
+        updateSuccess: 'Product updated successfully',
+        deleteSuccess: 'Product deleted successfully',
+        notFound: 'Product not found',
+    },
 }
 ```
 
@@ -256,7 +264,7 @@ The script asks if you want to overwrite with `--yes` or in interactive mode.
 
 Yes! Templates live in `scripts/bo/templates/`.
 
-### Why 7 files?
+### Why 8 files?
 
 The separation promotes:
 
@@ -264,4 +272,5 @@ The separation promotes:
 2. **Maintainability**: Organized and predictable code
 3. **Reusability**: Messages and errors can be shared
 4. **Typing**: Centralized types avoid duplication
-5. **i18n**: Messages.ts facilitates internationalization
+5. **i18n**: Messages.ts facilitates bilingual internationalization
+6. **SQL**: Queries.ts keeps SQL colocated and typed

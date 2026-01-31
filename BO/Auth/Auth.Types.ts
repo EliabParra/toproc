@@ -1,3 +1,70 @@
+export type UserRow = {
+    user_id: number
+    user_na?: string | null
+    user_em?: string | null
+    email_verified_at?: string | Date | null
+    user_pw?: string | null
+    profile_id?: number | null
+}
+
+export type OneTimeCodeRow = {
+    code_id: number
+    user_id: number
+    purpose?: string | null
+    expires_at?: string | Date | null
+    consumed_at?: string | Date | null
+    attempt_count?: number | null
+    meta?: any
+}
+
+export type UserId = {
+    user_id: number
+}
+
+export type UserWithProfileId = {
+    userId: number
+    profileId: number
+}
+
+export type InsertUserParams = {
+    username: string | null
+    email: string | null
+    passwordHash: string
+}
+
+export type PasswordResetRow = {
+    reset_id: number
+    user_id: number
+    expires_at?: string | Date | null
+    used_at?: string | Date | null
+    attempt_count?: number | null
+}
+
+export type UserPasswordResetParams = {
+    userId: number
+    passwordHash: string
+}
+
+export type PasswordReset = {
+    userId: number
+    tokenHash: string
+    sentTo: string
+    expiresSeconds: number
+}
+
+export type OneTimeCode = {
+    userId: number
+    purpose: string
+    codeHash: string
+    expiresSeconds: number
+    meta?: any
+}
+
+export type GetActiveOneTimeCodeParams = {
+    purpose: string
+    tokenHash: string
+}
+
 export interface User {
     userId: number
     email: string

@@ -3,7 +3,8 @@ import bcrypt from 'bcryptjs'
 import { BOService } from '../../src/core/business-objects/BOService.js'
 import type { IConfig, IDatabase } from '../../src/types/core.js'
 import { EmailService } from '../../src/services/EmailService.js'
-import { AuthRepository, UserRow } from './Auth.Repository.js'
+import { AuthRepository } from './Auth.Repository.js'
+import { UserRow } from './Auth.Types.js'
 import type { User, RegisterData } from './Auth.Types.js'
 import { AuthEmailExistsError, AuthTokenInvalidError } from './Auth.Errors.js'
 
@@ -37,13 +38,13 @@ export class AuthService extends BOService {
             passwordHash: hash,
         })
 
-        const sessionProfileId = Number((this.config as any)?.auth?.sessionProfileId ?? 1)
+        const sessionProfileId = Number(this.config.auth.sessionProfileId ?? 1)
         await this.repo.upsertUserProfile({
             userId: user.user_id,
             profileId: sessionProfileId,
         })
 
-        if ((this.config as any)?.auth?.requireEmailVerification) {
+        if (this.config.auth.requireEmailVerification) {
             await this.sendVerificationEmail(user.user_id, data.email)
         }
 
@@ -64,9 +65,7 @@ export class AuthService extends BOService {
     }
 
     async verifyEmail(token: string): Promise<void> {
-        const purpose = String(
-            (this.config as any)?.auth?.emailVerificationPurpose ?? 'email_verification'
-        )
+        const purpose = String(this.config.auth.emailVerificationPurpose ?? 'email_verification')
         const tokenHash = sha256Hex(token)
 
         const otp = await this.repo.getActiveOneTimeCodeForPurposeAndTokenHash({
@@ -84,7 +83,7 @@ export class AuthService extends BOService {
         const user = await this.repo.getUserByEmail(email)
         if (!user || !user.user_em) return
 
-        const purpose = String((this.config as any)?.auth?.passwordResetPurpose ?? 'password_reset')
+        const purpose = String(this.config.auth.passwordResetPurpose ?? 'password_reset')
         const expiresSeconds = 900
 
         await this.repo.invalidateActivePasswordResetsForUser(user.user_id)
@@ -103,7 +102,7 @@ export class AuthService extends BOService {
             to: user.user_em,
             token,
             code: '000000',
-            appName: (this.config as any)?.app?.name,
+            appName: this.config.app.name,
         })
     }
 
@@ -125,9 +124,7 @@ export class AuthService extends BOService {
     }
 
     private async sendVerificationEmail(userId: number, emailAddr: string) {
-        const purpose = String(
-            (this.config as any)?.auth?.emailVerificationPurpose ?? 'email_verification'
-        )
+        const purpose = String(this.config.auth.emailVerificationPurpose ?? 'email_verification')
         const expiresSeconds = 900
 
         const token = randomBytes(32).toString('hex')
@@ -145,7 +142,7 @@ export class AuthService extends BOService {
             to: emailAddr,
             token,
             code: '000000',
-            appName: (this.config as any)?.app?.name,
+            appName: this.config.app.name,
         })
     }
 

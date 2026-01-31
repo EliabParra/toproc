@@ -3,7 +3,7 @@
  */
 export function sendInvalidParameters(
     res: AppResponse,
-    invalidParametersError: ApiError,
+    invalidParametersError: { code: number; msg: string },
     alerts: string[]
 ) {
     return res.status(invalidParametersError.code).send({

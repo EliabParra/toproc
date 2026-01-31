@@ -46,7 +46,7 @@ export abstract class CrudBO<T, TCreate = T, TUpdate = Partial<T>> extends BaseB
             ])
             return this.success(res.rows)
         } catch (e) {
-            return this.safeCatch(e)
+            return this.safeCatch(e) as any
         }
     }
 

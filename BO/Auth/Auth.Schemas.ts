@@ -1,15 +1,14 @@
 import { z } from 'zod'
-import { AuthMessages } from './Auth.Messages.js'
 
 export const AuthSchemas = {
     login: z.object({
-        loginId: z.string().min(1, AuthMessages.VALIDATION.LOGIN_ID_REQUIRED),
-        password: z.string().min(1, AuthMessages.VALIDATION.PASSWORD_REQUIRED),
+        loginId: z.string().min(1, 'bo.auth.validation.loginIdRequired'),
+        password: z.string().min(1, 'bo.auth.validation.passwordRequired'),
     }),
 
     register: z.object({
-        email: z.string().email(AuthMessages.VALIDATION.EMAIL_INVALID),
-        password: z.string().min(8, AuthMessages.VALIDATION.PASSWORD_TOO_SHORT),
+        email: z.string().email('bo.auth.validation.emailInvalid'),
+        password: z.string().min(8, 'bo.auth.validation.passwordTooShort'),
         name: z.string().optional(),
     }),
 
@@ -18,29 +17,29 @@ export const AuthSchemas = {
     }),
 
     verifyEmail: z.object({
-        token: z.string().min(1, AuthMessages.VALIDATION.TOKEN_REQUIRED),
+        token: z.string().min(1, 'bo.auth.validation.tokenRequired'),
     }),
 
     requestEmailVerification: z.object({
-        identifier: z.string().min(1, AuthMessages.VALIDATION.EMAIL_REQUIRED),
+        identifier: z.string().min(1, 'bo.auth.validation.emailRequired'),
     }),
 
     resetPassword: z.object({
-        email: z.string().email(AuthMessages.VALIDATION.EMAIL_INVALID),
+        email: z.string().email('bo.auth.validation.emailInvalid'),
     }),
 
     verifyPasswordReset: z.object({
-        token: z.string().min(1, AuthMessages.VALIDATION.TOKEN_REQUIRED),
+        token: z.string().min(1, 'bo.auth.validation.tokenRequired'),
     }),
 
     resetPasswordConfirm: z.object({
-        token: z.string().min(1, AuthMessages.VALIDATION.TOKEN_REQUIRED),
-        newPassword: z.string().min(8, AuthMessages.VALIDATION.PASSWORD_TOO_SHORT),
+        token: z.string().min(1, 'bo.auth.validation.tokenRequired'),
+        newPassword: z.string().min(8, 'bo.auth.validation.passwordTooShort'),
     }),
 
     changePassword: z.object({
-        currentPassword: z.string().min(1, AuthMessages.VALIDATION.PASSWORD_REQUIRED),
-        newPassword: z.string().min(8, AuthMessages.VALIDATION.PASSWORD_TOO_SHORT),
+        currentPassword: z.string().min(1, 'bo.auth.validation.passwordRequired'),
+        newPassword: z.string().min(8, 'bo.auth.validation.passwordTooShort'),
     }),
 }
 

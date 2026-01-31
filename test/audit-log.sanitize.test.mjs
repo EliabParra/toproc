@@ -6,8 +6,8 @@ import { AuditService } from '../src/services/AuditService.js'
 test('AuditService.log redacts secrets in details before insert', async () => {
     const calls = []
     const dbStub = {
-        exe: async (schema, query, params) => {
-            calls.push([schema, query, params])
+        query: async (query, params) => {
+            calls.push(['security', query, params]) // Adapting to test expectation of [schema, query, params]
             return { rows: [] }
         },
     }
@@ -39,7 +39,7 @@ test('AuditService.log redacts secrets in details before insert', async () => {
     assert.equal(calls.length, 1)
     const [schema, query, params] = calls[0]
     assert.equal(schema, 'security')
-    assert.equal(query, 'insertAuditLog')
+    assert.match(query, /INSERT INTO security.audit_logs/)
 
     const metaJson = params[7]
     const meta = JSON.parse(metaJson)

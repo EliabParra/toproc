@@ -10,7 +10,7 @@ export function templateTypes(objectName: string, methods: string[] = []) {
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
 
     const extraInputs = methods
-        .filter((m) => !['create', 'update'].includes(m.toLowerCase()))
+        .filter((m) => !['create', 'update', 'delete', 'get', 'getall'].includes(m.toLowerCase()))
         .map((m) => {
             const pascalMethod = m.charAt(0).toUpperCase() + m.slice(1)
             return `export interface ${pascalMethod}${pascalName}Input {
@@ -51,6 +51,26 @@ export interface Update${pascalName}Input {
     // TODO: Definir datos para actualización
 }
 
+export interface Get${pascalName}Input {
+    // TODO: Definir datos para get
+}
+
+export interface GetAll${pascalName}Input {
+    // TODO: Definir datos para getAll
+}
+
+export interface Delete${pascalName}Input {
+    // TODO: Definir datos para delete
+}
+
 ${extraInputs}
+
+export type RowCount${pascalName} = {
+    rowCount: number
+}
+
+export type Exists${pascalName} = {
+    exists: boolean
+}
 `
 }

@@ -1,5 +1,13 @@
 import { IDatabase, ILogger } from '../../types/core.js'
 
+const TxQueries = {
+    loadDataTx: `
+        SELECT m.tx as tx_nu, o.object_name as object_na, m.method_name as method_na 
+        FROM security.methods m 
+        INNER JOIN security.objects o ON m.object_id = o.object_id
+    `,
+}
+
 /**
  * Define la ruta de ejecución para una transacción.
  */
@@ -49,7 +57,7 @@ export class TransactionMapper {
         try {
             // Accessing raw db result rows from IDatabase simplified interface
             // Expected query: security.loadDataTx
-            const result = await this.db.exe('security', 'loadDataTx', null)
+            const result = await this.db.query(TxQueries.loadDataTx)
 
             if (!result || !result.rows) {
                 this.log.show({

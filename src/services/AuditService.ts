@@ -11,6 +11,14 @@ export type AuditArgs = {
     details?: Record<string, unknown>
 }
 
+const AuditQueries = {
+    insertAuditLog: `
+        INSERT INTO security.audit_logs 
+        (request_id, user_id, profile_id, action, object_name, method_name, tx, meta)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+    `,
+}
+
 /**
  * Servicio de Auditoría.
  *
@@ -38,7 +46,7 @@ export class AuditService implements IAuditService {
         try {
             const safeDetails = redactSecrets((details ?? {}) as Record<string, unknown>)
 
-            await this.db.exe('security', 'insertAuditLog', [
+            await this.db.query(AuditQueries.insertAuditLog, [
                 req?.requestId,
                 user_id,
                 profile_id,

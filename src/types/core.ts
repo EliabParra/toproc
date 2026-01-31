@@ -43,8 +43,11 @@ export interface IValidator {
  * Servicio de internacionalización.
  */
 export interface II18nService {
+    currentLocale: string
+    messages: any
+
     /**
-     * Obtiene una traducción por su clave.
+     * Obtiene una traducción por su clave (Legacy).
      * @param key Clave del mensaje (e.g. 'auth.login.success')
      * @param params Variables para interpolar
      * @param locale Idioma opcional
@@ -52,15 +55,22 @@ export interface II18nService {
     t(key: string, params?: Record<string, unknown>, locale?: string): string
 
     /**
+     * Interpola parámetros en un template string.
+     */
+    format(template: string, params?: Record<string, unknown>): string
+
+    /**
+     * Selecciona el objeto de mensajes para el idioma actual.
+     */
+    use<T>(messageSet: Record<string, T>): NonNullable<T>
+
+    /**
      * Obtiene un objeto de error HTTP con código y mensaje.
-     * @param key Clave de error (e.g. 'errors.server.dbError')
-     * @param params Variables para interpolar
-     * @param locale Idioma opcional
+     * Soporta selector function (Typed) o key string (Legacy).
      */
     error(
-        key: string,
-        params?: Record<string, unknown>,
-        locale?: string
+        selectorOrKey: string | ((msgs: any) => { msg: string; code: number }),
+        params?: Record<string, unknown>
     ): { msg: string; code: number }
 
     /**
@@ -82,33 +92,18 @@ export interface IDatabase {
      * @param query Nombre de la query
      * @param params Parámetros (array u objeto)
      */
-    exe(
-        schema: string,
-        query: string,
-        params?: unknown
-    ): Promise<{ rows: any[]; rowCount: number | null }>
-
     /**
-     * Ejecuta SQL crudo.
-     * @param sql Sentencia SQL
-     * @param params Parámetros posicionales
+     * Executes a raw query or query definition.
      */
     exeRaw(sql: string, params?: unknown): Promise<{ rows: any[]; rowCount: number | null }>
 
     /**
-     * Ejecuta query con parámetros nombrados.
-     * @param schema Esquema de la query
-     * @param query Nombre de la query
-     * @param paramsObj Objeto con valores
-     * @param orderKeys Orden esperado de claves
+     * Executes a raw query or query definition.
      */
-    exeNamed(
-        schema: string,
-        query: string,
-        paramsObj: unknown,
-        orderKeys: unknown[],
-        opts?: { strict?: boolean; enforceSqlArity?: boolean }
-    ): Promise<{ rows: any[]; rowCount: number | null }>
+    query<T extends Record<string, any> = any>(
+        queryDef: string | { sql: string },
+        params?: unknown[]
+    ): Promise<{ rows: T[]; rowCount: number | null }>
 }
 
 /**
@@ -226,5 +221,5 @@ export interface BODependencies {
     security: ISecurityService
     session: ISessionService
     validator: IValidator
-    i18n?: II18nService
+    i18n: II18nService
 }

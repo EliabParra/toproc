@@ -49,7 +49,7 @@ function createMockI18n() {
 // Helper to create mock dependencies
 function createMockDeps(overrides = {}) {
     return {
-        db: { exe: async () => ({ rows: [] }) },
+        db: { query: async () => ({ rows: [] }), exe: async () => ({ rows: [] }) },
         log: {
             TYPE_INFO: 'info',
             TYPE_WARNING: 'warn',
@@ -194,7 +194,7 @@ test('createSession returns 400 if session already exists', async () => {
 
 test('createSession returns 401 for non-existent user', async () => {
     const deps = createMockDeps({
-        db: { exe: async () => ({ rows: [] }) },
+        db: { query: async () => ({ rows: [] }) },
     })
     const sm = new SessionManager(deps)
 
@@ -217,11 +217,11 @@ test('createSession returns 401 for non-existent user', async () => {
 })
 
 test('createSession uses getUserByUsername for non-email identifier', async () => {
-    let queryCalled = null
+    let sqlCalled = null
     const deps = createMockDeps({
         db: {
-            exe: async (schema, query) => {
-                queryCalled = query
+            query: async (sql) => {
+                if (!sqlCalled) sqlCalled = sql
                 return { rows: [] }
             },
         },
@@ -239,15 +239,15 @@ test('createSession uses getUserByUsername for non-email identifier', async () =
 
     await sm.createSession(req, res)
 
-    assert.equal(queryCalled, 'getUserByUsername')
+    assert.ok(sqlCalled.includes('user_na = $1'), 'Should use username lookup query')
 })
 
 test('createSession uses getUserByEmail for email identifier', async () => {
-    let queryCalled = null
+    let sqlCalled = null
     const deps = createMockDeps({
         db: {
-            exe: async (schema, query) => {
-                queryCalled = query
+            query: async (sql) => {
+                if (!sqlCalled) sqlCalled = sql
                 return { rows: [] }
             },
         },
@@ -265,14 +265,14 @@ test('createSession uses getUserByEmail for email identifier', async () => {
 
     await sm.createSession(req, res)
 
-    assert.equal(queryCalled, 'getUserByEmail')
+    assert.ok(sqlCalled.includes('user_em = $1'), 'Should use email lookup query')
 })
 
 test('createSession handles error gracefully and logs', async () => {
     let logCalled = false
     const deps = createMockDeps({
         db: {
-            exe: async () => {
+            query: async () => {
                 throw new Error('DB Error')
             },
         },

@@ -49,7 +49,7 @@ ${'Generated Files:'.bold} (7 files per BO)
   🗄️ {Name}.Repository.ts    Database access layer
   ✅ {Name}.Schemas.ts        Zod validations
   📘 {Name}.Types.ts          TypeScript interfaces
-  💬 {Name}.Messages.ts       User-facing strings
+  💬 {Name}.Messages.ts       Messages for i18n
   ❌ {Name}.Errors.ts         Custom error classes
 `
 

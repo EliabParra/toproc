@@ -1,135 +1,115 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { createRequire } from 'node:module'
 import { deepMerge } from '../config/utils/merge.utils.js'
-
-const require = createRequire(import.meta.url)
+import type { AppMessages } from '../locales/es.js'
 
 /**
- * Servicio de internacionalización (I18n) para mensajes multilingües.
+ * Servicio de internacionalización (I18n).
  *
- * Carga archivos JSON de ubicación (`locales/es/*.json`) y permite
- * la interpolación de parámetros en tiempo de ejecución.
- * Soporta estructuras anidadas y objetos con propiedades { msg, code }.
- *
- *
- *
- * @example
- * ```typescript
- * const i18n = new I18nService('es')
- * i18n.loadLocale('es', './src/locales/es')
- * console.log(i18n.t('auth.login.success', { user: 'Admin' }))
- * ```
+ * Gestiona mensajes tipados y evita el uso de strings mágicos como keys.
+ * Soporta registro de locales globales y uso de objetos de mensajes por componente.
  */
 export class I18nService {
     private locales: Record<string, any> = {}
     private defaultLocale: string
+    currentLocale: string
 
     /**
      * Crea una instancia de I18nService.
-     *
      * @param defaultLocale - Idioma por defecto (e.g. 'es')
      */
     constructor(defaultLocale: string = 'es') {
         this.defaultLocale = defaultLocale
+        this.currentLocale = defaultLocale
     }
 
     /**
-     * Carga todos los archivos JSON de un directorio como dominios de traducción.
-     *
-     * @param locale - Código del idioma (e.g. 'es')
-     * @param dirPath - Ruta absoluta al directorio de archivos JSON
+     * Registra un objeto de mensajes para un idioma.
+     * @param locale - Idioma (e.g. 'es')
+     * @param messages - Objeto de mensajes
      */
-    loadLocale(locale: string, dirPath: string) {
-        if (!fs.existsSync(dirPath)) return
-
-        const files = fs.readdirSync(dirPath)
-        const localeData: Record<string, any> = {}
-
-        for (const file of files) {
-            if (path.extname(file) !== '.json') continue
-            const domain = path.basename(file, '.json') // e.g. 'auth', 'errors'
-
-            try {
-                const content = require(path.join(dirPath, file))
-                // Structure: domain -> content
-                // So t('auth.login.success') works if auth.json contains { login: { success: ... } }
-                localeData[domain] = content
-            } catch (err) {
-                console.error(`Error cargando archivo de locale ${file}`, err)
-            }
-        }
-
-        this.locales[locale] = localeData
+    register(locale: string, messages: Record<string, any>) {
+        this.locales[locale] = deepMerge(this.locales[locale] || {}, messages)
     }
 
     /**
-     * Traduce una clave y opcionalmente interpola parámetros.
+     * Obtiene los mensajes globales para el idioma actual.
+     */
+    get messages(): AppMessages {
+        return (this.locales[this.currentLocale] ||
+            this.locales[this.defaultLocale] ||
+            {})
+    }
+
+    /**
+     * Selecciona el objeto de mensajes adecuado para el idioma actual.
+     * Útil para constantes de mensajes en BOs (AuthMessages).
      *
-     * @param key - Clave de traducción (e.g. 'auth.login.success')
-     * @param params - Objeto con valores para reemplazar {variable}
-     * @param locale - Idioma opcional (usa default si se omite)
-     * @returns {string} Mensaje traducido o la clave si no existe
+     * @param messageSet - Objeto con claves por idioma { es: {...}, en: {...} }
+     * @returns El objeto de mensajes del idioma actual
+     */
+    use<T>(messageSet: Record<string, T>): NonNullable<T> {
+        return (messageSet[this.currentLocale] ||
+            messageSet[this.defaultLocale] ||
+            messageSet['es']) as NonNullable<T>
+    }
+
+    /**
+     * Interpola parámetros en un string.
+     * Alias público de interpolate.
+     */
+    format(template: string, params?: Record<string, any>): string {
+        return this.interpolate(template, params)
+    }
+
+    /**
+     * @deprecated Usar `i18n.messages` o `i18n.use()` para acceso tipado.
+     * Traduce una clave string (soporte legacy/dinámico).
      */
     t(key: string, params?: Record<string, any>, locale?: string): string {
-        const targetLocale = locale || this.defaultLocale
+        const targetLocale = locale || this.currentLocale
         const data = this.locales[targetLocale] || this.locales[this.defaultLocale] || {}
 
         const value = this.resolveKey(data, key)
-        if (!value) return key // Fallback to key if not found
+        if (!value) return key
 
-        if (typeof value === 'object' && value.msg) return this.interpolate(value.msg, params) // Handle { msg, code } style
+        if (typeof value === 'object' && value.msg) return this.interpolate(value.msg, params)
         if (typeof value === 'string') return this.interpolate(value, params)
 
         return key
     }
 
     /**
-     * Obtiene un objeto de error HTTP con código y mensaje traducido.
-     * Diseñado para errores que requieren código HTTP (e.g. { msg, code }).
-     *
-     * @param key - Clave de error (e.g. 'errors.server.notFound')
-     * @param params - Parámetros de interpolación opcionales
-     * @param locale - Idioma opcional
-     * @returns {{ msg: string, code: number }} Objeto de error HTTP
-     *
-     * @example
-     * ```typescript
-     * const err = i18n.error('errors.server.dbError')
-     * // { msg: 'Error al consultar la base de datos', code: 500 }
-     * res.status(err.code).json(err)
-     * ```
+     * Obtiene un objeto de error HTTP desde los mensajes globales.
+     * @param selector - Función que selecciona el error desde AppMessages
+     * @param params - Parámetros de interpolación
      */
     error(
-        key: string,
-        params?: Record<string, any>,
-        locale?: string
+        selector: (msgs: AppMessages['errors']) => { msg: string; code: number },
+        params?: Record<string, any>
     ): { msg: string; code: number } {
-        const targetLocale = locale || this.defaultLocale
-        const data = this.locales[targetLocale] || this.locales[this.defaultLocale] || {}
-
-        const value = this.resolveKey(data, key)
-        if (!value || typeof value !== 'object') {
-            return { msg: key, code: 500 }
-        }
+        const msgs = this.messages.errors
+        const err = selector(msgs)
+        if (!err) return { msg: 'Unknown Error', code: 500 }
 
         return {
-            msg: this.interpolate(value.msg || key, params),
-            code: value.code || 500,
+            msg: this.interpolate(err.msg, params),
+            code: err.code,
         }
     }
 
-    /**
-     * Obtiene un objeto completo de una clave (útil para estructuras anidadas).
-     *
-     * @param key - Clave de acceso (e.g. 'errors.server')
-     * @param locale - Idioma opcional
-     * @returns {any} Objeto o valor de la clave
-     */
-    get(key: string, locale?: string): any {
-        const targetLocale = locale || this.defaultLocale
-        const data = this.locales[targetLocale] || this.locales[this.defaultLocale] || {}
-        return this.resolveKey(data, key)
+    // Legacy string-key error accessor (to avoid breaking everything at once)
+    errorKey(key: string, params?: Record<string, any>): { msg: string; code: number } {
+        // Re-implement simplified legacy lookup if needed, or map to keys
+        // For now, let's keep basic lookup for legacy compatibility
+        const val = this.resolveKey(this.messages, key)
+        if (!val) return { msg: key, code: 500 }
+        return {
+            msg: this.interpolate(val.msg || key, params),
+            code: val.code || 500,
+        }
+    }
+
+    get(key: string): string {
+        return this.resolveKey(this.messages, key)
     }
 
     private resolveKey(obj: any, key: string) {

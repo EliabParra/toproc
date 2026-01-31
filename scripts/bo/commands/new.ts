@@ -4,9 +4,11 @@ import {
     templateRepository,
     templateService,
     templateSchemas,
+    templateQueries,
 } from '../templates/bo.js'
+
 import { templateTypes } from '../templates/types.js'
-import { templateMessages } from '../templates/messages.js'
+import { templateLocales } from '../templates/messages.js'
 import { templateErrors } from '../templates/errors.js'
 import { Interactor } from '../interactor/ui.js'
 import fs from 'node:fs/promises'
@@ -103,10 +105,12 @@ export class NewCommand {
             const serviceContent = templateService(cleanName)
             const schemasContent = templateSchemas(cleanName, methods)
             const typesContent = templateTypes(cleanName, methods)
-            const messagesContent = templateMessages(cleanName, methods)
+            const localesContent = templateLocales(cleanName, methods)
             const errorsContent = templateErrors(cleanName, methods)
+            const queriesContent = templateQueries(cleanName)
 
             const dir = path.join(this.ctx.config.rootDir, 'BO', pascalName)
+            const localesDir = path.join(dir, 'locales')
 
             const files = [
                 {
@@ -131,6 +135,13 @@ export class NewCommand {
                     desc: 'Data Access',
                 },
                 {
+                    path: path.join(dir, `${pascalName}.Queries.ts`),
+                    content: queriesContent,
+                    name: `${pascalName}.Queries.ts`,
+                    icon: '🔍',
+                    desc: 'SQL Queries',
+                },
+                {
                     path: path.join(dir, `${pascalName}.Schemas.ts`),
                     content: schemasContent,
                     name: `${pascalName}.Schemas.ts`,
@@ -151,10 +162,10 @@ export class NewCommand {
             if (!skipMessages) {
                 files.push({
                     path: path.join(dir, `${pascalName}.Messages.ts`),
-                    content: messagesContent,
+                    content: localesContent,
                     name: `${pascalName}.Messages.ts`,
                     icon: '💬',
-                    desc: 'Localized Strings',
+                    desc: 'Messages for i18n',
                 })
             }
             if (!skipErrors) {

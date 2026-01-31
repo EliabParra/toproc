@@ -13,6 +13,7 @@
 export function templateErrors(objectName: string, _methods: string[]) {
     const cleanName = objectName.replace(/BO$/, '')
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
+    const lowerName = cleanName.toLowerCase()
     const upperName = cleanName.toUpperCase()
 
     return `/**
@@ -24,7 +25,6 @@ export function templateErrors(objectName: string, _methods: string[]) {
  * - Depuración más fácil
  */
 
-import { ${pascalName}Messages } from './${pascalName}.Messages.js'
 import { BOError } from '../../src/core/errors/BOError.js'
 
 // ============================================================
@@ -56,10 +56,7 @@ export class ${pascalName}Error extends BOError {
  */
 export class ${pascalName}NotFoundError extends ${pascalName}Error {
     constructor(id?: number) {
-        const message = id 
-            ? ${pascalName}Messages.notFoundById(id)
-            : ${pascalName}Messages.NOT_FOUND
-        super(message, '${upperName}_NOT_FOUND', 404, id ? { id } : undefined)
+        super('bo.${lowerName}.notFound', '${upperName}_NOT_FOUND', 404, id ? { id } : undefined)
         this.name = '${pascalName}NotFoundError'
     }
 }
@@ -69,10 +66,7 @@ export class ${pascalName}NotFoundError extends ${pascalName}Error {
  */
 export class ${pascalName}AlreadyExistsError extends ${pascalName}Error {
     constructor(field?: string, value?: string) {
-        const message = field && value
-            ? ${pascalName}Messages.duplicateField(field, value)
-            : ${pascalName}Messages.ALREADY_EXISTS
-        super(message, '${upperName}_ALREADY_EXISTS', 409, { field, value })
+        super('bo.${lowerName}.alreadyExists', '${upperName}_ALREADY_EXISTS', 409, { field, value })
         this.name = '${pascalName}AlreadyExistsError'
     }
 }
@@ -84,7 +78,7 @@ export class ${pascalName}ValidationError extends ${pascalName}Error {
     readonly validationErrors: string[]
 
     constructor(errors: string[]) {
-        super(${pascalName}Messages.INVALID_DATA, '${upperName}_VALIDATION_ERROR', 400, { errors })
+        super('bo.${lowerName}.invalidData', '${upperName}_VALIDATION_ERROR', 400, { errors })
         this.name = '${pascalName}ValidationError'
         this.validationErrors = errors
     }
@@ -96,7 +90,7 @@ export class ${pascalName}ValidationError extends ${pascalName}Error {
 export class ${pascalName}CannotDeleteError extends ${pascalName}Error {
     constructor(reason?: string) {
         super(
-            reason || ${pascalName}Messages.CANNOT_DELETE,
+            'bo.${lowerName}.cannotDelete',
             '${upperName}_CANNOT_DELETE',
             409,
             { reason }
@@ -111,7 +105,7 @@ export class ${pascalName}CannotDeleteError extends ${pascalName}Error {
 export class ${pascalName}PermissionError extends ${pascalName}Error {
     constructor(action?: string) {
         super(
-            ${pascalName}Messages.PERMISSION_DENIED,
+            'bo.${lowerName}.permissionDenied',
             '${upperName}_PERMISSION_DENIED',
             403,
             { action }

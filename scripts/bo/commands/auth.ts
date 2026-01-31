@@ -91,8 +91,9 @@ export class AuthCommand {
             console.log('      ├── 🗄️ Auth.Repository.ts')
             console.log('      ├── ✅ Auth.Schemas.ts')
             console.log('      ├── 📘 Auth.Types.ts')
-            console.log('      ├── 💬 Auth.Messages.ts')
+            console.log('      ├── 🌎 Auth.Messages.ts')
             console.log('      ├── ❌ Auth.Errors.ts')
+            console.log('      ├── 🔍 Auth.Queries.ts')
             console.log('      └── 🔜 Auth.SocialAuth.ts (Coming Soon)')
             this.interactor.close()
             return
@@ -119,6 +120,7 @@ export class AuthCommand {
                 path: path.join(authDir, 'Auth.Repository.ts'),
                 content: AuthPreset.repository(),
                 icon: '🗄️',
+                desc: 'Auth Repository',
             },
             {
                 path: path.join(authDir, 'Auth.Schemas.ts'),
@@ -129,12 +131,18 @@ export class AuthCommand {
             {
                 path: path.join(authDir, 'Auth.Messages.ts'),
                 content: AuthPreset.messages(),
-                icon: '💬',
+                icon: '🌎',
             },
             {
                 path: path.join(authDir, 'Auth.Errors.ts'),
                 content: AuthPreset.errors(),
                 icon: '❌',
+            },
+            {
+                path: path.join(authDir, 'Auth.Queries.ts'),
+                content: AuthPreset.queries(),
+                icon: '🔍',
+                desc: 'SQL Queries',
             },
         ]
 
