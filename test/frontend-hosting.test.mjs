@@ -9,21 +9,35 @@ import os from 'node:os'
 import { registerFrontendHosting } from '../src/frontend-adapters/index.js'
 import { routes } from '../src/api/http/router/routes.js'
 
-function makeMsgs() {
-    return {
-        en: {
-            errors: {
-                client: {
-                    unknown: { code: 500, msg: 'Unknown' },
-                },
+// Mock i18n helper
+function createMockI18n() {
+    const data = {
+        errors: {
+            client: {
+                unknown: { code: 500, msg: 'Unknown' },
             },
+        },
+    }
+    return {
+        t: (key) => key,
+        error: (key) => {
+            const parts = key.split('.')
+            let val = data
+            for (const p of parts) val = val?.[p]
+            return val || { msg: key, code: 500 }
+        },
+        get: (key) => {
+            const parts = key.split('.')
+            let val = data
+            for (const p of parts) val = val?.[p]
+            return val
         },
     }
 }
 
 const mockLog = { TYPE_ERROR: 'error', show: () => {} }
 const mockConfig = { app: { lang: 'en' } }
-const mockMsgs = makeMsgs()
+const mockI18n = createMockI18n()
 
 test('buildPagesRouter redirects when validateIsAuth=true and session missing', async () => {
     const { buildPagesRouter } = await import('../src/api/http/router/pages.js')
@@ -36,7 +50,7 @@ test('buildPagesRouter redirects when validateIsAuth=true and session missing', 
         buildPagesRouter({
             session,
             config: mockConfig,
-            msgs: mockMsgs,
+            i18n: mockI18n,
             log: mockLog,
             routes: [added],
         })
@@ -58,7 +72,7 @@ test('buildPagesRouter serves page when authenticated', async () => {
         buildPagesRouter({
             session,
             config: mockConfig,
-            msgs: mockMsgs,
+            i18n: mockI18n,
             log: mockLog,
             routes: [added],
         })
@@ -78,7 +92,7 @@ test('registerFrontendHosting does nothing when stage does not match', async () 
         stage: 'postApi',
         session: {},
         config,
-        msgs: mockMsgs,
+        i18n: mockI18n,
         log: mockLog,
     })
 
@@ -91,7 +105,7 @@ test('registerPagesHosting mounts static + pages router', async () => {
 
     const app = express()
     const session = { sessionExists: () => true }
-    await registerPagesHosting(app, { session, config: mockConfig, msgs: mockMsgs, log: mockLog })
+    await registerPagesHosting(app, { session, config: mockConfig, i18n: mockI18n, log: mockLog })
 
     const res = await request(app).get('/').set('Accept', 'text/html')
     assert.equal(res.status, 200)
@@ -117,7 +131,7 @@ test('registerFrontendHosting spa mode serves index.html fallback for html reque
             stage: 'postApi',
             session: {},
             config,
-            msgs: mockMsgs,
+            i18n: mockI18n,
             log: mockLog,
         })
 
@@ -147,7 +161,7 @@ test('registerFrontendHosting spa mode throws when SPA_DIST_PATH is missing (non
                 stage: 'postApi',
                 session: {},
                 config,
-                msgs: mockMsgs,
+                i18n: mockI18n,
                 log: mockLog,
             })
         }, /SPA_DIST_PATH/i)

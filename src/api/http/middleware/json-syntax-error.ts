@@ -1,4 +1,4 @@
-import { IConfig } from '../../../types/core.js'
+import { IConfig, II18nService } from '../../../types/core.js'
 
 /**
  * Crea un middleware para capturar errores de sintaxis JSON en el body.
@@ -7,11 +7,11 @@ import { IConfig } from '../../../types/core.js'
  * Este middleware intercepta ese error específico y devuelve nuestra respuesta estándar de "Parámetros inválidos".
  *
  * @function createJsonSyntaxErrorHandler
- * @param deps - Dependencias (config, msgs)
+ * @param deps - Dependencias (config, i18n)
  * @returns {Function} Middleware de manejo de errores Express
  */
-export function createJsonSyntaxErrorHandler(deps: { config: IConfig; msgs: any }) {
-    const { config, msgs } = deps
+export function createJsonSyntaxErrorHandler(deps: { config: IConfig; i18n: II18nService }) {
+    const { i18n } = deps
     return function jsonBodySyntaxErrorHandler(err: any, req: any, res: any, next: any) {
         const status = err?.status ?? err?.statusCode
         const isEntityParseFailed = err?.type === 'entity.parse.failed'
@@ -20,9 +20,8 @@ export function createJsonSyntaxErrorHandler(deps: { config: IConfig; msgs: any 
 
         if (!looksLikeJsonParseError) return next(err)
 
-        const lang = config.app.lang || 'es'
-        const alert = msgs[lang].alerts.invalidJson.replace('{value}', 'body')
-        const errorDef = msgs[lang].errors.client.invalidParameters
+        const alert = i18n.t('alerts.invalidJson', { value: 'body' })
+        const errorDef = i18n.error('errors.client.invalidParameters')
 
         return res.status(errorDef.code).send({
             msg: errorDef.msg,

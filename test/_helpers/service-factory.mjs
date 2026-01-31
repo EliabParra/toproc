@@ -23,7 +23,7 @@ export function createTestDispatcher(globals) {
         db: globals.db,
         log: globals.log,
         config: globals.config,
-        msgs: globals.msgs,
+        i18n: globals.i18n,
         email: emailStub,
         audit: audit,
         v: globals.v,
@@ -34,7 +34,7 @@ export function createTestDispatcher(globals) {
         log: globals.log,
         security: globals.security,
         session: session,
-        msgs: globals.msgs,
+        i18n: globals.i18n,
         audit: audit,
         db: globals.db,
     })

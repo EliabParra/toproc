@@ -1,12 +1,12 @@
 import express from 'express'
 import path from 'path'
 import { routes, pagesPath } from './routes.js'
-import { IConfig, ILogger } from '../../../types/core.js'
+import { IConfig, ILogger, II18nService } from '../../../types/core.js'
 
 type PagesRouterArgs = {
     session?: { sessionExists?: (req: any) => boolean }
     config: IConfig
-    msgs: any
+    i18n: II18nService
     log: ILogger
     routes?: any[]
 }
@@ -15,18 +15,18 @@ type PagesRouterArgs = {
  * Construye el router de páginas (SSR/Static).
  * Mapea definiciones de rutas a archivos HTML y aplica protección de sesión si es necesario.
  *
- * @param args - Configuración ({ session, config, msgs, log, routes })
+ * @param args - Configuración ({ session, config, i18n, log, routes })
  * @returns Express Router
  */
 export function buildPagesRouter({
     session,
     config,
-    msgs,
+    i18n,
     log,
     routes: providedRoutes,
 }: PagesRouterArgs) {
     const activeRoutes = providedRoutes || routes
-    const clientErrors = msgs[config.app.lang].errors.client
+    const clientErrors = i18n.get('errors.client') as Record<string, { msg: string; code: number }>
     const router = express.Router()
 
     const requireAuth = (req: any, res: any, next: any) => {

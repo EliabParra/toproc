@@ -27,7 +27,11 @@ class TestBO extends BaseBO {
 }
 
 function createTestBO() {
-    const i18nStub = { t: (k) => k }
+    const i18nStub = {
+        t: (k) => k,
+        error: (k) => ({ msg: k, code: 500 }),
+        get: (k) => undefined,
+    }
     const dbStub = { exe: async () => ({ rows: [] }) }
     const logStub = {
         TYPE_INFO: 'info',
@@ -36,7 +40,6 @@ function createTestBO() {
         show: () => {},
     }
     const configStub = { app: { lang: 'en' } }
-    const msgsStub = { en: { errors: { server: { unknown: { msg: 'Unknown', code: 500 } } } } }
 
     const validator = new AppValidator(i18nStub)
 
@@ -44,7 +47,7 @@ function createTestBO() {
         db: dbStub,
         log: logStub,
         config: configStub,
-        msgs: msgsStub,
+        i18n: i18nStub,
         v: validator,
     })
 }

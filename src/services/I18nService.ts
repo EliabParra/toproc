@@ -85,15 +85,51 @@ export class I18nService {
     }
 
     /**
-     * Retorna el objeto completo de locales para compatibilidad legacy.
+     * Obtiene un objeto de error HTTP con código y mensaje traducido.
+     * Diseñado para errores que requieren código HTTP (e.g. { msg, code }).
      *
-     * @deprecated Usar métodos específicos de traducción en su lugar
-     * @param locale - Idioma específico
-     * @returns {any} Objeto de mensajes
+     * @param key - Clave de error (e.g. 'errors.server.notFound')
+     * @param params - Parámetros de interpolación opcionales
+     * @param locale - Idioma opcional
+     * @returns {{ msg: string, code: number }} Objeto de error HTTP
+     *
+     * @example
+     * ```typescript
+     * const err = i18n.error('errors.server.dbError')
+     * // { msg: 'Error al consultar la base de datos', code: 500 }
+     * res.status(err.code).json(err)
+     * ```
      */
-    getLegacyObject(locale?: string) {
-        if (!locale) return this.locales
-        return { [locale]: this.locales[locale] }
+    error(
+        key: string,
+        params?: Record<string, any>,
+        locale?: string
+    ): { msg: string; code: number } {
+        const targetLocale = locale || this.defaultLocale
+        const data = this.locales[targetLocale] || this.locales[this.defaultLocale] || {}
+
+        const value = this.resolveKey(data, key)
+        if (!value || typeof value !== 'object') {
+            return { msg: key, code: 500 }
+        }
+
+        return {
+            msg: this.interpolate(value.msg || key, params),
+            code: value.code || 500,
+        }
+    }
+
+    /**
+     * Obtiene un objeto completo de una clave (útil para estructuras anidadas).
+     *
+     * @param key - Clave de acceso (e.g. 'errors.server')
+     * @param locale - Idioma opcional
+     * @returns {any} Objeto o valor de la clave
+     */
+    get(key: string, locale?: string): any {
+        const targetLocale = locale || this.defaultLocale
+        const data = this.locales[targetLocale] || this.locales[this.defaultLocale] || {}
+        return this.resolveKey(data, key)
     }
 
     private resolveKey(obj: any, key: string) {

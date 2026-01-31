@@ -1,5 +1,5 @@
 import { Pool, type PoolClient, type QueryResult } from 'pg'
-import { IDatabase, ILogger, IConfig } from '../types/core.js'
+import { IDatabase, ILogger, IConfig, II18nService } from '../types/core.js'
 
 export type NamedParamsOptions = {
     strict?: boolean
@@ -125,12 +125,12 @@ export default class DBComponent implements IDatabase {
     /**
      * Crea una instancia de DBComponent.
      *
-     * @param deps - Dependencias (config, msgs, querying, log)
+     * @param deps - Dependencias (config, i18n, queries, log)
      */
-    constructor(deps: { config: IConfig; msgs: any; queries: any; log: ILogger }) {
-        const { config, msgs, queries, log } = deps
+    constructor(deps: { config: IConfig; i18n: II18nService; queries: any; log: ILogger }) {
+        const { config, i18n, queries, log } = deps
         this.pool = new Pool((config as any).db as any)
-        this.serverErrors = (msgs as any)[(config as any).app.lang].errors.server
+        this.serverErrors = i18n.get('errors.server')
         this.queries = queries
         this.log = log
     }

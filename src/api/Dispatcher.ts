@@ -10,6 +10,7 @@ import {
     ISessionService,
     IAuditService,
     IDatabase,
+    II18nService,
 } from '../types/core.js'
 import { registerFrontendHosting } from '../frontend-adapters/index.js'
 
@@ -50,7 +51,7 @@ export class Dispatcher {
     private log: ILogger
     private security: ISecurityService
     private session: ISessionService
-    private msgs: any
+    private i18n: II18nService
     private audit: IAuditService
     private db: IDatabase
 
@@ -70,7 +71,7 @@ export class Dispatcher {
         log: ILogger
         security: ISecurityService
         session: ISessionService
-        msgs: any
+        i18n: II18nService
         audit: IAuditService
         db: IDatabase
     }) {
@@ -78,7 +79,7 @@ export class Dispatcher {
         this.log = deps.log
         this.security = deps.security
         this.session = deps.session
-        this.msgs = deps.msgs
+        this.i18n = deps.i18n
         this.audit = deps.audit
         this.db = deps.db
 
@@ -86,11 +87,10 @@ export class Dispatcher {
         this.server = null
         this.initialized = false
 
-        // Setup Helpers based on config
-        const lang = this.config.app.lang || 'es'
-        this.serverErrors = this.msgs[lang].errors.server
-        this.clientErrors = this.msgs[lang].errors.client
-        this.successMsgs = this.msgs[lang].success
+        // Setup Helpers based on i18n
+        this.serverErrors = this.i18n.get('errors.server')
+        this.clientErrors = this.i18n.get('errors.client')
+        this.successMsgs = this.i18n.get('success')
 
         this.setupExpress()
     }
@@ -110,11 +110,11 @@ export class Dispatcher {
 
         this.csrfTokenHandler = createCsrfTokenHandler({
             config: this.config,
-            msgs: this.msgs,
+            i18n: this.i18n,
         } as any)
-        this.csrfProtection = createCsrfProtection({ config: this.config, msgs: this.msgs } as any)
+        this.csrfProtection = createCsrfProtection({ config: this.config, i18n: this.i18n } as any)
 
-        this.app.use(createJsonSyntaxErrorHandler({ config: this.config, msgs: this.msgs }))
+        this.app.use(createJsonSyntaxErrorHandler({ config: this.config, i18n: this.i18n }))
 
         this.loginRateLimiter = createLoginRateLimiter(this.clientErrors)
         // this.toProccessRateLimiter = createToProccessRateLimiter(this.clientErrors)
@@ -158,7 +158,7 @@ export class Dispatcher {
             session: { sessionExists: (req: any) => this.session.sessionExists(req) },
             stage: 'preApi',
             config: this.config,
-            msgs: this.msgs,
+            i18n: this.i18n,
             log: this.log,
         })
 
@@ -181,7 +181,7 @@ export class Dispatcher {
             session: { sessionExists: (req: any) => this.session.sessionExists(req) },
             stage: 'postApi',
             config: this.config,
-            msgs: this.msgs,
+            i18n: this.i18n,
             log: this.log,
         })
 
@@ -274,10 +274,7 @@ export class Dispatcher {
 
                 if (!isOk) {
                     alerts.push(
-                        this.msgs[this.config.app.lang || 'es'].alerts?.paramsType?.replace(
-                            '{value}',
-                            'params'
-                        ) || 'Invalid params'
+                        this.i18n.t('alerts.paramsType', { value: 'params' }) || 'Invalid params'
                     )
                 }
             }
@@ -378,7 +375,7 @@ export class Dispatcher {
             const rawTxData = tx != null ? this.security.getDataTx(tx) : null
             const txData = rawTxData && typeof rawTxData === 'object' ? rawTxData : null
 
-            const ctxMock = { config: this.config, msgs: this.msgs, log: this.log }
+            const ctxMock = { config: this.config, i18n: this.i18n, log: this.log }
 
             await this.audit.log(req, {
                 action: 'tx_error',

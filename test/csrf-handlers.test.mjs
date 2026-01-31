@@ -8,6 +8,34 @@ import {
 } from '../src/api/http/middleware/csrf.js'
 import { createHealthHandler } from '../src/api/http/handlers/health.js'
 
+// Mock i18n helper
+function createMockI18n(overrides = {}) {
+    const data = {
+        errors: {
+            client: {
+                unknown: { code: 500, msg: 'Unknown' },
+                csrfInvalid: { code: 403, msg: 'Invalid CSRF' },
+                ...overrides.client,
+            },
+        },
+    }
+    return {
+        t: (key) => key,
+        error: (key) => {
+            const parts = key.split('.')
+            let val = data
+            for (const p of parts) val = val?.[p]
+            return val || { msg: key, code: 500 }
+        },
+        get: (key) => {
+            const parts = key.split('.')
+            let val = data
+            for (const p of parts) val = val?.[p]
+            return val
+        },
+    }
+}
+
 // --- ensureCsrfToken tests ---
 test('ensureCsrfToken returns null if no session', () => {
     const req = {}
@@ -42,7 +70,7 @@ test('ensureCsrfToken generates new token if empty string', () => {
 test('createCsrfTokenHandler returns 200 with token', () => {
     const deps = {
         config: { app: { lang: 'es' } },
-        msgs: { es: { errors: { client: { unknown: { code: 500, msg: 'Unknown' } } } } },
+        i18n: createMockI18n(),
     }
     const handler = createCsrfTokenHandler(deps)
 
@@ -70,7 +98,7 @@ test('createCsrfTokenHandler returns 200 with token', () => {
 test('createCsrfTokenHandler returns error if no session', () => {
     const deps = {
         config: { app: { lang: 'es' } },
-        msgs: { es: { errors: { client: { unknown: { code: 500, msg: 'Unknown' } } } } },
+        i18n: createMockI18n(),
     }
     const handler = createCsrfTokenHandler(deps)
 
@@ -93,7 +121,7 @@ test('createCsrfTokenHandler returns error if no session', () => {
 test('createCsrfProtection allows request without session for /toProccess', () => {
     const deps = {
         config: { app: { lang: 'es' } },
-        msgs: { es: { errors: { client: { csrfInvalid: { code: 403, msg: 'Invalid CSRF' } } } } },
+        i18n: createMockI18n(),
     }
     const middleware = createCsrfProtection(deps)
 
@@ -112,7 +140,7 @@ test('createCsrfProtection allows request without session for /toProccess', () =
 test('createCsrfProtection allows request without session for /logout', () => {
     const deps = {
         config: { app: { lang: 'es' } },
-        msgs: { es: { errors: { client: { csrfInvalid: { code: 403, msg: 'Invalid CSRF' } } } } },
+        i18n: createMockI18n(),
     }
     const middleware = createCsrfProtection(deps)
 
@@ -131,7 +159,7 @@ test('createCsrfProtection allows request without session for /logout', () => {
 test('createCsrfProtection rejects when no expected token', () => {
     const deps = {
         config: { app: { lang: 'es' } },
-        msgs: { es: { errors: { client: { csrfInvalid: { code: 403, msg: 'Invalid CSRF' } } } } },
+        i18n: createMockI18n(),
     }
     const middleware = createCsrfProtection(deps)
 
@@ -157,7 +185,7 @@ test('createCsrfProtection rejects when no expected token', () => {
 test('createCsrfProtection rejects when token mismatch', () => {
     const deps = {
         config: { app: { lang: 'es' } },
-        msgs: { es: { errors: { client: { csrfInvalid: { code: 403, msg: 'Invalid CSRF' } } } } },
+        i18n: createMockI18n(),
     }
     const middleware = createCsrfProtection(deps)
 
@@ -183,7 +211,7 @@ test('createCsrfProtection rejects when token mismatch', () => {
 test('createCsrfProtection allows when token matches', () => {
     const deps = {
         config: { app: { lang: 'es' } },
-        msgs: { es: { errors: { client: { csrfInvalid: { code: 403, msg: 'Invalid CSRF' } } } } },
+        i18n: createMockI18n(),
     }
     const middleware = createCsrfProtection(deps)
 

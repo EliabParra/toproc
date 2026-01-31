@@ -21,8 +21,10 @@ const mockConfig = {
     bo: { path: '../../test/mocks/BO/' }, // Point to test BOs
     app: { lang: 'en' },
 }
-const mockMsgs = {
-    en: { errors: { server: { serverError: { msg: 'Error' } } } },
+const mockI18n = {
+    t: (key) => key,
+    error: (key) => ({ msg: key, code: 500 }),
+    get: (key) => undefined,
 }
 
 describe('SecurityService Integration', async () => {
@@ -33,7 +35,7 @@ describe('SecurityService Integration', async () => {
             db: mockDb,
             log: mockLog,
             config: mockConfig,
-            msgs: mockMsgs,
+            i18n: mockI18n,
             audit: { log: async () => {} },
             session: {
                 sessionExists: () => false,

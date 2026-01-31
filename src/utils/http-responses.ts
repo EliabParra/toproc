@@ -1,5 +1,3 @@
-import { msgs } from '../foundation.js'
-
 /**
  * Sends a standardized `invalidParameters` response.
  */

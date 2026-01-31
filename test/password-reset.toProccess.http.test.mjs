@@ -13,34 +13,53 @@ import { AppValidator } from '../src/core/AppValidator.js'
 
 import { withGlobals } from './_helpers/global-state.mjs'
 
-const GLOBAL_KEYS = ['config', 'msgs', 'log', 'db', 'security', 'v', 'validator']
+const GLOBAL_KEYS = ['config', 'i18n', 'log', 'db', 'security', 'v', 'validator']
 
-function makeTestMsgs() {
-    const client = {
-        unknown: { code: 500, msg: 'Unknown' },
-        invalidParameters: { code: 400, msg: 'Invalid parameters' },
-        login: { code: 401, msg: 'Login required' },
-        permissionDenied: { code: 403, msg: 'Permission denied' },
-        serviceUnavailable: { code: 503, msg: 'Service unavailable' },
-        csrfInvalid: { code: 403, msg: 'CSRF invalid' },
-        tooManyRequests: { code: 429, msg: 'Too many requests' },
-    }
-
-    const server = {
-        serverError: { code: 500, msg: 'Server error' },
-        dbError: { code: 500, msg: 'DB error' },
-        txNotFound: { code: 500, msg: 'tx not found {tx}' },
-    }
-
-    const success = {
+const mockLocaleData = {
+    alerts: { paramsType: 'Invalid type at {value}' },
+    errors: {
+        client: {
+            unknown: { code: 500, msg: 'Unknown' },
+            invalidParameters: { code: 400, msg: 'Invalid parameters' },
+            login: { code: 401, msg: 'Login required' },
+            permissionDenied: { code: 403, msg: 'Permission denied' },
+            serviceUnavailable: { code: 503, msg: 'Service unavailable' },
+            csrfInvalid: { code: 403, msg: 'CSRF invalid' },
+            tooManyRequests: { code: 429, msg: 'Too many requests' },
+        },
+        server: {
+            serverError: { code: 500, msg: 'Server error' },
+            dbError: { code: 500, msg: 'DB error' },
+            txNotFound: { code: 500, msg: 'tx not found {tx}' },
+        },
+    },
+    success: {
         ok: { code: 200, msg: 'OK' },
-    }
+    },
+}
 
+function createMockI18n() {
     return {
-        en: {
-            alerts: { paramsType: 'Invalid type at {value}' },
-            errors: { client, server },
-            success,
+        t: (key, params) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            if (typeof val === 'string' && params) {
+                return val.replace(/\{(\w+)\}/g, (_, k) => params?.[k] ?? `{${k}}`)
+            }
+            return typeof val === 'string' ? val : key
+        },
+        error: (key) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            return typeof val === 'object' && val?.code ? val : { msg: key, code: 500 }
+        },
+        get: (key) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            return val
         },
     }
 }
@@ -102,9 +121,8 @@ test('password reset works via /toProccess without session (public profile)', as
             assert.equal(gen.status, 0, gen.stderr || gen.stdout)
         }
 
-        globalThis.msgs = makeTestMsgs()
-        const i18nStub = { t: (k) => k }
-        globalThis.validator = new AppValidator(i18nStub)
+        globalThis.i18n = createMockI18n()
+        globalThis.validator = new AppValidator(globalThis.i18n)
         globalThis.v = globalThis.validator
 
         // Public (anonymous) profile id used when there is no session.
@@ -329,7 +347,7 @@ test('password reset works via /toProccess without session (public profile)', as
             log: globalThis.log,
             config: globalThis.config,
             v: globalThis.validator,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
 
         globalThis.security = {

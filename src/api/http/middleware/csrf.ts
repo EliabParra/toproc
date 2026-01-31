@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { IConfig } from '../../../types/core.js'
+import { IConfig, II18nService } from '../../../types/core.js'
 
 /**
  * Genera o recupera el token CSRF de la sesión actual.
@@ -22,17 +22,16 @@ export function ensureCsrfToken(req: any) {
  * Crea el handler para el endpoint GET /csrf.
  * Devuelve el token CSRF actual para que el frontend lo use en requests subsecuentes.
  *
- * @param deps - Dependencias (configuración, mensajes)
+ * @param deps - Dependencias (configuración, i18n)
  * @returns {Function} Handler de Express
  */
-export function createCsrfTokenHandler(deps: { config: IConfig; msgs: any }) {
-    const { config, msgs } = deps
+export function createCsrfTokenHandler(deps: { config: IConfig; i18n: II18nService }) {
+    const { i18n } = deps
     return function csrfTokenHandler(req: any, res: any) {
         const token = ensureCsrfToken(req)
         if (!token) {
-            return res
-                .status((msgs as any)[(config as any).app.lang].errors.client.unknown.code)
-                .send((msgs as any)[(config as any).app.lang].errors.client.unknown)
+            const errDef = i18n.error('errors.client.unknown')
+            return res.status(errDef.code).send(errDef)
         }
         return res.status(200).send({ csrfToken: token })
     }
@@ -46,11 +45,11 @@ export function createCsrfTokenHandler(deps: { config: IConfig; msgs: any }) {
  * - Si no hay sesión de usuario, permite paso (para login)
  * - Si hay sesión, exige token válido
  *
- * @param deps - Dependencias (configuración, mensajes)
+ * @param deps - Dependencias (configuración, i18n)
  * @returns {Function} Middleware de Express
  */
-export function createCsrfProtection(deps: { config: IConfig; msgs: any }) {
-    const { config, msgs } = deps
+export function createCsrfProtection(deps: { config: IConfig; i18n: II18nService }) {
+    const { i18n } = deps
     return function csrfProtection(req: any, res: any, next: any) {
         // Preserve previous semantics: if there's no authenticated session yet,
         // keep returning the existing 401 behavior for endpoints that already check auth.
@@ -64,14 +63,12 @@ export function createCsrfProtection(deps: { config: IConfig; msgs: any }) {
         const expected = req.session?.csrfToken
         const provided = req.get?.('X-CSRF-Token')
         if (typeof expected !== 'string' || expected.length === 0) {
-            return res
-                .status((msgs as any)[(config as any).app.lang].errors.client.csrfInvalid.code)
-                .send((msgs as any)[(config as any).app.lang].errors.client.csrfInvalid)
+            const errDef = i18n.error('errors.client.csrfInvalid')
+            return res.status(errDef.code).send(errDef)
         }
         if (typeof provided !== 'string' || provided !== expected) {
-            return res
-                .status((msgs as any)[(config as any).app.lang].errors.client.csrfInvalid.code)
-                .send((msgs as any)[(config as any).app.lang].errors.client.csrfInvalid)
+            const errDef = i18n.error('errors.client.csrfInvalid')
+            return res.status(errDef.code).send(errDef)
         }
         return next()
     }

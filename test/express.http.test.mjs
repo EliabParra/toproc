@@ -22,7 +22,7 @@ import {
     restoreGlobals,
 } from './_helpers/global-state.mjs'
 
-const GLOBAL_KEYS = ['config', 'msgs', 'log', 'db', 'security']
+const GLOBAL_KEYS = ['config', 'i18n', 'log', 'db', 'security']
 
 function makeErrors() {
     return {
@@ -42,29 +42,61 @@ function makeErrors() {
     }
 }
 
-function makeEsMsgsForCsrfAndJson() {
+// Mock i18n for CSRF and JSON error handlers
+const mockLocaleData = {
+    alerts: {
+        invalidJson: 'JSON inválido en {value}',
+        paramsType: 'Tipo inválido en {value}',
+    },
+    errors: {
+        client: {
+            unknown: { msg: 'Error desconocido', code: 500 },
+            invalidParameters: { msg: 'Parámetros inválidos', code: 400 },
+            csrfInvalid: { msg: 'CSRF inválido', code: 403 },
+            payloadTooLarge: { msg: 'Payload demasiado grande', code: 413 },
+            tooManyRequests: { msg: 'Demasiadas solicitudes', code: 429 },
+        },
+        server: {
+            serverError: { msg: 'Error del servidor', code: 500 },
+            unauthorized: { msg: 'No autorizado', code: 401 },
+            forbidden: { msg: 'Prohibido', code: 403 },
+            notFound: { msg: 'No encontrado', code: 404 },
+        },
+    },
+    success: {},
+}
+
+function createMockI18n() {
     return {
-        es: {
-            alerts: {
-                invalidJson: 'JSON inválido en {value}',
-                paramsType: 'Tipo inválido en {value}',
-            },
-            errors: {
-                client: {
-                    unknown: { msg: 'Error desconocido', code: 500 },
-                    invalidParameters: { msg: 'Parámetros inválidos', code: 400 },
-                    csrfInvalid: { msg: 'CSRF inválido', code: 403 },
-                    payloadTooLarge: { msg: 'Payload demasiado grande', code: 413 },
-                    tooManyRequests: { msg: 'Demasiadas solicitudes', code: 429 },
-                },
-                server: {
-                    serverError: { msg: 'Error del servidor', code: 500 },
-                    unauthorized: { msg: 'No autorizado', code: 401 },
-                    forbidden: { msg: 'Prohibido', code: 403 },
-                    notFound: { msg: 'No encontrado', code: 404 },
-                },
-            },
-            success: {},
+        t: (key, params) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            if (typeof val === 'object' && val?.msg) {
+                let msg = val.msg
+                if (params) {
+                    for (const [k, v] of Object.entries(params)) {
+                        msg = msg.replace(`{${k}}`, String(v))
+                    }
+                }
+                return msg
+            }
+            if (typeof val === 'string') {
+                return params ? val.replace(/\{(\w+)\}/g, (_, k) => params?.[k] ?? `{${k}}`) : val
+            }
+            return key
+        },
+        error: (key) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            return typeof val === 'object' && val?.code ? val : { msg: key, code: 500 }
+        },
+        get: (key) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            return val
         },
     }
 }
@@ -254,14 +286,7 @@ test('jsonBodySyntaxErrorHandler returns invalidParameters with alerts on invali
         const snap = snapshotGlobals(GLOBAL_KEYS)
         try {
             globalThis.config = { app: { lang: 'es' } }
-            globalThis.msgs = {
-                es: {
-                    alerts: { invalidJson: 'JSON inválido en {value}' },
-                    errors: {
-                        client: { invalidParameters: { msg: 'Parámetros inválidos', code: 400 } },
-                    },
-                },
-            }
+            globalThis.i18n = createMockI18n()
 
             const app = express()
             app.use(express.json())
@@ -269,7 +294,7 @@ test('jsonBodySyntaxErrorHandler returns invalidParameters with alerts on invali
             app.use(
                 createJsonSyntaxErrorHandler({
                     config: globalThis.config,
-                    msgs: globalThis.msgs,
+                    i18n: globalThis.i18n,
                 })
             )
 
@@ -293,11 +318,11 @@ test('csrfTokenHandler returns unknown when session is missing', async () => {
         const snap = snapshotGlobals(GLOBAL_KEYS)
         try {
             globalThis.config = { app: { lang: 'es' } }
-            globalThis.msgs = makeEsMsgsForCsrfAndJson()
+            globalThis.i18n = createMockI18n()
 
             const csrfTokenHandler = createCsrfTokenHandler({
                 config: globalThis.config,
-                msgs: globalThis.msgs,
+                i18n: globalThis.i18n,
             })
 
             const app = express()
@@ -317,11 +342,11 @@ test('csrfTokenHandler returns a csrfToken when session exists', async () => {
         const snap = snapshotGlobals(GLOBAL_KEYS)
         try {
             globalThis.config = { app: { lang: 'es' } }
-            globalThis.msgs = makeEsMsgsForCsrfAndJson()
+            globalThis.i18n = createMockI18n()
 
             const csrfTokenHandler = createCsrfTokenHandler({
                 config: globalThis.config,
-                msgs: globalThis.msgs,
+                i18n: globalThis.i18n,
             })
 
             const app = express()
@@ -346,11 +371,11 @@ test('csrfProtection bypasses /toProccess when unauthenticated', async () => {
         const snap = snapshotGlobals(GLOBAL_KEYS)
         try {
             globalThis.config = { app: { lang: 'es' } }
-            globalThis.msgs = makeEsMsgsForCsrfAndJson()
+            globalThis.i18n = createMockI18n()
 
             const csrfProtection = createCsrfProtection({
                 config: globalThis.config,
-                msgs: globalThis.msgs,
+                i18n: globalThis.i18n,
             })
 
             const app = express()
@@ -377,11 +402,11 @@ test('csrfProtection rejects when expected token is missing', async () => {
         const snap = snapshotGlobals(GLOBAL_KEYS)
         try {
             globalThis.config = { app: { lang: 'es' } }
-            globalThis.msgs = makeEsMsgsForCsrfAndJson()
+            globalThis.i18n = createMockI18n()
 
             const csrfProtection = createCsrfProtection({
                 config: globalThis.config,
-                msgs: globalThis.msgs,
+                i18n: globalThis.i18n,
             })
 
             const app = express()
@@ -393,7 +418,7 @@ test('csrfProtection rejects when expected token is missing', async () => {
 
             const res = await request(app).post('/login').set('X-CSRF-Token', 'abc').send({})
             assert.equal(res.status, 403)
-            assert.deepEqual(res.body, globalThis.msgs.es.errors.client.csrfInvalid)
+            assert.deepEqual(res.body, mockLocaleData.errors.client.csrfInvalid)
         } finally {
             restoreGlobals(snap)
         }
@@ -405,11 +430,11 @@ test('csrfProtection allows request when header matches session token', async ()
         const snap = snapshotGlobals(GLOBAL_KEYS)
         try {
             globalThis.config = { app: { lang: 'es' } }
-            globalThis.msgs = makeEsMsgsForCsrfAndJson()
+            globalThis.i18n = createMockI18n()
 
             const csrfProtection = createCsrfProtection({
                 config: globalThis.config,
-                msgs: globalThis.msgs,
+                i18n: globalThis.i18n,
             })
 
             const app = express()

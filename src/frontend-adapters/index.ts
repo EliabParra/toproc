@@ -1,3 +1,5 @@
+import { II18nService } from '../types/core.js'
+
 function getFrontendMode(config: any) {
     const raw = String((config as any)?.app?.frontendMode ?? 'pages')
         .trim()
@@ -10,7 +12,7 @@ type RegisterFrontendHostingArgs = {
     session: any
     stage: 'preApi' | 'postApi'
     config: any
-    msgs: any
+    i18n: II18nService
     log: any
 }
 
@@ -23,7 +25,7 @@ type RegisterFrontendHostingArgs = {
  */
 export async function registerFrontendHosting(
     app: any,
-    { session, stage, config, msgs, log }: RegisterFrontendHostingArgs
+    { session, stage, config, i18n, log }: RegisterFrontendHostingArgs
 ) {
     const mode = getFrontendMode(config)
 
@@ -31,7 +33,7 @@ export async function registerFrontendHosting(
 
     if (stage === 'preApi' && mode === 'pages') {
         const { registerPagesHosting } = await import('./pages.adapter.js')
-        await registerPagesHosting(app, { session, config, msgs, log })
+        await registerPagesHosting(app, { session, config, i18n, log })
         return
     }
 

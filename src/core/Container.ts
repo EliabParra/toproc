@@ -1,4 +1,11 @@
-import { ILogger, IDatabase, IConfig, ISecurityService, ISessionService } from '../types/core.js'
+import {
+    ILogger,
+    IDatabase,
+    IConfig,
+    ISecurityService,
+    ISessionService,
+    II18nService,
+} from '../types/core.js'
 
 export class Container {
     private static instance: Container
@@ -37,8 +44,8 @@ export class Container {
     get security(): ISecurityService {
         return this.resolve<ISecurityService>('security')
     }
-    get msgs(): any {
-        return this.resolve<any>('msgs')
+    get i18n(): II18nService {
+        return this.resolve<II18nService>('i18n')
     }
     get queries(): any {
         return this.resolve<any>('queries')

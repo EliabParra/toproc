@@ -24,7 +24,7 @@ import { TransactionExecutor } from '../core/transaction/TransactionExecutor.js'
  *
  * @example
  * ```typescript
- * const security = new SecurityService({ db, log, config, msgs, audit, session, validator })
+ * const security = new SecurityService({ db, log, config, i18n, audit, session, validator })
  * await security.init() // Carga permisos y mapeos
  *
  * // Uso típico en Dispatcher:
@@ -39,9 +39,9 @@ export class SecurityService implements ISecurityService {
     private guard: PermissionGuard
     private executor: TransactionExecutor
 
-    // config/msgs/log needed for error handling/responses
+    // config/i18n/log needed for error handling/responses
     private config: IConfig
-    private msgs: any
+    private i18n: II18nService
     private log: ILogger
 
     /** Indica si el sistema de seguridad ha cargado correctamente */
@@ -58,15 +58,14 @@ export class SecurityService implements ISecurityService {
         db: IDatabase
         log: ILogger
         config: IConfig
-        msgs: any
+        i18n: II18nService
         audit: IAuditService
         session: ISessionService
         validator: IValidator
-        i18n?: II18nService
     }) {
         this.log = deps.log
         this.config = deps.config
-        this.msgs = deps.msgs
+        this.i18n = deps.i18n
 
         // Initialize sub-components
         this.mapper = new TransactionMapper(deps.db, deps.log)
@@ -86,8 +85,8 @@ export class SecurityService implements ISecurityService {
         this.executor = new TransactionExecutor(boDeps)
     }
 
-    private get serverErrors() {
-        return this.msgs[this.config.app.lang].errors.server
+    private get serverErrors(): Record<string, { msg: string; code: number }> {
+        return this.i18n.get('errors.server') as Record<string, { msg: string; code: number }>
     }
 
     /**

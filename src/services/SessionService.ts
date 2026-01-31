@@ -7,6 +7,7 @@ import {
     IEmailService,
     IConfig,
     IAuditService,
+    II18nService,
 } from '../types/core.js'
 
 function sha256Hex(value: unknown) {
@@ -52,7 +53,7 @@ export class SessionManager implements ISessionService {
     private db: IDatabase
     private log: ILogger
     private config: IConfig
-    private msgs: any
+    private i18n: II18nService
     private email: IEmailService
     private audit: IAuditService
     private v: any // Validator
@@ -74,7 +75,7 @@ export class SessionManager implements ISessionService {
         db: IDatabase
         log: ILogger
         config: IConfig
-        msgs: any
+        i18n: II18nService
         email: IEmailService
         audit: IAuditService
         v?: any
@@ -82,15 +83,14 @@ export class SessionManager implements ISessionService {
         this.db = deps.db
         this.log = deps.log
         this.config = deps.config
-        this.msgs = deps.msgs
+        this.i18n = deps.i18n
         this.email = deps.email
         this.audit = deps.audit
         this.v = deps.v
 
-        const lang = this.config.app.lang || 'es'
-        this.serverErrors = this.msgs[lang].errors.server
-        this.clientErrors = this.msgs[lang].errors.client
-        this.successMsgs = this.msgs[lang].success
+        this.serverErrors = this.i18n.get('errors.server')
+        this.clientErrors = this.i18n.get('errors.client')
+        this.successMsgs = this.i18n.get('success')
 
         this.authCfg = this.config.auth ?? {}
         this.loginId = String(this.authCfg.loginId ?? 'email')
@@ -120,10 +120,10 @@ export class SessionManager implements ISessionService {
      */
     async createSession(req: AppRequest, res: AppResponse) {
         try {
-            // Context Mock for helpers that need it
+            // Context for helpers that need it
             const ctxHelper = {
                 config: this.config,
-                msgs: this.msgs,
+                i18n: this.i18n,
                 log: this.log,
                 db: this.db,
                 v: this.v,

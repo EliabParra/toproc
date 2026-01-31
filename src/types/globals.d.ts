@@ -61,14 +61,4 @@ declare global {
         require: any
         __alerts?: any[] // Used in tests
     }
-
-    type AppContext = {
-        config: AppConfig
-        log: AppLog
-        db: AppDb
-        msgs: any
-        queries: any
-        v: any
-        security?: AppSecurity
-    }
 }

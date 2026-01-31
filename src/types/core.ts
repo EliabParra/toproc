@@ -46,9 +46,29 @@ export interface II18nService {
     /**
      * Obtiene una traducción por su clave.
      * @param key Clave del mensaje (e.g. 'auth.login.success')
-     * @param props Variables para interpolar
+     * @param params Variables para interpolar
+     * @param locale Idioma opcional
      */
-    t(key: string, props?: Record<string, unknown>): string
+    t(key: string, params?: Record<string, unknown>, locale?: string): string
+
+    /**
+     * Obtiene un objeto de error HTTP con código y mensaje.
+     * @param key Clave de error (e.g. 'errors.server.dbError')
+     * @param params Variables para interpolar
+     * @param locale Idioma opcional
+     */
+    error(
+        key: string,
+        params?: Record<string, unknown>,
+        locale?: string
+    ): { msg: string; code: number }
+
+    /**
+     * Obtiene el valor raw de una clave (para estructuras anidadas).
+     * @param key Clave de acceso
+     * @param locale Idioma opcional
+     */
+    get(key: string, locale?: string): unknown
 }
 
 /**

@@ -9,42 +9,70 @@ import { AppValidator } from '../src/core/AppValidator.js'
 // TestValidatorAdapter removed - using AppValidator directly
 
 import { withGlobals } from './_helpers/global-state.mjs'
-// ... (keep functions)
-const GLOBAL_KEYS = ['config', 'msgs', 'log', 'db', 'security', 'v', 'validator']
+// Updated keys: replaced 'msgs' with 'i18n'
+const GLOBAL_KEYS = ['config', 'i18n', 'log', 'db', 'security', 'v', 'validator']
 
-function makeTestMsgs() {
-    const client = {
-        unknown: { code: 500, msg: 'Unknown' },
-        invalidParameters: { code: 400, msg: 'Invalid parameters' },
-        login: { code: 401, msg: 'Login required' },
-        sessionExists: { code: 409, msg: 'Session exists' },
-        usernameOrPasswordIncorrect: { code: 401, msg: 'Bad credentials' },
-        invalidToken: { code: 401, msg: 'Invalid token' },
-        expiredToken: { code: 401, msg: 'Expired token' },
-        tooManyRequests: { code: 429, msg: 'Too many requests' },
-        csrfInvalid: { code: 403, msg: 'CSRF invalid' },
-        emailRequired: { code: 409, msg: 'Email required' },
-        serviceUnavailable: { code: 503, msg: 'Service unavailable' },
-        permissionDenied: { code: 403, msg: 'Permission denied' },
-    }
-
-    const server = {
-        serverError: { code: 500, msg: 'Server error' },
-        dbError: { code: 500, msg: 'DB error' },
-        txNotFound: { msg: 'Tx not found: {tx}' },
-    }
-
-    const success = {
+// Mock i18n data for tests
+const mockLocaleData = {
+    alerts: { paramsType: 'Invalid type at {value}' },
+    errors: {
+        client: {
+            unknown: { code: 500, msg: 'Unknown' },
+            invalidParameters: { code: 400, msg: 'Invalid parameters' },
+            login: { code: 401, msg: 'Login required' },
+            sessionExists: { code: 409, msg: 'Session exists' },
+            usernameOrPasswordIncorrect: { code: 401, msg: 'Bad credentials' },
+            invalidToken: { code: 401, msg: 'Invalid token' },
+            expiredToken: { code: 401, msg: 'Expired token' },
+            tooManyRequests: { code: 429, msg: 'Too many requests' },
+            csrfInvalid: { code: 403, msg: 'CSRF invalid' },
+            emailRequired: { code: 409, msg: 'Email required' },
+            serviceUnavailable: { code: 503, msg: 'Service unavailable' },
+            permissionDenied: { code: 403, msg: 'Permission denied' },
+        },
+        server: {
+            serverError: { code: 500, msg: 'Server error' },
+            dbError: { code: 500, msg: 'DB error' },
+            txNotFound: { msg: 'Tx not found: {tx}' },
+        },
+    },
+    success: {
         login: { code: 200, msg: 'Login ok' },
         loginVerificationRequired: { code: 202, msg: 'Verify required' },
         logout: { code: 200, msg: 'Logout ok' },
-    }
+    },
+}
 
+function createMockI18n() {
     return {
-        en: {
-            alerts: { paramsType: 'Invalid type at {value}' },
-            errors: { client, server },
-            success,
+        t: (key, params) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            if (typeof val === 'object' && val?.msg) {
+                let msg = val.msg
+                if (params) {
+                    for (const [k, v] of Object.entries(params)) {
+                        msg = msg.replace(`{${k}}`, String(v))
+                    }
+                }
+                return msg
+            }
+            return typeof val === 'string'
+                ? val.replace(/\{(\w+)\}/g, (_, k) => params?.[k] ?? `{${k}}`)
+                : key
+        },
+        error: (key) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            return typeof val === 'object' && val?.code ? val : { msg: key, code: 500 }
+        },
+        get: (key) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            return val
         },
     }
 }
@@ -61,7 +89,7 @@ function makeValidatorStub() {
 test('POST /login returns invalidParameters when body schema is invalid (with CSRF)', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
         // ... globals setup ...
-        globalThis.msgs = makeTestMsgs()
+        globalThis.i18n = createMockI18n()
         const i18nStub = { t: (k) => k }
         globalThis.validator = new AppValidator(i18nStub)
         globalThis.v = globalThis.validator
@@ -81,11 +109,11 @@ test('POST /login returns invalidParameters when body schema is invalid (with CS
 
         const csrfTokenHandler = createCsrfTokenHandler({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
         const csrfProtection = createCsrfProtection({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
 
         const dispatcher = createTestDispatcher(globalThis)
@@ -107,14 +135,14 @@ test('POST /login returns invalidParameters when body schema is invalid (with CS
 
         assert.equal(res.status, 400)
         assert.equal(res.body.code, 400)
-        assert.equal(res.body.msg, globalThis.msgs.en.errors.client.invalidParameters.msg)
+        assert.equal(res.body.msg, mockLocaleData.errors.client.invalidParameters.msg)
         assert.ok(Array.isArray(res.body.alerts) && res.body.alerts.length > 0)
     })
 })
 
 test('POST /toProccess returns login error when session does not exist', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
-        globalThis.msgs = makeTestMsgs()
+        globalThis.i18n = createMockI18n()
         const i18nStub = { t: (k) => k }
         globalThis.validator = new AppValidator(i18nStub)
         globalThis.v = globalThis.validator
@@ -134,7 +162,7 @@ test('POST /toProccess returns login error when session does not exist', async (
 
         const csrfProtection = createCsrfProtection({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
 
         const dispatcher = createTestDispatcher(globalThis)
@@ -144,13 +172,13 @@ test('POST /toProccess returns login error when session does not exist', async (
 
         const res = await request(dispatcher.app).post('/toProccess').send({ tx: 1 })
         assert.equal(res.status, 401)
-        assert.deepEqual(res.body, globalThis.msgs.en.errors.client.login)
+        assert.deepEqual(res.body, mockLocaleData.errors.client.login)
     })
 })
 
 test('POST /toProccess returns serviceUnavailable when security.ready rejects', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
-        globalThis.msgs = makeTestMsgs()
+        globalThis.i18n = createMockI18n()
         const i18nStub = { t: (k) => k }
         globalThis.validator = new AppValidator(i18nStub)
         globalThis.v = globalThis.validator
@@ -181,11 +209,11 @@ test('POST /toProccess returns serviceUnavailable when security.ready rejects', 
 
         const csrfTokenHandler = createCsrfTokenHandler({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
         const csrfProtection = createCsrfProtection({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
 
         const dispatcher = createTestDispatcher(globalThis)
@@ -208,13 +236,13 @@ test('POST /toProccess returns serviceUnavailable when security.ready rejects', 
         const res = await agent.post('/toProccess').set('X-CSRF-Token', csrfToken).send({ tx: 1 })
 
         assert.equal(res.status, 503)
-        assert.deepEqual(res.body, globalThis.msgs.en.errors.client.serviceUnavailable)
+        assert.deepEqual(res.body, mockLocaleData.errors.client.serviceUnavailable)
     })
 })
 
 test('POST /toProccess returns permissionDenied when permissions check fails (and audits best-effort)', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
-        globalThis.msgs = makeTestMsgs()
+        globalThis.i18n = createMockI18n()
         const i18nStub = { t: (k) => k }
         globalThis.validator = new AppValidator(i18nStub)
         globalThis.v = globalThis.validator
@@ -243,11 +271,11 @@ test('POST /toProccess returns permissionDenied when permissions check fails (an
 
         const csrfTokenHandler = createCsrfTokenHandler({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
         const csrfProtection = createCsrfProtection({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
 
         const dispatcher = createTestDispatcher(globalThis)
@@ -273,7 +301,7 @@ test('POST /toProccess returns permissionDenied when permissions check fails (an
             .send({ tx: 1, params: { a: 1 } })
 
         assert.equal(res.status, 403)
-        assert.deepEqual(res.body, globalThis.msgs.en.errors.client.permissionDenied)
+        assert.deepEqual(res.body, mockLocaleData.errors.client.permissionDenied)
 
         assert.ok(auditCalls.length >= 1)
         assert.equal(auditCalls[0][0], 'security')
@@ -283,7 +311,7 @@ test('POST /toProccess returns permissionDenied when permissions check fails (an
 
 test('POST /toProccess returns executeMethod response when permissions allow (and audits tx_exec)', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
-        globalThis.msgs = makeTestMsgs()
+        globalThis.i18n = createMockI18n()
         const i18nStub = { t: (k) => k }
         globalThis.validator = new AppValidator(i18nStub)
         globalThis.v = globalThis.validator
@@ -313,11 +341,11 @@ test('POST /toProccess returns executeMethod response when permissions allow (an
 
         const csrfTokenHandler = createCsrfTokenHandler({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
         const csrfProtection = createCsrfProtection({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
 
         const dispatcher = createTestDispatcher(globalThis)
@@ -360,7 +388,7 @@ test('POST /toProccess returns executeMethod response when permissions allow (an
 
 test('POST /toProccess returns unknown when tx is not found (and audits tx_error)', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
-        globalThis.msgs = makeTestMsgs()
+        globalThis.i18n = createMockI18n()
         const i18nStub = { t: (k) => k }
         globalThis.validator = new AppValidator(i18nStub)
         globalThis.v = globalThis.validator
@@ -390,11 +418,11 @@ test('POST /toProccess returns unknown when tx is not found (and audits tx_error
 
         const csrfTokenHandler = createCsrfTokenHandler({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
         const csrfProtection = createCsrfProtection({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
 
         const dispatcher = createTestDispatcher(globalThis)
@@ -420,7 +448,7 @@ test('POST /toProccess returns unknown when tx is not found (and audits tx_error
             .send({ tx: 1, params: { a: 1 } })
 
         assert.equal(res.status, 500)
-        assert.deepEqual(res.body, globalThis.msgs.en.errors.client.unknown)
+        assert.deepEqual(res.body, mockLocaleData.errors.client.unknown)
 
         const auditInsertCalls = auditCalls.filter(
             (c) => c[0] === 'security' && c[1] === 'insertAuditLog'
@@ -435,7 +463,7 @@ test('POST /toProccess returns unknown when tx is not found (and audits tx_error
 
 test('POST /logout returns login error when session does not exist (CSRF bypass)', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
-        globalThis.msgs = makeTestMsgs()
+        globalThis.i18n = createMockI18n()
         const i18nStub = { t: (k) => k }
         globalThis.validator = new AppValidator(i18nStub)
         globalThis.v = globalThis.validator
@@ -455,7 +483,7 @@ test('POST /logout returns login error when session does not exist (CSRF bypass)
 
         const csrfProtection = createCsrfProtection({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
 
         const dispatcher = createTestDispatcher(globalThis)
@@ -464,13 +492,13 @@ test('POST /logout returns login error when session does not exist (CSRF bypass)
 
         const res = await request(dispatcher.app).post('/logout').send({})
         assert.equal(res.status, 401)
-        assert.deepEqual(res.body, globalThis.msgs.en.errors.client.login)
+        assert.deepEqual(res.body, mockLocaleData.errors.client.login)
     })
 })
 
 test('POST /logout destroys session and returns success when session exists (requires CSRF)', async () => {
     await withGlobals(GLOBAL_KEYS, async () => {
-        globalThis.msgs = makeTestMsgs()
+        globalThis.i18n = createMockI18n()
         const i18nStub = { t: (k) => k }
         globalThis.validator = new AppValidator(i18nStub)
         globalThis.v = globalThis.validator
@@ -495,11 +523,11 @@ test('POST /logout destroys session and returns success when session exists (req
 
         const csrfTokenHandler = createCsrfTokenHandler({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
         const csrfProtection = createCsrfProtection({
             config: globalThis.config,
-            msgs: globalThis.msgs,
+            i18n: globalThis.i18n,
         })
 
         const dispatcher = createTestDispatcher(globalThis)
@@ -522,7 +550,7 @@ test('POST /logout destroys session and returns success when session exists (req
         const res = await agent.post('/logout').set('X-CSRF-Token', csrfToken).send({})
 
         assert.equal(res.status, 200)
-        assert.deepEqual(res.body, globalThis.msgs.en.success.logout)
+        assert.deepEqual(res.body, mockLocaleData.success.logout)
 
         const auditInsertCalls = auditCalls.filter(
             (c) => c[0] === 'security' && c[1] === 'insertAuditLog'

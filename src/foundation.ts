@@ -1,5 +1,5 @@
 // Bootstrap: Inicialización de servicios core.
-// Reemplaza al antiguo globals.ts
+// 100% Dependency Injection - No globals
 import 'dotenv/config'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -63,22 +63,18 @@ if (process.env.QUERIES_EXTRA_PATH) {
 }
 container.register('queries', queries)
 
-// 3. Initialize I18n
+// 3. Initialize I18n (replaces legacy msgs)
 const i18n = new I18nService(config.app.lang)
 const localesPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'locales')
 i18n.loadLocale('es', path.join(localesPath, 'es'))
 i18n.loadLocale('en', path.join(localesPath, 'en'))
 container.register('i18n', i18n)
 
-// Legacy msgs object (needed by some components during transition)
-const msgs = i18n.getLegacyObject()
-container.register('msgs', msgs)
-
 // 4. Feature Flags
 const features = new FeatureFlags(config)
 container.register('features', features)
 
-// 5. Validator (Pure Zod - NO Legacy Adapter)
+// 5. Validator (Pure Zod)
 const validator = new AppValidator(i18n)
 container.register('validator', validator)
 
@@ -88,10 +84,8 @@ container.register('log', appLogger)
 
 // 7. Database
 const { default: DBComponent } = await import('./services/DatabaseService.js')
-const db = new DBComponent({ config, msgs, queries, log: appLogger })
+const db = new DBComponent({ config, i18n, queries, log: appLogger })
 container.register('db', db)
-
-// Legacy Globals removed: Use DI everywhere!
 
 // 8. Service Layer Initialization
 
@@ -108,20 +102,19 @@ const session = new SessionManager({
     db,
     log: appLogger,
     config,
-    msgs,
+    i18n,
     email,
     audit,
     v: validator,
 })
 container.register('session', session)
 
-// Initialize Security Service
 // Initialize SecurityService
 const security = new SecurityService({
     db,
     log: appLogger,
     config,
-    msgs,
+    i18n,
     audit,
     session,
     validator,
@@ -134,10 +127,10 @@ const dispatcher = new Dispatcher({
     log: appLogger,
     security,
     session,
-    msgs,
+    i18n,
     audit,
     db,
 })
 
 // Export services
-export { container, dispatcher, appLogger as log, db, config, validator, session, security, msgs }
+export { container, dispatcher, appLogger as log, db, config, validator, session, security, i18n }

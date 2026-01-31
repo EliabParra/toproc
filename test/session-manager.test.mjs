@@ -3,6 +3,49 @@ import assert from 'node:assert/strict'
 
 import { SessionManager } from '../src/services/SessionService.js'
 
+// Mock i18n data
+const mockLocaleData = {
+    errors: {
+        server: { serverError: { msg: 'Server Error', code: 500 } },
+        client: {
+            invalidParameters: { msg: 'Invalid Parameters', code: 400 },
+            sessionExists: { msg: 'Session exists', code: 400 },
+            usernameOrPasswordIncorrect: { msg: 'Incorrect', code: 401 },
+            emailRequired: { msg: 'Email required', code: 400 },
+            emailNotVerified: { msg: 'Email not verified', code: 403 },
+            unknown: { msg: 'Unknown error', code: 500 },
+        },
+    },
+    success: {
+        login: { msg: 'Login successful', code: 200 },
+    },
+}
+
+// Mock i18n service
+function createMockI18n() {
+    return {
+        t: (key, params) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            if (typeof val === 'object' && val?.msg) return val.msg
+            return typeof val === 'string' ? val : key
+        },
+        error: (key) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            return typeof val === 'object' ? val : { msg: key, code: 500 }
+        },
+        get: (key) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            return val
+        },
+    }
+}
+
 // Helper to create mock dependencies
 function createMockDeps(overrides = {}) {
     return {
@@ -17,24 +60,7 @@ function createMockDeps(overrides = {}) {
             app: { lang: 'es' },
             auth: { loginId: 'email', requireEmailVerification: false },
         },
-        msgs: {
-            es: {
-                errors: {
-                    server: { serverError: { msg: 'Server Error', code: 500 } },
-                    client: {
-                        invalidParameters: { msg: 'Invalid Parameters', code: 400 },
-                        sessionExists: { msg: 'Session exists', code: 400 },
-                        usernameOrPasswordIncorrect: { msg: 'Incorrect', code: 401 },
-                        emailRequired: { msg: 'Email required', code: 400 },
-                        emailNotVerified: { msg: 'Email not verified', code: 403 },
-                        unknown: { msg: 'Unknown error', code: 500 },
-                    },
-                },
-                success: {
-                    login: { msg: 'Login successful', code: 200 },
-                },
-            },
-        },
+        i18n: createMockI18n(),
         email: { send: async () => {} },
         audit: { log: async () => {} },
         v: { getMessage: (type, param) => `${type}:${param?.label || 'field'}` },

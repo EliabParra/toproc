@@ -11,27 +11,48 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const repoRoot = path.resolve(__dirname, '..')
 
-function makeMsgs() {
+// Mock i18n data
+const mockLocaleData = {
+    errors: {
+        server: {
+            serverError: { code: 500, msg: 'Server error' },
+        },
+    },
+}
+
+function createMockI18n() {
     return {
-        en: {
-            errors: {
-                server: {
-                    serverError: { code: 500, msg: 'Server error' },
-                },
-            },
+        t: (key, params) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            if (typeof val === 'object' && val?.msg) return val.msg
+            return typeof val === 'string' ? val : key
+        },
+        error: (key) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            return typeof val === 'object' && val?.code ? val : { msg: key, code: 500 }
+        },
+        get: (key) => {
+            const parts = key.split('.')
+            let val = mockLocaleData
+            for (const p of parts) val = val?.[p]
+            return val
         },
     }
 }
 
 test('Security.init loads permissions + tx map and sets isReady', async () => {
     await withGlobals(
-        ['config', 'msgs', 'log', 'db', 'audit', 'session', 'validator'],
+        ['config', 'i18n', 'log', 'db', 'audit', 'session', 'validator'],
         async () => {
             globalThis.config = {
                 app: { lang: 'en' },
                 bo: { path: '../../BO/' },
             }
-            globalThis.msgs = makeMsgs()
+            globalThis.i18n = createMockI18n()
 
             const logs = []
             globalThis.log = {
@@ -94,10 +115,10 @@ test('Security.init loads permissions + tx map and sets isReady', async () => {
 
 test('Security.init captures initError and rejects ready when DB fails', async () => {
     await withGlobals(
-        ['config', 'msgs', 'log', 'db', 'audit', 'session', 'validator'],
+        ['config', 'i18n', 'log', 'db', 'audit', 'session', 'validator'],
         async () => {
             globalThis.config = { app: { lang: 'en' }, bo: { path: '../../BO/' } }
-            globalThis.msgs = makeMsgs()
+            globalThis.i18n = createMockI18n()
 
             const logs = []
             globalThis.log = {
@@ -162,12 +183,12 @@ test('Security.executeMethod dynamically imports BO and caches the instance', as
         )
 
         await withGlobals(
-            ['config', 'msgs', 'log', 'db', 'audit', 'session', 'validator'],
+            ['config', 'i18n', 'log', 'db', 'audit', 'session', 'validator'],
             async () => {
                 globalThis.__securityBoCtorCount = 0
 
                 globalThis.config = { app: { lang: 'en' }, bo: { path: '../../BO/' } }
-                globalThis.msgs = makeMsgs()
+                globalThis.i18n = createMockI18n()
                 globalThis.log = { TYPE_ERROR: 'error', TYPE_INFO: 'info', show: () => {} }
                 globalThis.db = {
                     exe: async (schema, queryName) => {
@@ -215,10 +236,10 @@ test('Security.executeMethod dynamically imports BO and caches the instance', as
 
 test('Security.executeMethod returns serverError and logs when BO import fails', async () => {
     await withGlobals(
-        ['config', 'msgs', 'log', 'db', 'audit', 'session', 'validator'],
+        ['config', 'i18n', 'log', 'db', 'audit', 'session', 'validator'],
         async () => {
             globalThis.config = { app: { lang: 'en' }, bo: { path: '../../BO/' } }
-            globalThis.msgs = makeMsgs()
+            globalThis.i18n = createMockI18n()
 
             const logs = []
             globalThis.log = {
@@ -253,7 +274,7 @@ test('Security.executeMethod returns serverError and logs when BO import fails',
                 method_na: 'nope',
                 params: {},
             })
-            assert.deepEqual(r, globalThis.msgs.en.errors.server.serverError)
+            assert.deepEqual(r, mockLocaleData.errors.server.serverError)
             assert.ok(
                 logs.some((l) => String(l?.msg ?? '').includes('SecurityService.executeMethod'))
             )
