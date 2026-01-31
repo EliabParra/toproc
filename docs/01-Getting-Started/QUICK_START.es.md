@@ -36,7 +36,7 @@ docker-compose up -d
 Una vez que los contenedores estén arriba (verde en Docker Desktop), ejecuta:
 
 ```bash
-docker-compose exec api npm run db:init -- --yes --profile development
+docker-compose exec api pnpm run db:init -- --yes --profile development
 ```
 
 ### 4. ¡A Desarrollar!
@@ -69,18 +69,18 @@ Sigue la guía detallada paso a paso:
 
 ### Comandos Comunes
 
-| Acción              | 🐳 Docker                               | 🛠️ Manual        |
-| :------------------ | :-------------------------------------- | :--------------- |
-| **Iniciar Server**  | `docker-compose up -d`                  | `npm run dev`    |
-| **Ver Logs**        | `docker-compose logs -f`                | (En tu terminal) |
-| **Crear BO/Schema** | `docker-compose exec api npm run bo`    | `npm run bo`     |
-| **Tests**           | `docker-compose exec api npm test`      | `npm test`       |
-| **Auditoría**       | `docker-compose exec api npm run audit` | `npm run audit`  |
+| Acción              | 🐳 Docker                                | 🛠️ Manual        |
+| :------------------ | :--------------------------------------- | :--------------- |
+| **Iniciar Server**  | `docker-compose up -d`                   | `pnpm run dev`   |
+| **Ver Logs**        | `docker-compose logs -f`                 | (En tu terminal) |
+| **Crear BO/Schema** | `docker-compose exec api pnpm run bo`    | `pnpm run bo`    |
+| **Tests**           | `docker-compose exec api pnpm test`      | `pnpm test`      |
+| **Auditoría**       | `docker-compose exec api pnpm run audit` | `pnpm run audit` |
 
 ### Tips Pro
 
 - **Entrar al contenedor**: Si necesitas ejecutar muchos comandos seguidos en Docker:
     ```bash
     docker-compose exec api sh
-    # Ahora estás dentro de Linux. Ejecuta 'npm run ...' directamente.
+    # Ahora estás dentro de Linux. Ejecuta 'pnpm run ...' directamente.
     ```

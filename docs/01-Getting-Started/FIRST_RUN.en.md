@@ -2,7 +2,7 @@
 
 You installed everything and configured the environment. Now let's see what happens when you "push the power button".
 
-## 1. Database Initialization (`npm run db:init`)
+## 1. Database Initialization (`pnpm run db:init`)
 
 This command is critical for the first run.
 
@@ -19,7 +19,7 @@ This command is critical for the first run.
 ### Usage
 
 ```bash
-npm run db:init
+pnpm run db:init
 ```
 
 **Expected Output:**
@@ -33,7 +33,7 @@ npm run db:init
 
 ---
 
-## 2. Development Mode (`npm run dev`)
+## 2. Development Mode (`pnpm run dev`)
 
 This is the command you will use 90% of the time.
 
@@ -46,7 +46,7 @@ This is the command you will use 90% of the time.
 ### Usage
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 **Verification**:
@@ -54,11 +54,11 @@ Open `http://localhost:3000/health`. You should see: `OK`.
 
 ---
 
-## 3. Production Mode (`npm run build` + `npm start`)
+## 3. Production Mode (`pnpm run build` + `pnpm start`)
 
-This is how it should run on AWS, DigitalOcean, or your real server. Never use `npm run dev` in production (it's slow and insecure).
+This is how it should run on AWS, DigitalOcean, or your real server. Never use `pnpm run dev` in production (it's slow and insecure).
 
-### Step A: Compilation (`npm run build`)
+### Step A: Compilation (`pnpm run build`)
 
 Transforms your TypeScript code (pretty but heavy) into standard JavaScript (ugly but super fast).
 
@@ -68,23 +68,23 @@ Transforms your TypeScript code (pretty but heavy) into standard JavaScript (ugl
 > **Why compile?**
 > Node.js doesn't natively understand TypeScript. Compilation removes types and optimizes code.
 
-### Step B: Execution (`npm start`)
+### Step B: Execution (`pnpm start`)
 
 Runs the optimized code from the `dist/` folder.
 
 ```bash
-npm start
+pnpm start
 ```
 
 ---
 
 ## Lifecycle Summary
 
-1.  **Install** (`npm install`)
+1.  **Install** (`pnpm install`)
 2.  **Configure** (`.env`)
-3.  **Init DB** (`npm run db:init`)
-4.  **Code** (`npm run dev`)
-5.  **Deploy** (`npm run build` -> `npm start`)
+3.  **Init DB** (`pnpm run db:init`)
+4.  **Code** (`pnpm run dev`)
+5.  **Deploy** (`pnpm run build` -> `pnpm start`)
 
 ## Next Step
 

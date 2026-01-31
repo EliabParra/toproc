@@ -7,7 +7,7 @@ services:
             context: .
             # IMPORTANTE: Para desarrollo, usamos la etapa 'builder' del Dockerfile.
             # ¿Por qué? Porque 'builder' tiene las devDependencies (TypeScript, etc.)
-            # y herramientas necesarias para correr 'npm run dev'.
+            # y herramientas necesarias para correr 'pnpm run dev'.
             target: builder
         container_name: toproc-api
         ports:
@@ -29,13 +29,13 @@ services:
             db:
                 condition: service_healthy # Espera a que la DB esté lista antes de iniciar
         # Sobrescribimos el comando CMD del Dockerfile para usar modo desarrollo
-        command: npm run dev
+        command: pnpm run dev
         networks:
             - toproc-net
 
     # --- Servicio Base de Datos (PostgreSQL) ---
     db:
-        image: postgres:15-alpine
+        image: postgres:18-alpine
         container_name: toproc-db
         restart: always
         environment:
@@ -43,7 +43,7 @@ services:
             POSTGRES_PASSWORD: postgres
             POSTGRES_DB: toproc_dev
         ports:
-            - '5432:5432' # Útil si quieres conectar TablePlus/DBeaver desde fuera
+            - '5441:5432' # Útil si quieres conectar TablePlus/DBeaver desde fuera
         volumes:
             # Persistencia de datos: Si borras el contenedor, los datos sobreviven aquí.
             - postgres_data:/var/lib/postgresql/data

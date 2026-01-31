@@ -162,8 +162,8 @@ export class AuthCommand {
         console.log('        "sessionProfileId": 3')
         console.log('      }')
         console.log('')
-        console.log(`   4. Register methods: ${'npm run bo sync Auth'.bold}`)
-        console.log(`   5. Assign permissions: ${'npm run bo perms Auth'.bold}`)
+        console.log(`   4. Register methods: ${'pnpm run bo sync Auth'.bold}`)
+        console.log(`   5. Assign permissions: ${'pnpm run bo perms Auth'.bold}`)
         console.log('')
 
         this.interactor.close()

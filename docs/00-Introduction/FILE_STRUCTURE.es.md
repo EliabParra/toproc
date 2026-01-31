@@ -81,5 +81,5 @@ Capa consolidada para todos los servicios técnicos (Base de datos, Email, Loggi
 ## Archivos en Raíz
 
 - **`.env.example`**: Plantilla de variables de entorno.
-- **`package.json`**: Lista de dependencias y scripts (`npm run ...`).
+- **`package.json`**: Lista de dependencias y scripts (`pnpm run ...`).
 - **`tsconfig.json`**: Reglas del compilador TypeScript (e.g., Modo Estricto activado).

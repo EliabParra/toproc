@@ -68,7 +68,7 @@ Sigue la arquitectura de 4 capas:
 
 ## Tablas Involucradas
 
-- `security.users_base`: Credenciales y estado.
+- `security.users`: Credenciales y estado.
 - `security.user_profiles`: Roles asignados.
 - `security.one_time_codes`: Almacén temporal de OTPs.
 - `security.password_resets`: Historial de solicitudes de reset.

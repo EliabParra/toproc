@@ -36,15 +36,28 @@ export class Context {
     // Lazy load globals if not present (simulating legacy script start)
     async ensureGlobals() {
         if (!this.db) {
-            // Load valid config
-            // Connect DB
-            // Assign to this.db
-            // For now, assume migration to use unified `npm run db` CLI?
-            // Or stick to `src/globals` logic?
-            // Let's stick to importing globals.js in index.ts for simplicity.
-            await import('../../../src/foundation.js')
+            // Try to load from foundation first
+            try {
+                await import('../../../src/foundation.js')
+            } catch (e) {
+                // Ignore if foundation fails (e.g. strict mode or legacy issues)
+            }
+
             this.db = (globalThis as any).db
-            this.log = (globalThis as any).log
+
+            // If still no DB, create a standalone connection
+            if (!this.db) {
+                const { Database } = await import('../../db/core/db.js')
+                this.db = new Database({
+                    host: process.env.PGHOST || 'localhost',
+                    port: Number(process.env.PGPORT) || 5432,
+                    user: process.env.PGUSER || 'postgres',
+                    password: process.env.PGPASSWORD || '',
+                    database: process.env.PGDATABASE || 'toproc',
+                })
+            }
+
+            this.log = (globalThis as any).log || this.createMockLogger()
         }
     }
 }

@@ -19,7 +19,7 @@ export class InitCommand {
     }
 
     async run(opts: InitOptions = {}) {
-        console.log(`\n${'🚀'.cyan} ToProccess BO Setup Wizard`.cyan.bold)
+        console.log(`\n🚀 ToProccess BO Setup Wizard`.cyan.bold)
         console.log('══════════════════════════════════════════════════'.gray)
         console.log('')
 
@@ -36,13 +36,13 @@ export class InitCommand {
             const boCount = entries.filter((e) => e.isDirectory()).length
 
             if (boCount > 0) {
-                console.log(`${'ℹ️'.blue} Found ${boCount} existing BO(s) in BO/`)
+                console.log(`ℹ️  Found ${boCount} existing BO(s) in BO/`)
                 console.log('')
             }
         }
 
         // Step 1: Create initial BO
-        console.log('${"📋".blue} Step 1: Create your first Business Object')
+        console.log('📋 Step 1: Create your first Business Object')
         console.log('')
 
         const createFirst = await this.interactor.confirm('Create a new BO now?', true)
@@ -51,16 +51,16 @@ export class InitCommand {
             const name = await this.interactor.ask('BO name (PascalCase)', 'Product')
 
             if (!name) {
-                console.log(`${'⚠️'.yellow} Name required`)
+                console.log(`⚠️ Name required`)
                 this.interactor.close()
                 return
             }
 
             // Choose preset
             console.log('')
-            console.log('${"📦".blue} Choose a preset:')
-            console.log('   1. CRUD (get, create, update, delete)')
-            console.log('   2. ReadOnly (get, list, search)')
+            console.log('📦 Choose a preset:')
+            console.log('   1. CRUD (get, getAll, create, update, delete)')
+            console.log('   2. ReadOnly (get, getAll)')
             console.log('   3. Minimal (get)')
             console.log('   4. Custom')
 
@@ -69,10 +69,10 @@ export class InitCommand {
             let methods: string[]
             switch (preset) {
                 case '1':
-                    methods = ['get', 'create', 'update', 'delete']
+                    methods = ['get', 'getAll', 'create', 'update', 'delete']
                     break
                 case '2':
-                    methods = ['get', 'list', 'search']
+                    methods = ['get', 'getAll']
                     break
                 case '3':
                     methods = ['get']
@@ -80,7 +80,7 @@ export class InitCommand {
                 case '4':
                     const custom = await this.interactor.ask(
                         'Methods (comma-separated)',
-                        'get,create'
+                        'get,getAll,create,update,delete'
                     )
                     methods = custom
                         .split(',')
@@ -88,7 +88,7 @@ export class InitCommand {
                         .filter((m) => m)
                     break
                 default:
-                    methods = ['get', 'create', 'update', 'delete']
+                    methods = ['get', 'getAll', 'create', 'update', 'delete']
             }
 
             if (opts.isDryRun) {
@@ -106,7 +106,7 @@ export class InitCommand {
 
         // Step 2: Database setup reminder
         console.log('')
-        console.log('${"📋".blue} Step 2: Database Setup')
+        console.log('📋 Step 2: Database Setup')
         console.log('')
         console.log('Make sure your database is configured:')
         console.log('')
@@ -114,38 +114,38 @@ export class InitCommand {
         console.log('      PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD'.gray)
         console.log('')
         console.log('   2. Initialize database:'.gray)
-        console.log(`      ${'npm run db'.bold}`.gray)
+        console.log(`      ${'pnpm run db'.bold}`.gray)
         console.log('')
 
         // Step 3: Sync methods
-        console.log('${"📋".blue} Step 3: Register BO Methods')
+        console.log('📋 Step 3: Register BO Methods')
         console.log('')
         console.log('After creating BOs, sync them to the database:')
-        console.log(`   ${'npm run bo sync --all'.bold}`.gray)
+        console.log(`   ${'pnpm run bo sync --all'.bold}`.gray)
         console.log('')
 
         // Step 4: Set permissions
-        console.log('${"📋".blue} Step 4: Configure Permissions')
+        console.log('📋 Step 4: Configure Permissions')
         console.log('')
         console.log('Manage permissions for each BO:')
-        console.log(`   ${'npm run bo perms <Name>'.bold}`.gray)
+        console.log(`   ${'pnpm run bo perms <Name>'.bold}`.gray)
         console.log('')
 
         // Summary
         console.log('══════════════════════════════════════════════════'.gray)
         console.log('')
-        console.log('${"🎉".green} Setup complete! Quick reference:'.green.bold)
+        console.log('🎉 Setup complete! Quick reference:'.green.bold)
         console.log('')
-        console.log('┌─────────────────────────────────────────────────┐')
-        console.log('│ ${"Command".bold.padEnd(35)} │ ${"Description".bold.padEnd(20)} │')
-        console.log('├─────────────────────────────────────────────────┤')
-        console.log('│ npm run bo new <Name>        │ Create new BO     │')
-        console.log('│ npm run bo list              │ List all BOs      │')
-        console.log('│ npm run bo sync --all        │ Sync methods to DB│')
-        console.log('│ npm run bo perms <Name>      │ Manage permissions│')
-        console.log('│ npm run bo analyze           │ Health check      │')
-        console.log('│ npm run bo auth              │ Generate Auth     │')
-        console.log('└─────────────────────────────────────────────────┘')
+        console.log('┌───────────────────────────────────────────────────┐')
+        console.log('│ Command                      │ Description        │')
+        console.log('├───────────────────────────────────────────────────┤')
+        console.log('│ pnpm run bo new <Name>        │ Create new BO      │')
+        console.log('│ pnpm run bo list              │ List all BOs       │')
+        console.log('│ pnpm run bo sync --all        │ Sync methods to DB │')
+        console.log('│ pnpm run bo perms <Name>      │ Manage permissions │')
+        console.log('│ pnpm run bo analyze           │ Health check       │')
+        console.log('│ pnpm run bo auth              │ Generate Auth      │')
+        console.log('└───────────────────────────────────────────────────┘')
         console.log('')
 
         this.interactor.close()

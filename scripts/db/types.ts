@@ -46,6 +46,7 @@ export interface SecurityConfig {
     registerBo?: boolean
     txStart?: number
     pruneMethods?: boolean
+    introspectData?: boolean // New option
 
     seedPublicAuthPerms?: boolean
     includeEmail?: boolean

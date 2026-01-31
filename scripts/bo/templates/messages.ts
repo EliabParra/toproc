@@ -35,6 +35,14 @@ ${methodMessages}
 
     // Error
     NOT_FOUND: '${pascalName} no encontrado',
+    ALREADY_EXISTS: 'Ya existe un registro con estos datos',
+    INVALID_DATA: 'Datos inválidos',
+    CANNOT_DELETE: 'No se puede eliminar el registro',
+    PERMISSION_DENIED: 'Permiso denegado',
+    
+    // Helpers
+    notFoundById: (id: number) => \`${pascalName} con ID \${id} no encontrado\`,
+    duplicateField: (field: string, value: string) => \`${pascalName} con \${field} "\${value}" ya existe\`,
 
     // Validación
     VALIDATION: {

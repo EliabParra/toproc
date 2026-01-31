@@ -202,9 +202,9 @@ export interface BODependencies {
     db: IDatabase
     log: ILogger
     config: IConfig
-    msgs: any
     audit: IAuditService
     security: ISecurityService
     session: ISessionService
     validator: IValidator
+    i18n?: II18nService
 }

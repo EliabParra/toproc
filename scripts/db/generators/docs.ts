@@ -27,7 +27,7 @@ export class DocsGenerator {
 
         md += `\n## Next Steps\n`
         md += `1. Review \`.env\` file for credentials.\n`
-        md += `2. Run \`npm run dev\` to start the server.\n`
+        md += `2. Run \`pnpm run dev\` to start the server.\n`
         if (config.auth.enabled) {
             md += `3. Use \`scripts/bo.ts\` to generate Auth BOs if needed.\n`
         }

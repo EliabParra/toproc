@@ -1,6 +1,6 @@
 # 🤝 Collaborative Development Guide
 
-This guide details how to use the **Database CLI** (`npm run db`) to keep the database synchronized across your team. It's the essential document to avoid the classic "It works on my machine!" problem.
+This guide details how to use the **Database CLI** (`pnpm run db`) to keep the database synchronized across your team. It's the essential document to avoid the classic "It works on my machine!" problem.
 
 ---
 
@@ -27,7 +27,7 @@ Day 3: Juan does git pull, runs the app and... 💥
 
 > **Golden Rule**: Code is the single source of truth for the database.
 
-In ToProccess, all database changes are defined in TypeScript files under `scripts/db/schemas/`. When any developer runs `npm run db sync`, their local database is automatically updated.
+In ToProccess, all database changes are defined in TypeScript files under `scripts/db/schemas/`. When any developer runs `pnpm run db sync`, their local database is automatically updated.
 
 ```
 scripts/db/schemas/
@@ -49,16 +49,16 @@ scripts/db/schemas/
 git pull origin main
 
 # 2. Sync database
-npm run db sync
+pnpm run db sync
 
 # 3. Sync BO methods
-npm run db bo
+pnpm run db bo
 
 # 4. Start working
-npm run dev
+pnpm run dev
 ```
 
-> 💡 **Tip**: Create an alias `alias sync="git pull && npm run db sync && npm run db bo"` to do this in one command.
+> 💡 **Tip**: Create an alias `alias sync="git pull && pnpm run db sync && pnpm run db bo"` to do this in one command.
 
 ### Creating a New Table
 
@@ -86,13 +86,13 @@ export const sql = [
 2. **Apply the schema**:
 
 ```bash
-npm run db sync
+pnpm run db sync
 ```
 
 3. **Verify it works**:
 
 ```bash
-npm run verify
+pnpm run verify
 ```
 
 4. **Push to Git**:
@@ -107,10 +107,10 @@ git push
 
 ```bash
 # Verify your schemas are idempotent
-npm run db sync --dry-run
+pnpm run db sync --dry-run
 
 # Make sure everything passes
-npm run verify
+pnpm run verify
 ```
 
 ---
@@ -177,10 +177,10 @@ That method needs:
 1. A record in `security.methods` (with `tx` number)
 2. Permissions in `security.permission_methods`
 
-### The Solution: `npm run db bo`
+### The Solution: `pnpm run db bo`
 
 ```bash
-npm run db bo
+pnpm run db bo
 ```
 
 This automatically:
@@ -195,7 +195,7 @@ This automatically:
 If someone deleted a method from code but it's still in DB:
 
 ```bash
-npm run db bo
+pnpm run db bo
 # ⚠️ Found 2 orphaned methods:
 #    • ProductBO.oldMethod (tx: 150)
 ```
@@ -204,24 +204,24 @@ npm run db bo
 
 ```bash
 # First, see what would be deleted (dry-run)
-npm run db bo --prune --dry-run
+pnpm run db bo --prune --dry-run
 
 # If you're sure, delete
-npm run db bo --prune
+pnpm run db bo --prune
 ```
 
 ---
 
 ## 6. Essential Commands
 
-| Situation         | Command                                           |
-| ----------------- | ------------------------------------------------- |
-| **Start of day**  | `git pull && npm run db sync && npm run db bo`    |
-| **New table**     | Create file in `schemas/`, then `npm run db sync` |
-| **New BO method** | `npm run db bo`                                   |
-| **Verify state**  | `npm run db bo --dry-run`                         |
-| **Clean orphans** | `npm run db bo --prune`                           |
-| **Total reset**   | `npm run db reset --yes`                          |
+| Situation         | Command                                            |
+| ----------------- | -------------------------------------------------- |
+| **Start of day**  | `git pull && pnpm run db sync && pnpm run db bo`   |
+| **New table**     | Create file in `schemas/`, then `pnpm run db sync` |
+| **New BO method** | `pnpm run db bo`                                   |
+| **Verify state**  | `pnpm run db bo --dry-run`                         |
+| **Clean orphans** | `pnpm run db bo --prune`                           |
+| **Total reset**   | `pnpm run db reset --yes`                          |
 
 ---
 
@@ -245,9 +245,9 @@ my-company/
 ```bash
 cd my-app-backend
 git pull
-npm run db sync
-npm run db bo
-npm run dev
+pnpm run db sync
+pnpm run db bo
+pnpm run dev
 ```
 
 ### Flow for Frontend Developer
@@ -265,11 +265,11 @@ docker-compose up -d
 ```bash
 cd my-app-backend
 git pull
-npm run db sync
-npm run dev
+pnpm run db sync
+pnpm run dev
 # In another terminal
 cd my-app-frontend
-npm run dev
+pnpm run dev
 ```
 
 ---
@@ -289,16 +289,16 @@ jobs:
               run: docker-compose up -d postgres
 
             - name: Install dependencies
-              run: npm ci
+              run: pnpm ci
 
             - name: Sync database
-              run: npm run db sync -- --yes
+              run: pnpm run db sync -- --yes
 
             - name: Register BOs
-              run: npm run db bo -- --yes
+              run: pnpm run db bo -- --yes
 
             - name: Run tests
-              run: npm run verify
+              run: pnpm run verify
 ```
 
 ---
@@ -316,7 +316,7 @@ ERROR: relation "my_table" does not exist
 **Solution**:
 
 ```bash
-npm run db sync
+pnpm run db sync
 ```
 
 ### "Duplicate key value"
@@ -342,7 +342,7 @@ ERROR: duplicate key value violates unique constraint
 ### ✅ Do
 
 - Use `IF NOT EXISTS` always
-- Run `npm run db sync` after every `git pull`
+- Run `pnpm run db sync` after every `git pull`
 - Keep schema files small and focused
 - Use consistent numeric prefixes
 
@@ -361,7 +361,7 @@ ERROR: duplicate key value violates unique constraint
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  Pedro creates  │     │   Juan does     │     │   Maria does    │
 │   50_orders.ts  │────▶│   git pull      │────▶│   git pull      │
-│                 │     │   npm run db    │     │   npm run db    │
+│                 │     │   pnpm run db    │     │   pnpm run db    │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
          │                      │                       │
          ▼                      ▼                       ▼

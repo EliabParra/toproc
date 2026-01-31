@@ -10,7 +10,7 @@ This tutorial walks you through creating a complete feature.
 Don't waste time creating folders.
 
 ```bash
-npm run bo new Coupons --methods "create,validate"
+pnpm run bo new Coupons --methods "create,validate"
 ```
 
 This creates:

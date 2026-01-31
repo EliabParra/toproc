@@ -1,4 +1,4 @@
-# CLI Deep Dive: Business Object Generator (`npm run bo`)
+# CLI Deep Dive: Business Object Generator (`pnpm run bo`)
 
 The Business Object generator is your best friend for avoiding boilerplate code.
 It creates the standard **7-file structure** in seconds.
@@ -6,12 +6,12 @@ It creates the standard **7-file structure** in seconds.
 ## Main Command
 
 ```bash
-npm run bo [command] [options]
+pnpm run bo [command] [options]
 ```
 
 ### Interactive Menu
 
-Running just `npm run bo` shows an interactive menu:
+Running just `pnpm run bo` shows an interactive menu:
 
 ```
 📦 ToProccess BO CLI
@@ -32,19 +32,19 @@ Running just `npm run bo` shows an interactive menu:
 
 ## Available Commands
 
-| Command                     | Description                            |
-| --------------------------- | -------------------------------------- |
-| `npm run bo new <Name>`     | Create a new Business Object (7 files) |
-| `npm run bo list`           | List all registered BOs                |
-| `npm run bo sync [name]`    | Sync methods with database             |
-| `npm run bo perms [name]`   | Manage permissions for a BO            |
-| `npm run bo auth`           | Generate authentication module         |
-| `npm run bo analyze [name]` | BO health check                        |
-| `npm run bo init`           | Project setup wizard                   |
+| Command                      | Description                            |
+| ---------------------------- | -------------------------------------- |
+| `pnpm run bo new <Name>`     | Create a new Business Object (7 files) |
+| `pnpm run bo list`           | List all registered BOs                |
+| `pnpm run bo sync [name]`    | Sync methods with database             |
+| `pnpm run bo perms [name]`   | Manage permissions for a BO            |
+| `pnpm run bo auth`           | Generate authentication module         |
+| `pnpm run bo analyze [name]` | BO health check                        |
+| `pnpm run bo init`           | Project setup wizard                   |
 
 ---
 
-## `npm run bo new <Name>`
+## `pnpm run bo new <Name>`
 
 Creates a new Business Object with the 7-file structure.
 
@@ -60,13 +60,13 @@ Creates a new Business Object with the 7-file structure.
 
 ```bash
 # Full CRUD
-npm run bo new Products
+pnpm run bo new Products
 
 # Read-only
-npm run bo new Reports --methods "list,search,export"
+pnpm run bo new Reports --methods "list,search,export"
 
 # Verify before creating
-npm run bo new Orders --dry
+pnpm run bo new Orders --dry
 ```
 
 ### File Naming Convention
@@ -89,29 +89,29 @@ BO/Product/
 
 ---
 
-## `npm run bo sync`
+## `pnpm run bo sync`
 
 Synchronizes your BO methods with the `security.methods` table.
 
 ```bash
 # Sync a specific BO
-npm run bo sync Products
+pnpm run bo sync Products
 
 # Sync all BOs
-npm run bo sync --all
+pnpm run bo sync --all
 
 # Remove methods that no longer exist in code
-npm run bo sync --all --prune
+pnpm run bo sync --all --prune
 ```
 
 ---
 
-## `npm run bo perms`
+## `pnpm run bo perms`
 
 Manage permissions interactively.
 
 ```bash
-npm run bo perms Products
+pnpm run bo perms Products
 ```
 
 Shows a permission matrix:
@@ -145,12 +145,12 @@ Shows a permission matrix:
 
 ---
 
-## `npm run bo auth`
+## `pnpm run bo auth`
 
 Generates the complete authentication module with the 7-file structure.
 
 ```bash
-npm run bo auth
+pnpm run bo auth
 ```
 
 Creates:
@@ -169,26 +169,26 @@ BO/Auth/
 
 ---
 
-## `npm run bo analyze`
+## `pnpm run bo analyze`
 
 Runs a health check on your Business Objects.
 
 ```bash
 # Analyze all BOs
-npm run bo analyze
+pnpm run bo analyze
 
 # Analyze a specific one
-npm run bo analyze Products
+pnpm run bo analyze Products
 ```
 
 ---
 
-## `npm run bo init`
+## `pnpm run bo init`
 
 Project setup wizard for new projects.
 
 ```bash
-npm run bo init
+pnpm run bo init
 ```
 
 Guides you through:

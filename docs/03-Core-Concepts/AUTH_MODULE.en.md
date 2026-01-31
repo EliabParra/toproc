@@ -68,7 +68,7 @@ Follows the 4-layer architecture:
 
 ## Involved Tables
 
-- `security.users_base`: Credentials and status.
+- `security.users`: Credentials and status.
 - `security.user_profiles`: Assigned roles.
 - `security.one_time_codes`: Temporary OTP storage.
 - `security.password_resets`: Reset request history.

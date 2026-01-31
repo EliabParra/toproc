@@ -1,6 +1,6 @@
 # 🤝 Guía de Desarrollo Colaborativo
 
-Esta guía detalla cómo utilizar el **CLI de Base de Datos** (`npm run db`) para mantener la base de datos sincronizada en todo el equipo. Es el documento esencial para evitar el clásico problema de "¡En mi máquina funciona!".
+Esta guía detalla cómo utilizar el **CLI de Base de Datos** (`pnpm run db`) para mantener la base de datos sincronizada en todo el equipo. Es el documento esencial para evitar el clásico problema de "¡En mi máquina funciona!".
 
 ---
 
@@ -27,7 +27,7 @@ Día 3: Juan hace git pull, corre la app y... 💥
 
 > **Regla de Oro**: El código es la única verdad de la base de datos.
 
-En ToProccess, todos los cambios de base de datos se definen en archivos TypeScript bajo `scripts/db/schemas/`. Cuando cualquier desarrollador ejecuta `npm run db sync`, su base de datos local se actualiza automáticamente.
+En ToProccess, todos los cambios de base de datos se definen en archivos TypeScript bajo `scripts/db/schemas/`. Cuando cualquier desarrollador ejecuta `pnpm run db sync`, su base de datos local se actualiza automáticamente.
 
 ```
 scripts/db/schemas/
@@ -49,16 +49,16 @@ scripts/db/schemas/
 git pull origin main
 
 # 2. Sincronizar base de datos
-npm run db sync
+pnpm run db sync
 
 # 3. Sincronizar métodos de BOs
-npm run db bo
+pnpm run db bo
 
 # 4. Empezar a trabajar
-npm run dev
+pnpm run dev
 ```
 
-> 💡 **Tip**: Crea un alias `alias sync="git pull && npm run db sync && npm run db bo"` para hacer esto en un solo comando.
+> 💡 **Tip**: Crea un alias `alias sync="git pull && pnpm run db sync && pnpm run db bo"` para hacer esto en un solo comando.
 
 ### Al Crear una Nueva Tabla
 
@@ -86,13 +86,13 @@ export const sql = [
 2. **Aplica el esquema**:
 
 ```bash
-npm run db sync
+pnpm run db sync
 ```
 
 3. **Verifica que funciona**:
 
 ```bash
-npm run verify
+pnpm run verify
 ```
 
 4. **Sube a Git**:
@@ -107,10 +107,10 @@ git push
 
 ```bash
 # Verifica que tus esquemas son idempotentes
-npm run db sync --dry-run
+pnpm run db sync --dry-run
 
 # Asegúrate de que todo pasa
-npm run verify
+pnpm run verify
 ```
 
 ---
@@ -177,10 +177,10 @@ Ese método necesita:
 1. Un registro en `security.methods` (con número `tx`)
 2. Permisos en `security.permission_methods`
 
-### La Solución: `npm run db bo`
+### La Solución: `pnpm run db bo`
 
 ```bash
-npm run db bo
+pnpm run db bo
 ```
 
 Esto automáticamente:
@@ -195,7 +195,7 @@ Esto automáticamente:
 Si alguien eliminó un método del código pero sigue en la BD:
 
 ```bash
-npm run db bo
+pnpm run db bo
 # ⚠️ Found 2 orphaned methods:
 #    • ProductoBO.metodoViejo (tx: 150)
 ```
@@ -204,24 +204,24 @@ npm run db bo
 
 ```bash
 # Primero, ver qué se eliminaría (dry-run)
-npm run db bo --prune --dry-run
+pnpm run db bo --prune --dry-run
 
 # Si estás seguro, eliminar
-npm run db bo --prune
+pnpm run db bo --prune
 ```
 
 ---
 
 ## 6. Comandos Esenciales
 
-| Situación             | Comando                                              |
-| --------------------- | ---------------------------------------------------- |
-| **Inicio del día**    | `git pull && npm run db sync && npm run db bo`       |
-| **Nueva tabla**       | Crear archivo en `schemas/`, luego `npm run db sync` |
-| **Nuevo método BO**   | `npm run db bo`                                      |
-| **Verificar estado**  | `npm run db bo --dry-run`                            |
-| **Limpiar huérfanos** | `npm run db bo --prune`                              |
-| **Reset total**       | `npm run db reset --yes`                             |
+| Situación             | Comando                                               |
+| --------------------- | ----------------------------------------------------- |
+| **Inicio del día**    | `git pull && pnpm run db sync && pnpm run db bo`      |
+| **Nueva tabla**       | Crear archivo en `schemas/`, luego `pnpm run db sync` |
+| **Nuevo método BO**   | `pnpm run db bo`                                      |
+| **Verificar estado**  | `pnpm run db bo --dry-run`                            |
+| **Limpiar huérfanos** | `pnpm run db bo --prune`                              |
+| **Reset total**       | `pnpm run db reset --yes`                             |
 
 ---
 
@@ -245,9 +245,9 @@ mi-empresa/
 ```bash
 cd mi-app-backend
 git pull
-npm run db sync
-npm run db bo
-npm run dev
+pnpm run db sync
+pnpm run db bo
+pnpm run dev
 ```
 
 ### Flujo para Desarrollador Frontend
@@ -265,11 +265,11 @@ docker-compose up -d
 ```bash
 cd mi-app-backend
 git pull
-npm run db sync
-npm run dev
+pnpm run db sync
+pnpm run dev
 # En otra terminal
 cd mi-app-frontend
-npm run dev
+pnpm run dev
 ```
 
 ---
@@ -289,16 +289,16 @@ jobs:
               run: docker-compose up -d postgres
 
             - name: Install dependencies
-              run: npm ci
+              run: pnpm ci
 
             - name: Sync database
-              run: npm run db sync -- --yes
+              run: pnpm run db sync -- --yes
 
             - name: Register BOs
-              run: npm run db bo -- --yes
+              run: pnpm run db bo -- --yes
 
             - name: Run tests
-              run: npm run verify
+              run: pnpm run verify
 ```
 
 ---
@@ -316,7 +316,7 @@ ERROR: relation "mi_tabla" does not exist
 **Solución**:
 
 ```bash
-npm run db sync
+pnpm run db sync
 ```
 
 ### "Duplicate key value"
@@ -342,7 +342,7 @@ ERROR: duplicate key value violates unique constraint
 ### ✅ Hacer
 
 - Usar `IF NOT EXISTS` siempre
-- Ejecutar `npm run db sync` después de cada `git pull`
+- Ejecutar `pnpm run db sync` después de cada `git pull`
 - Mantener los archivos de esquema pequeños y enfocados
 - Usar prefijos numéricos consistentes
 
@@ -361,7 +361,7 @@ ERROR: duplicate key value violates unique constraint
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   Pedro crea    │     │   Juan hace     │     │   María hace    │
 │   50_orders.ts  │────▶│   git pull      │────▶│   git pull      │
-│                 │     │   npm run db    │     │   npm run db    │
+│                 │     │   pnpm run db    │     │   pnpm run db    │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
          │                      │                       │
          ▼                      ▼                       ▼

@@ -1,8 +1,8 @@
 import bcrypt from 'bcryptjs'
 
 function usage() {
-    console.log('Usage: npm run hashpw -- <plainPassword> [saltRounds]')
-    console.log('Example: npm run hashpw -- "MyPassword123" 10')
+    console.log('Usage: pnpm run hashpw -- <plainPassword> [saltRounds]')
+    console.log('Example: pnpm run hashpw -- "MyPassword123" 10')
 }
 
 const plainPassword = process.argv[2]

@@ -123,7 +123,7 @@ async function main() {
             '- Add your domain BOs here (e.g. `BO/ObjectName/ObjectNameBO.ts`).',
             '- The dispatcher resolves `tx -> (object_na, method_na)` and `Security` dynamically imports BO modules.',
             '',
-            'Tip: use the BO CLI (`npm run bo -- new ...`) to scaffold a BO.',
+            'Tip: use the BO CLI (`pnpm run bo -- new ...`) to scaffold a BO.',
             '',
         ].join('\n')
     )

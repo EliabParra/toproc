@@ -1,5 +1,4 @@
 import { IDatabase, ILogger, IConfig, IValidator, II18nService } from '../../types/core.js'
-import { ApiResponse } from '../../types/ApiResponse.js'
 
 /**
  * Dependencias requeridas por todos los Business Objects.
@@ -27,8 +26,6 @@ export type BODependencies = {
     v: IValidator
     /** Servicio i18n opcional para localización de mensajes */
     i18n?: II18nService
-    /** Objeto de mensajes legacy (deprecado, usar i18n) */
-    msgs?: any
 }
 
 /**
@@ -44,7 +41,7 @@ export type BODependencies = {
  *
  * @example
  * ```typescript
- * import { BaseBO, BODependencies, ApiResponse } from '../core/base/BaseBO.js'
+ * import { BaseBO, BODependencies } from '../core/base/BaseBO.js'
  * import { UserSchema } from './schemas.js'
  *
  * export default class UserBO extends BaseBO {
@@ -78,9 +75,6 @@ export abstract class BaseBO {
     /** Servicio i18n opcional */
     protected readonly i18n?: II18nService
 
-    /** Mensajes legacy (deprecado) */
-    protected readonly msgs?: any
-
     /**
      * Crea una nueva instancia de Business Object.
      *
@@ -99,7 +93,6 @@ export abstract class BaseBO {
         this.config = deps.config!
         this.v = deps.v!
         this.i18n = deps.i18n
-        this.msgs = deps.msgs
     }
 
     /**

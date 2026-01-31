@@ -36,34 +36,17 @@ async function main() {
         process.exit(0)
     }
 
-    // 2. Build full configuration (merging defaults + profile + CLI + interactive)
+    // 2. Initial Config (Defaults + Profile + CLI)
     const builder = new ConfigBuilder()
-    const config = await builder.build(cliArgs)
+    let config = await builder.buildBasic(cliArgs)
 
-    // 3. Setup Database Connection
-    const dbConfig = {
-        host: config.db.host,
-        port: config.db.port,
-        user: config.db.user,
-        password: config.db.password,
-        database: config.db.database,
-        ssl: config.db.ssl,
-    }
-
-    console.log(
-        colors.gray(`🔌 Connecting to ${dbConfig.host}:${dbConfig.port}/${dbConfig.database}...`)
-    )
-
-    const db = new Database(dbConfig)
-    const schemasDir = path.join(__dirname, 'schemas')
-    const boRoot = path.resolve(__dirname, '../../BO')
-
-    // 4. Determine action
+    // 3. Determine action
     let action: MenuAction = (cliArgs.action as MenuAction) || 'sync'
 
     // Interactive menu if no action specified
     if (!cliArgs.action && config.app.interactive && process.stdin.isTTY) {
         const interactor = new Interactor()
+        await interactor.header()
         console.log(colors.cyan('\n📋 What would you like to do?\n'))
 
         const selected = await interactor.select(
@@ -83,7 +66,34 @@ async function main() {
         interactor.close()
     }
 
+    if (action === 'exit') {
+        console.log('👋 Bye!')
+        process.exit(0)
+    }
+
+    // 4. Run Interactive Wizard (Contextual)
+    config = await builder.runWizard(config, cliArgs, action)
+
+    // 5. Setup Database Connection
+
     // 5. Execute action
+    const dbConfig = {
+        host: config.db.host,
+        port: config.db.port,
+        user: config.db.user,
+        password: config.db.password,
+        database: config.db.database,
+        ssl: config.db.ssl,
+    }
+
+    console.log(
+        colors.gray(`🔌 Connecting to ${dbConfig.host}:${dbConfig.port}/${dbConfig.database}...`)
+    )
+
+    const db = new Database(dbConfig)
+    const schemasDir = path.join(__dirname, 'schemas')
+    const boRoot = path.resolve(__dirname, '../../BO')
+
     const runnerConfig = {
         dryRun: config.app.dryRun,
         interactive: config.app.interactive,
@@ -113,7 +123,9 @@ async function main() {
             case 'introspect': {
                 console.log(colors.cyan('\n🔍 Running Introspect (DB → Code)...'))
                 const introspector = new Introspector(db, schemasDir)
-                await introspector.introspectAll()
+                await introspector.introspectAll({
+                    withData: config.security.introspectData,
+                })
                 break
             }
 
@@ -218,9 +230,8 @@ async function main() {
                 break
             }
 
-            case 'exit':
             default:
-                console.log('👋 Cancelled.')
+                console.log('👋 Done.')
         }
     } catch (e: any) {
         console.error(colors.red('🔥 Fatal Error:'), e.message)

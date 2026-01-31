@@ -15,8 +15,8 @@ const HELP_TEXT = `
 ${'📦 ToProccess BO CLI'.cyan.bold} v${VERSION}
 
 ${'Usage:'.bold}
-  npm run bo <command> [options]
-  npm run bo                      # Interactive menu
+  pnpm run bo <command> [options]
+  pnpm run bo                      # Interactive menu
 
 ${'Commands:'.bold}
   new <name>     Create a new Business Object (7 files)
@@ -36,12 +36,12 @@ ${'Options:'.bold}
   --help, -h     Show this help message
 
 ${'Examples:'.bold}
-  npm run bo new Product
-  npm run bo new Invoice --methods "create,list,search"
-  npm run bo sync Product
-  npm run bo sync --all
-  npm run bo perms Product
-  npm run bo new Order --dry
+  pnpm run bo new Product
+  pnpm run bo new Invoice --methods "create,list,search"
+  pnpm run bo sync Product
+  pnpm run bo sync --all
+  pnpm run bo perms Product
+  pnpm run bo new Order --dry
 
 ${'Generated Files:'.bold} (7 files per BO)
   📦 {Name}BO.ts             Main Business Object
@@ -71,7 +71,7 @@ export async function parseArgs(args: string[]) {
         isDryRun: args.includes('--dry') || args.includes('-d'),
         isInteractive: !args.includes('--yes') && !args.includes('-y'),
         all: args.includes('--all'),
-        methods: 'get,create,update,delete',
+        methods: 'get,getAll,create,update,delete',
         showHelp: args.includes('--help') || args.includes('-h'),
         rootDir: process.cwd(),
     }
@@ -128,11 +128,11 @@ async function handleNewInteractive(ctx: Context, interactor: Interactor) {
         return
     }
 
-    const defaultMethods = ['get', 'create', 'update', 'delete', 'list', 'search']
+    const defaultMethods = ['get', 'getAll', 'create', 'update', 'delete']
     const selectedMethods = await interactor.multiSelect(
         'Select methods to generate',
         defaultMethods,
-        ['get', 'create', 'update', 'delete']
+        ['get', 'getAll', 'create', 'update', 'delete']
     )
 
     if (selectedMethods.length === 0) {
@@ -176,7 +176,7 @@ async function main() {
                 if (opts.isInteractive && !opts.name) {
                     await handleNewInteractive(ctx, interactor)
                 } else {
-                    if (!opts.name) throw new Error('Specify name: npm run bo new <Name>')
+                    if (!opts.name) throw new Error('Specify name: pnpm run bo new <Name>')
                     await new NewCommand(ctx).run(opts.name, { methods: opts.methods })
                 }
                 break

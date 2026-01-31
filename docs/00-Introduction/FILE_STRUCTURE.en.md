@@ -81,6 +81,6 @@ Consolidated layer for all technical services (Database, Email, Logging, etc.).
 ## Root Files
 
 - **`.env.example`**: Environment variables template.
-- **`package.json`**: Dependency list and scripts (`npm run ...`).
+- **`package.json`**: Dependency list and scripts (`pnpm run ...`).
 - **`tsconfig.json`**: TypeScript compiler rules (e.g., Strict Mode enabled).
 - **`nodemon.json`**: Configuration to restart server on file save.

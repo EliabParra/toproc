@@ -10,7 +10,7 @@ Este tutorial te llevará de la mano para crear una funcionalidad completa.
 No pierdas tiempo creando carpetas.
 
 ```bash
-npm run bo new Coupons --methods "create,validate"
+pnpm run bo new Coupons --methods "create,validate"
 ```
 
 Esto crea:

@@ -12,7 +12,7 @@ Antes de copiar una sola línea de código, verifica esto.
 | Herramienta    | Versión Minima | Comando de Verificación | ¿Por qué la necesito?                                         |
 | :------------- | :------------- | :---------------------- | :------------------------------------------------------------ |
 | **Node.js**    | v20.x (LTS)    | `node -v`               | Es el motor que ejecuta nuestro código JavaScript/TypeScript. |
-| **npm**        | v10.x          | `npm -v`                | El gestor de paquetes que descarga las librerías.             |
+| **pnpm**       | v9.x           | `pnpm -v`               | El gestor de paquetes optimizado.                             |
 | **PostgreSQL** | v14.x          | `psql --version`        | Dónde guardaremos los datos (Usuarios, Transacciones).        |
 | **Git**        | v2.x           | `git --version`         | Para descargar este código y guardar el tuyo.                 |
 
@@ -35,7 +35,7 @@ brew install node postgresql git
 
 ```bash
 sudo apt update
-sudo apt install nodejs npm postgresql git
+sudo apt install nodejs pnpm postgresql git
 ```
 
 ---
@@ -51,12 +51,12 @@ git clone <url-del-repositorio>
 cd nodejs-backend-architecture
 ```
 
-### Entendiendo `npm install`
+### Entendiendo `pnpm install`
 
-Cuando ejecutas el siguiente comando, `npm` lee el archivo `package.json`.
+Cuando ejecutas el siguiente comando, `pnpm` lee el archivo `package.json`.
 
 ```bash
-npm install
+pnpm install
 ```
 
 **¿Qué está pasando?**

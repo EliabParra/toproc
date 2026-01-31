@@ -83,6 +83,17 @@ export class BORegistrar {
     }): Promise<{ registered: number; bos: string[] }> {
         console.log(`\n📦 Registering Business Objects...`.cyan)
 
+        // Verify profile exists before starting
+        const profileExists = await this.checkProfileExists(options.profileId)
+        if (!profileExists) {
+            console.log(`   ❌ Error: Profile ID ${options.profileId} does not exist.`.red)
+            console.log(
+                `      Run 'pnpm run db seed --seedProfiles' first to initialize default profiles.`
+                    .gray
+            )
+            throw new Error(`Profile ID ${options.profileId} not found.`)
+        }
+
         const bos = await this.discoverBOs()
 
         if (bos.length === 0) {
@@ -122,6 +133,14 @@ export class BORegistrar {
             'SELECT COALESCE(MAX(tx), 0) + 1 AS next_tx FROM security.methods'
         )
         return Number(result.rows[0]?.next_tx) || 1
+    }
+
+    private async checkProfileExists(profileId: number): Promise<boolean> {
+        const result = await this.db.exeRaw(
+            'SELECT 1 FROM security.profiles WHERE profile_id = $1',
+            [profileId]
+        )
+        return (result.rowCount ?? 0) > 0
     }
 
     private async upsertObject(objectName: string): Promise<number> {

@@ -32,7 +32,35 @@ export class SyncCommand {
         }
 
         if (!objectName) {
-            // List available BOs
+            // Interactive mode
+            if (this.ctx.config.isInteractive) {
+                const bos = await this.discoverBOs()
+                if (bos.length === 0) {
+                    console.log(`${'⚠️'.yellow} No BOs found in BO/ directory`.yellow)
+                    return
+                }
+
+                const { Interactor } = await import('../interactor/ui.js')
+                const interactor = new Interactor()
+
+                try {
+                    const options = ['[Sync All]', ...bos.map((b) => b.objectName), '[Cancel]']
+                    const selection = await interactor.select('Select BO to sync', options)
+
+                    if (selection === '[Cancel]') return
+                    if (selection === '[Sync All]') {
+                        opts.all = true
+                        await this.syncAll(opts)
+                    } else {
+                        await this.syncOne(selection, opts)
+                    }
+                } finally {
+                    interactor.close()
+                }
+                return
+            }
+
+            // List available BOs (Non-interactive fallback)
             const bos = await this.discoverBOs()
             if (bos.length === 0) {
                 console.log(`${'⚠️'.yellow} No BOs found in BO/ directory`.yellow)
@@ -44,7 +72,7 @@ export class SyncCommand {
                 console.log(`   • ${bo.objectName} (${bo.methods.length} methods)`.gray)
             }
             console.log(
-                `\nRun: ${'npm run bo sync <Name>'.bold} or ${'npm run bo sync --all'.bold}`
+                `\nRun: ${'pnpm run bo sync <Name>'.bold} or ${'pnpm run bo sync --all'.bold}`
             )
             return
         }

@@ -1,4 +1,4 @@
-# CLI Deep Dive: Business Object Generator (`npm run bo`)
+# CLI Deep Dive: Business Object Generator (`pnpm run bo`)
 
 El generador de Business Objects es tu mejor amigo para no escribir "boilerplate" (código repetitivo).
 Se encarga de crear la estructura estándar de **7 archivos** en segundos.
@@ -6,12 +6,12 @@ Se encarga de crear la estructura estándar de **7 archivos** en segundos.
 ## Comando Principal
 
 ```bash
-npm run bo [comando] [opciones]
+pnpm run bo [comando] [opciones]
 ```
 
 ### Menú Interactivo
 
-Si ejecutas solo `npm run bo`, verás un menú interactivo:
+Si ejecutas solo `pnpm run bo`, verás un menú interactivo:
 
 ```
 📦 ToProccess BO CLI
@@ -32,19 +32,19 @@ Si ejecutas solo `npm run bo`, verás un menú interactivo:
 
 ## Comandos Disponibles
 
-| Comando                       | Descripción                                |
-| ----------------------------- | ------------------------------------------ |
-| `npm run bo new <Nombre>`     | Crea un nuevo Business Object (7 archivos) |
-| `npm run bo list`             | Lista todos los BOs registrados            |
-| `npm run bo sync [nombre]`    | Sincroniza métodos con la base de datos    |
-| `npm run bo perms [nombre]`   | Gestiona permisos para un BO               |
-| `npm run bo auth`             | Genera el módulo de autenticación          |
-| `npm run bo analyze [nombre]` | Health check de BOs                        |
-| `npm run bo init`             | Wizard de configuración inicial            |
+| Comando                        | Descripción                                |
+| ------------------------------ | ------------------------------------------ |
+| `pnpm run bo new <Nombre>`     | Crea un nuevo Business Object (7 archivos) |
+| `pnpm run bo list`             | Lista todos los BOs registrados            |
+| `pnpm run bo sync [nombre]`    | Sincroniza métodos con la base de datos    |
+| `pnpm run bo perms [nombre]`   | Gestiona permisos para un BO               |
+| `pnpm run bo auth`             | Genera el módulo de autenticación          |
+| `pnpm run bo analyze [nombre]` | Health check de BOs                        |
+| `pnpm run bo init`             | Wizard de configuración inicial            |
 
 ---
 
-## `npm run bo new <Nombre>`
+## `pnpm run bo new <Nombre>`
 
 Crea un nuevo Business Object con la estructura de 7 archivos.
 
@@ -60,13 +60,13 @@ Crea un nuevo Business Object con la estructura de 7 archivos.
 
 ```bash
 # CRUD completo
-npm run bo new Products
+pnpm run bo new Products
 
 # Solo lectura
-npm run bo new Reports --methods "list,search,export"
+pnpm run bo new Reports --methods "list,search,export"
 
 # Verificar antes de crear
-npm run bo new Orders --dry
+pnpm run bo new Orders --dry
 ```
 
 ### Nomenclatura de Archivos
@@ -89,29 +89,29 @@ BO/Product/
 
 ---
 
-## `npm run bo sync`
+## `pnpm run bo sync`
 
 Sincroniza los métodos de tus BOs con la tabla `security.methods`.
 
 ```bash
 # Sincronizar un BO específico
-npm run bo sync Products
+pnpm run bo sync Products
 
 # Sincronizar todos los BOs
-npm run bo sync --all
+pnpm run bo sync --all
 
 # Eliminar métodos que ya no existen en el código
-npm run bo sync --all --prune
+pnpm run bo sync --all --prune
 ```
 
 ---
 
-## `npm run bo perms`
+## `pnpm run bo perms`
 
 Gestiona permisos de forma interactiva.
 
 ```bash
-npm run bo perms Products
+pnpm run bo perms Products
 ```
 
 Muestra una matriz de permisos:
@@ -145,12 +145,12 @@ Muestra una matriz de permisos:
 
 ---
 
-## `npm run bo auth`
+## `pnpm run bo auth`
 
 Genera el módulo de autenticación completo con la estructura de 7 archivos.
 
 ```bash
-npm run bo auth
+pnpm run bo auth
 ```
 
 Crea:
@@ -169,26 +169,26 @@ BO/Auth/
 
 ---
 
-## `npm run bo analyze`
+## `pnpm run bo analyze`
 
 Ejecuta un health check en tus Business Objects.
 
 ```bash
 # Analizar todos los BOs
-npm run bo analyze
+pnpm run bo analyze
 
 # Analizar uno específico
-npm run bo analyze Products
+pnpm run bo analyze Products
 ```
 
 ---
 
-## `npm run bo init`
+## `pnpm run bo init`
 
 Wizard de configuración inicial para nuevos proyectos.
 
 ```bash
-npm run bo init
+pnpm run bo init
 ```
 
 Te guía paso a paso:

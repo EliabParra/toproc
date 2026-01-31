@@ -46,7 +46,7 @@ export class NewCommand {
             let finalName = objectName
             let methods = options.methods
                 ? options.methods.split(',').map((m) => m.trim())
-                : ['get', 'create', 'update', 'delete']
+                : ['get', 'getAll', 'create', 'update', 'delete']
             let skipTypes = options.skipTypes
             let skipMessages = options.skipMessages
             let skipErrors = options.skipErrors
@@ -68,9 +68,9 @@ export class NewCommand {
                 ])) as Preset
 
                 if (preset === 'Default (CRUD)') {
-                    methods = ['get', 'create', 'update', 'delete']
+                    methods = ['get', 'getAll', 'create', 'update', 'delete']
                 } else if (preset === 'ReadOnly') {
-                    methods = ['get', 'list']
+                    methods = ['get', 'getAll']
                 } else if (preset === 'Minimal') {
                     methods = ['get']
                     skipTypes = true
@@ -79,8 +79,8 @@ export class NewCommand {
                 } else if (preset === 'Custom') {
                     methods = await this.ui.multiSelect(
                         'Select Methods',
-                        ['get', 'list', 'create', 'update', 'delete'],
-                        ['get', 'create', 'update', 'delete']
+                        ['get', 'getAll', 'create', 'update', 'delete'],
+                        ['get', 'getAll', 'create', 'update', 'delete']
                     )
                     // Custom file selection could be added here, currently defaulting to all
                 }
@@ -93,8 +93,8 @@ export class NewCommand {
 
             if (!this.ctx.config.isDryRun) {
                 console.log('')
-                this.ui.info(`Creating Business Object: ${pascalName.bold}`)
-                this.ui.startSpinner('Generating templates...')
+                this.ui.info(` Creating Business Object: ${pascalName.bold}`)
+                this.ui.startSpinner(' Generating templates...')
             }
 
             // Generate contents
@@ -127,14 +127,14 @@ export class NewCommand {
                     path: path.join(dir, `${pascalName}.Repository.ts`),
                     content: repoContent,
                     name: `${pascalName}.Repository.ts`,
-                    icon: '🗄️',
+                    icon: '🛢️',
                     desc: 'Data Access',
                 },
                 {
                     path: path.join(dir, `${pascalName}.Schemas.ts`),
                     content: schemasContent,
                     name: `${pascalName}.Schemas.ts`,
-                    icon: '✅',
+                    icon: '📜',
                     desc: 'Validation',
                 },
             ]
@@ -162,7 +162,7 @@ export class NewCommand {
                     path: path.join(dir, `${pascalName}.Errors.ts`),
                     content: errorsContent,
                     name: `${pascalName}.Errors.ts`,
-                    icon: '❌',
+                    icon: '🛑',
                     desc: 'Domain Errors',
                 })
             }
@@ -212,7 +212,8 @@ export class NewCommand {
                 console.log('💡 Next steps:'.cyan)
                 console.log(`   1. Edit ${`${pascalName}.Types.ts`.bold}`)
                 console.log(`   2. Edit ${`${pascalName}.Schemas.ts`.bold}`)
-                console.log(`   3. Run: ${'npm run bo sync'.bold}`)
+                console.log(`   3. Configure DB queries in ${`${pascalName}.Repository.ts`.bold}`)
+                console.log(`   4. Run: ${'pnpm run bo sync'.bold}`)
                 console.log('')
             }
         } finally {

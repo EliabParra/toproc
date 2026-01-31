@@ -2,7 +2,7 @@
 
 Ya instalaste todo y configuraste el entorno. Ahora vamos a ver qué pasa cuando "aprietas el botón de encendido".
 
-## 1. Inicialización de Base de Datos (`npm run db:init`)
+## 1. Inicialización de Base de Datos (`pnpm run db:init`)
 
 Este comando es crítico para la primera vez.
 
@@ -19,7 +19,7 @@ Este comando es crítico para la primera vez.
 ### Uso
 
 ```bash
-npm run db:init
+pnpm run db:init
 ```
 
 **Salida Esperada:**
@@ -33,7 +33,7 @@ npm run db:init
 
 ---
 
-## 2. Modo Desarrollo (`npm run dev`)
+## 2. Modo Desarrollo (`pnpm run dev`)
 
 Este es el comando que usarás el 90% del tiempo.
 
@@ -46,7 +46,7 @@ Este es el comando que usarás el 90% del tiempo.
 ### Uso
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 **Verificación**:
@@ -54,11 +54,11 @@ Abre `http://localhost:3000/health`. Deberías ver: `OK`.
 
 ---
 
-## 3. Modo Producción (`npm run build` + `npm start`)
+## 3. Modo Producción (`pnpm run build` + `pnpm start`)
 
-Así es como debe correr en AWS, DigitalOcean o tu servidor real. Nunca uses `npm run dev` en producción (es lento e inseguro).
+Así es como debe correr en AWS, DigitalOcean o tu servidor real. Nunca uses `pnpm run dev` en producción (es lento e inseguro).
 
-### Paso A: Compilación (`npm run build`)
+### Paso A: Compilación (`pnpm run build`)
 
 Transforma tu código TypeScript (bonito pero pesado) a JavaScript estándar (feo pero rapidísimo).
 
@@ -68,23 +68,23 @@ Transforma tu código TypeScript (bonito pero pesado) a JavaScript estándar (fe
 > **¿Por qué compilar?**
 > Node.js no entiende TypeScript nativamente. La compilación elimina tipos y optimiza el código.
 
-### Paso B: Ejecución (`npm start`)
+### Paso B: Ejecución (`pnpm start`)
 
 Corre el código optimizado desde la carpeta `dist/`.
 
 ```bash
-npm start
+pnpm start
 ```
 
 ---
 
 ## Resumen del Ciclo de Vida
 
-1.  **Instalar** (`npm install`)
+1.  **Instalar** (`pnpm install`)
 2.  **Configurar** (`.env`)
-3.  **Inicializar DB** (`npm run db:init`)
-4.  **Programar** (`npm run dev`)
-5.  **Desplegar** (`npm run build` -> `npm start`)
+3.  **Inicializar DB** (`pnpm run db:init`)
+4.  **Programar** (`pnpm run dev`)
+5.  **Desplegar** (`pnpm run build` -> `pnpm start`)
 
 ## Siguiente Paso
 

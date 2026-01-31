@@ -36,7 +36,7 @@ docker-compose up -d
 Once the containers are up (green in Docker Desktop), run:
 
 ```bash
-docker-compose exec api npm run db:init -- --yes --profile development
+docker-compose exec api pnpm run db:init -- --yes --profile development
 ```
 
 ### 4. Start Developing!
@@ -69,18 +69,18 @@ Follow the detailed step-by-step guide:
 
 ### Common Commands
 
-| Action               | 🐳 Docker                               | 🛠️ Manual          |
-| :------------------- | :-------------------------------------- | :----------------- |
-| **Start Server**     | `docker-compose up -d`                  | `npm run dev`      |
-| **View Logs**        | `docker-compose logs -f`                | (In your terminal) |
-| **Create BO/Schema** | `docker-compose exec api npm run bo`    | `npm run bo`       |
-| **Tests**            | `docker-compose exec api npm test`      | `npm test`         |
-| **Audit**            | `docker-compose exec api npm run audit` | `npm run audit`    |
+| Action               | 🐳 Docker                                | 🛠️ Manual          |
+| :------------------- | :--------------------------------------- | :----------------- |
+| **Start Server**     | `docker-compose up -d`                   | `pnpm run dev`     |
+| **View Logs**        | `docker-compose logs -f`                 | (In your terminal) |
+| **Create BO/Schema** | `docker-compose exec api pnpm run bo`    | `pnpm run bo`      |
+| **Tests**            | `docker-compose exec api pnpm test`      | `pnpm test`        |
+| **Audit**            | `docker-compose exec api pnpm run audit` | `pnpm run audit`   |
 
 ### Pro Tips
 
 - **Enter the container**: If you need to run many commands in a row in Docker:
     ```bash
     docker-compose exec api sh
-    # You are now inside Linux. Run 'npm run ...' directly.
+    # You are now inside Linux. Run 'pnpm run ...' directly.
     ```

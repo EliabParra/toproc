@@ -36,7 +36,7 @@ export class AnalyzeCommand {
     constructor(private ctx: Context) {}
 
     async run(objectName?: string) {
-        console.log(`\n${'🔍'.cyan} BO Health Analyzer`.cyan.bold)
+        console.log(`\n🔍 BO Health Analyzer`.cyan.bold)
         console.log('══════════════════════════════════════════════════'.gray)
 
         if (objectName) {
@@ -63,12 +63,12 @@ export class AnalyzeCommand {
                 }
             }
         } catch {
-            console.log(`${'⚠️'.yellow} BO directory not found. Run: npm run bo new <Name>`)
+            console.log(`⚠️ BO directory not found. Run: pnpm run bo new <Name>`)
             return
         }
 
         if (bos.length === 0) {
-            console.log(`${'ℹ️'.blue} No BOs found. Run: npm run bo new <Name>`)
+            console.log(`ℹ️ No BOs found. Run: pnpm run bo new <Name>`)
             return
         }
 
@@ -81,12 +81,7 @@ export class AnalyzeCommand {
         for (const bo of bos) {
             const result = await this.analyze(bo)
 
-            const icon =
-                result.status === 'ok'
-                    ? '✅'.green
-                    : result.status === 'warning'
-                      ? '⚠️'.yellow
-                      : '❌'.red
+            const icon = result.status === 'ok' ? '✅' : result.status === 'warning' ? '⚠️' : '❌'
 
             const fileCount = result.files.filter((f) => f.exists).length
             const methodCount = result.methods.length
@@ -102,13 +97,11 @@ export class AnalyzeCommand {
 
         console.log('')
         console.log('──────────────────────────────────────────────────'.gray)
-        console.log(
-            `   ${'✅'.green} OK: ${okCount}   ${'⚠️'.yellow} Warnings: ${warnCount}   ${'❌'.red} Errors: ${errorCount}`
-        )
+        console.log(`   ✅ OK: ${okCount}   ⚠️ Warnings: ${warnCount}   ❌ Errors: ${errorCount}`)
         console.log('')
 
         if (warnCount > 0 || errorCount > 0) {
-            console.log(`Run ${'npm run bo analyze <Name>'.bold} for details on a specific BO`)
+            console.log(`Run pnpm run bo analyze <Name>'.bold} for details on a specific BO`)
         }
     }
 
@@ -129,7 +122,7 @@ export class AnalyzeCommand {
                 files: [],
                 methods: [],
                 issues: [`Directory BO/${objectName}/ not found`],
-                suggestions: [`Run: npm run bo new ${objectName}`],
+                suggestions: [`Run: pnpm run bo new ${objectName}`],
             }
         }
 
@@ -231,7 +224,7 @@ export class AnalyzeCommand {
 
         // Issues
         if (result.issues.length > 0) {
-            console.log(`\n${'❌'.red} Issues:`)
+            console.log(`\n❌ Issues:`)
             for (const issue of result.issues) {
                 console.log(`   • ${issue}`.red)
             }
@@ -239,7 +232,7 @@ export class AnalyzeCommand {
 
         // Suggestions
         if (result.suggestions.length > 0) {
-            console.log(`\n${'💡'.blue} Suggestions:`)
+            console.log(`\n💡 Suggestions:`)
             for (const suggestion of result.suggestions) {
                 console.log(`   • ${suggestion}`.gray)
             }

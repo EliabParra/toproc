@@ -12,7 +12,7 @@ Before copying a single line of code, verify this.
 | Tool           | Min Version | Check Command    | Why do I need it?                                    |
 | :------------- | :---------- | :--------------- | :--------------------------------------------------- |
 | **Node.js**    | v20.x (LTS) | `node -v`        | The engine that runs our JavaScript/TypeScript code. |
-| **npm**        | v10.x       | `npm -v`         | The package manager that downloads libraries.        |
+| **pnpm**       | v9.x        | `pnpm -v`        | The optimized package manager.                       |
 | **PostgreSQL** | v14.x       | `psql --version` | Where we store data (Users, Transactions).           |
 | **Git**        | v2.x        | `git --version`  | To download this code and save yours.                |
 
@@ -35,7 +35,7 @@ brew install node postgresql git
 
 ```bash
 sudo apt update
-sudo apt install nodejs npm postgresql git
+sudo apt install nodejs pnpm postgresql git
 ```
 
 ---
@@ -51,12 +51,12 @@ git clone <repo-url>
 cd nodejs-backend-architecture
 ```
 
-### Understanding `npm install`
+### Understanding `pnpm install`
 
-When you run the following command, `npm` reads the `package.json` file.
+When you run the following command, `pnpm` reads the `package.json` file.
 
 ```bash
-npm install
+pnpm install
 ```
 
 **What is happening?**

@@ -4,25 +4,25 @@ Thanks for taking the time to contribute.
 
 ## Development setup
 
-- Requires Node.js and npm.
+- Requires Node.js and pnpm.
 - Install dependencies:
 
 ```bash
-npm ci
+pnpm ci
 ```
 
 ## Running tests
 
 ```bash
-npm test
+pnpm test
 ```
 
 Optional (recommended):
 
 ```bash
-npm run verify
-npm run test:watch
-npm run test:coverage
+pnpm run verify
+pnpm run test:watch
+pnpm run test:coverage
 ```
 
 ## Pull requests
@@ -30,7 +30,7 @@ npm run test:coverage
 - Keep PRs focused and small.
 - Include a clear description of what changed and why.
 - Add or update tests when behavior changes.
-- Make sure `npm test` passes.
+- Make sure `pnpm test` passes.
 
 ## Reporting security issues
 

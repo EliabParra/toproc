@@ -48,6 +48,6 @@ describe('Coupons Logic', () => {
 
 ## Comandos
 
-- **Todos los tests**: `npm test`
+- **Todos los tests**: `pnpm test`
 - **Solo un archivo**: `node --import tsx --test BO/Coupons/test/CouponsService.test.ts`
-- **Con Cobertura**: `npm run test:coverage` (te dice qué % de código está probado).
+- **Con Cobertura**: `pnpm run test:coverage` (te dice qué % de código está probado).

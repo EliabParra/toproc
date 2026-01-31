@@ -25,17 +25,7 @@ export function templateErrors(objectName: string, _methods: string[]) {
  */
 
 import { ${pascalName}Messages } from './${pascalName}.Messages.js'
-
-// ============================================================
-// Clase Base de Error
-// ============================================================
-
-/**
- * Clase base de error para el dominio ${pascalName}
- * Extiende Error estándar con código y status HTTP
- */
 import { BOError } from '../../src/core/errors/BOError.js'
-import { ${pascalName}Messages } from './${pascalName}.Messages.js'
 
 // ============================================================
 // Clase Base de Error
@@ -48,17 +38,12 @@ import { ${pascalName}Messages } from './${pascalName}.Messages.js'
 export class ${pascalName}Error extends BOError {
     constructor(
         message: string,
-        code: string,
-        status: number = 500,
+        tag: string,
+        code: number = 500,
         details?: Record<string, unknown>
     ) {
-        // Tag format example: PRODUCT_ERROR
-        super(message, '${upperName}_ERROR', status, details)
-        this.name = '${pascalName}Error'
-        // Override code with the specific string code from generic BOError number code if needed, 
-        // but BOError primarily uses number. We can map string code to tag or details if we want strict compatibility.
-        // For this template, we'll keep the custom properties but extend BOError.
-        (this as any).codeString = code 
+        super(message, tag, code, details)
+        this.name = '${pascalName}Error';
     }
 }
 

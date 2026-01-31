@@ -7,7 +7,9 @@ export class ListCommand {
         this.ctx.log.show({ type: this.ctx.log.TYPE_INFO, msg: 'Listing BOs...' })
         await this.ctx.ensureGlobals()
 
-        const res = await this.ctx.db.exe('security', 'listObjects', null)
+        const res = await this.ctx.db.exeRaw(
+            `SELECT object_id, object_name FROM security.objects ORDER BY object_name`
+        )
         const objects = res.rows || []
 
         console.log(`\n📦 Registered Objects: ${objects.length}`)

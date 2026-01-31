@@ -53,23 +53,94 @@ export class Interactor {
     }
 
     async select(question: string, options: string[], defaultOption?: string): Promise<string> {
-        console.log(`${'➜'.green} ${question.bold}:`)
-        options.forEach((opt, i) => {
-            const marker = defaultOption === opt ? '❯'.cyan : ' '
-            console.log(`  ${marker} ${String(i + 1).gray}. ${opt}`)
-        })
+        let index = defaultOption ? Math.max(0, options.indexOf(defaultOption)) : 0
 
-        while (true) {
-            const ans = await this.ask(
-                `Select (1-${options.length})`,
-                defaultOption ? String(options.indexOf(defaultOption) + 1) : undefined
-            )
-            const idx = parseInt(ans) - 1
-            if (idx >= 0 && idx < options.length) {
-                return options[idx]
-            }
-            console.log(`${'⚠'.yellow} Invalid selection`)
+        // Hide cursor
+        process.stdout.write('\x1B[?25l')
+
+        const print = () => {
+            // Move cursor to start
+            process.stdout.write('\r')
+            // Clear screen down (if we want robust redraw, simpler is just rewriting lines if we know count)
+            // But for simplicity, we'll clear N lines up.
+            // Better: use a fresh "render" approach.
+            // Since we can't easily clear "previous" render without tracking lines, let's assume we print once and then use ansi moves.
+            // Actually, for a robust CLI without deps, standard practice is:
+            // Print Question
+            // Print Options
+            // Move cursor back up N lines.
+
+            // For now, let's just print the menu.
+            console.log(`${'➜'.green} ${question.bold}:`)
+            options.forEach((opt, i) => {
+                const marker = i === index ? '❯'.cyan : ' '
+                const style = i === index ? (s: string) => s.cyan.bold : (s: string) => s
+                console.log(`  ${marker} ${style(opt)}`)
+            })
         }
+
+        // Initial render
+        // We will assume "fullscreen" component style for list isn't feasible cleanly without clearing.
+        // Let's use a "redraw" strategy: Move cursor up N lines, Clear, Print.
+
+        const render = () => {
+            options.forEach((opt, i) => {
+                const marker = i === index ? '❯'.cyan : ' '
+                const style = i === index ? (s: string) => s.cyan.bold : (s: string) => s
+                // Clear line
+                process.stdout.write('\x1B[2K\r')
+                console.log(`  ${marker} ${style(opt)}`)
+            })
+        }
+
+        console.log(`${'➜'.green} ${question.bold}:`)
+        // Reserve space
+        for (let i = 0; i < options.length; i++) console.log('')
+        // Move back up
+        process.stdout.write(`\x1B[${options.length}A`)
+
+        render()
+
+        return new Promise((resolve) => {
+            const onData = (key: Buffer) => {
+                // Up
+                if (key.toString() === '\u001b[A') {
+                    index = (index - 1 + options.length) % options.length
+                    process.stdout.write(`\x1B[${options.length}A`)
+                    render()
+                }
+                // Down
+                if (key.toString() === '\u001b[B') {
+                    index = (index + 1) % options.length
+                    process.stdout.write(`\x1B[${options.length}A`)
+                    render()
+                }
+                // Enter
+                if (key.toString() === '\r' || key.toString() === '\n') {
+                    cleanup()
+                    process.stdout.write('\x1B[?25h') // Show cursor
+                    // Move cursor down to end
+                    // process.stdout.write(`\x1B[${options.length}B`) // Actually we are at bottom? No we are at bottom of render loop.
+                    resolve(options[index])
+                }
+                // Ctrl+C
+                if (key.toString() === '\u0003') {
+                    cleanup()
+                    process.stdout.write('\x1B[?25h')
+                    process.exit(0)
+                }
+            }
+
+            const cleanup = () => {
+                process.stdin.removeListener('data', onData)
+                process.stdin.setRawMode(false)
+                process.stdin.pause()
+            }
+
+            process.stdin.setRawMode(true)
+            process.stdin.resume()
+            process.stdin.on('data', onData)
+        })
     }
 
     async multiSelect(
@@ -78,41 +149,81 @@ export class Interactor {
         defaults: string[] = []
     ): Promise<string[]> {
         const selected = new Set<string>(defaults)
+        let index = 0
+
+        process.stdout.write('\x1B[?25l') // Hide cursor
 
         console.log(`${'➜ '.green} ${question.bold}:`)
-        console.log('   Use numbers to toggle, Enter when done'.gray)
+        console.log('   Use arrows to move, Space to toggle, Enter to confirm'.gray)
 
-        const printOptions = () => {
+        // Reserve space
+        for (let i = 0; i < options.length; i++) console.log('')
+        process.stdout.write(`\x1B[${options.length}A`)
+
+        const render = () => {
             options.forEach((opt, i) => {
-                const checked = selected.has(opt) ? '◉'.green : '◯'.gray
-                console.log(`  ${checked} ${String(i + 1).gray}. ${opt}`)
+                const isSelected = selected.has(opt)
+                const isFocused = i === index
+
+                const checkbox = isSelected ? '◉'.green : '◯'.gray
+                const cursor = isFocused ? '❯'.cyan : ' '
+                const label = isFocused ? opt.cyan.bold : opt.gray
+
+                process.stdout.write('\x1B[2K\r') // Clear line
+                console.log(`  ${cursor} ${checkbox} ${label}`)
             })
         }
 
-        printOptions()
+        render()
 
-        while (true) {
-            const ans = await this.ask('Toggle or Enter to confirm', '')
+        return new Promise((resolve) => {
+            const onData = (key: Buffer) => {
+                const k = key.toString()
 
-            if (ans === '') {
-                return Array.from(selected)
-            }
-
-            const idx = parseInt(ans) - 1
-            if (idx >= 0 && idx < options.length) {
-                const opt = options[idx]
-                if (selected.has(opt)) {
-                    selected.delete(opt)
-                } else {
-                    selected.add(opt)
+                // Up
+                if (k === '\u001b[A') {
+                    index = (index - 1 + options.length) % options.length
+                    process.stdout.write(`\x1B[${options.length}A`)
+                    render()
                 }
-                // Reprint
-                console.log('')
-                printOptions()
-            } else {
-                console.log(`${'⚠'.yellow} Invalid selection`)
+                // Down
+                if (k === '\u001b[B') {
+                    index = (index + 1) % options.length
+                    process.stdout.write(`\x1B[${options.length}A`)
+                    render()
+                }
+                // Space (Toggle)
+                if (k === ' ') {
+                    const opt = options[index]
+                    if (selected.has(opt)) selected.delete(opt)
+                    else selected.add(opt)
+                    process.stdout.write(`\x1B[${options.length}A`)
+                    render()
+                }
+                // Enter
+                if (k === '\r' || k === '\n') {
+                    cleanup()
+                    process.stdout.write('\x1B[?25h')
+                    resolve(Array.from(selected))
+                }
+                // Ctrl+C
+                if (k === '\u0003') {
+                    cleanup()
+                    process.stdout.write('\x1B[?25h')
+                    process.exit(0)
+                }
             }
-        }
+
+            const cleanup = () => {
+                process.stdin.removeListener('data', onData)
+                process.stdin.setRawMode(false)
+                process.stdin.pause()
+            }
+
+            process.stdin.setRawMode(true)
+            process.stdin.resume()
+            process.stdin.on('data', onData)
+        })
     }
 
     // ============================================================
@@ -144,14 +255,33 @@ export class Interactor {
     // Tables
     // ============================================================
 
+    private visibleLength(str: string): number {
+        // Remove ANSI codes
+        const noAnsi = str.replace(
+            /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
+            ''
+        )
+        // Remove Variation Selector-16 (\uFE0F) which adds length but is visually merged
+        const noVS16 = noAnsi.replace(/\uFE0F/g, '')
+        return noVS16.length
+    }
+
     table(headers: string[], rows: string[][]) {
         // Calculate column widths
         const widths = headers.map((h, i) => {
-            return Math.max(h.length, ...rows.map((r) => (r[i] || '').length))
+            return Math.max(
+                this.visibleLength(h),
+                ...rows.map((r) => this.visibleLength(r[i] || ''))
+            )
         })
 
+        const pad = (s: string, w: number) => {
+            const len = this.visibleLength(s)
+            return s + ' '.repeat(Math.max(0, w - len))
+        }
+
         // Print header
-        const headerLine = headers.map((h, i) => h.padEnd(widths[i])).join(' │ ')
+        const headerLine = headers.map((h, i) => pad(h, widths[i])).join(' │ ')
         const dividerLine = widths.map((w) => '─'.repeat(w)).join('─┼─')
 
         console.log('┌' + widths.map((w) => '─'.repeat(w + 2)).join('┬') + '┐')
@@ -160,7 +290,7 @@ export class Interactor {
 
         // Print rows
         for (const row of rows) {
-            const rowLine = row.map((cell, i) => (cell || '').padEnd(widths[i])).join(' │ ')
+            const rowLine = row.map((cell, i) => pad(cell || '', widths[i])).join(' │ ')
             console.log('│ ' + rowLine + ' │')
         }
 
@@ -190,7 +320,7 @@ export class Interactor {
             clearInterval(this.spinnerInterval)
             this.spinnerInterval = null
         }
-        const icon = success ? '✅'.green : '❌'.red
+        const icon = success ? '✅ '.green : '❌ '.red
         process.stdout.write(`\r   ${icon}\n`)
     }
 }

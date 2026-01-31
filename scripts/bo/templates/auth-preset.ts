@@ -27,7 +27,6 @@ export const AuthPreset = {
     // ============================================================
 
     bo: () => `import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
-import { ApiResponse } from '../../src/types/ApiResponse.js'
 import { AuthService } from './Auth.Service.js'
 import {
     AuthSchemas,
@@ -39,7 +38,6 @@ import {
     ResetPasswordConfirmInput,
 } from './Auth.Schemas.js'
 import { AuthMessages } from './Auth.Messages.js'
-import { isAuthError } from './Auth.Errors.js'
 
 export class AuthBO extends BaseBO {
     private service: AuthService

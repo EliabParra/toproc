@@ -44,7 +44,7 @@ A diferencia de los frameworks MVC tradicionales, Toproc no expone recursos (End
 
 - **Auth Module Completo**: Login, Registro, Email Verification (OTP), Password Reset y CSRF Protection.
 - **Infraestructura Lista**: Sesiones en Postgres, Rate Limiting, CORS seguro y Logs estructurados (JSON/Text).
-- **CLI Tools**: Generadores de código (`npm run bo`), inicializadores de DB y scripts de mantenimiento.
+- **CLI Tools**: Generadores de código (`pnpm run bo`), inicializadores de DB y scripts de mantenimiento.
 
 ---
 
@@ -59,7 +59,7 @@ A diferencia de los frameworks MVC tradicionales, Toproc no expone recursos (End
 
 ```bash
 git clone ...
-npm install
+pnpm install
 ```
 
 ### 3. Configuración
@@ -77,13 +77,13 @@ cp .env.example .env
 Crea las tablas del sistema (`security`, `session`, `audit`).
 
 ```bash
-npm run db
+pnpm run db
 ```
 
 ### 5. Arrancar
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 ---
@@ -134,16 +134,16 @@ npm run dev
 
 ## 🛠️ Scripts Disponibles
 
-| Script                 | Descripción                                      |
-| :--------------------- | :----------------------------------------------- |
-| `npm run dev`          | Modo desarrollo con `nodemon` (Hot Reload).      |
-| `npm start`            | Modo producción (Ejecuta `dist/index.js`).       |
-| `npm run verify`       | **Quality Gate**: Typecheck + Build + Tests.     |
-| `npm run db`           | CLI interactivo de BD (sync, seed, reset).       |
-| `npm run config:check` | Valida el archivo `.env` sin arrancar el server. |
-| `npm run bo <cmd>`     | CLI para crear BOs: `new`, `sync`, `list`.       |
-| `npm run docs:gen`     | Genera documentación API (TypeDoc).              |
-| `npm run hashpw`       | Utilidad para hashear passwords manualmente.     |
+| Script                  | Descripción                                      |
+| :---------------------- | :----------------------------------------------- |
+| `pnpm run dev`          | Modo desarrollo con `nodemon` (Hot Reload).      |
+| `pnpm start`            | Modo producción (Ejecuta `dist/index.js`).       |
+| `pnpm run verify`       | **Quality Gate**: Typecheck + Build + Tests.     |
+| `pnpm run db`           | CLI interactivo de BD (sync, seed, reset).       |
+| `pnpm run config:check` | Valida el archivo `.env` sin arrancar el server. |
+| `pnpm run bo <cmd>`     | CLI para crear BOs: `new`, `sync`, `list`.       |
+| `pnpm run docs:gen`     | Genera documentación API (TypeDoc).              |
+| `pnpm run hashpw`       | Utilidad para hashear passwords manualmente.     |
 
 ---
 

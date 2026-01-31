@@ -40,7 +40,7 @@ async function main() {
         .filter((f) => fs.statSync(path.join(boDir, f)).isDirectory())
 
     let mdContent = `# Business Objects Index\n\n`
-    mdContent += `This document is **AUTO-GENERATED** by \`npm run docs:bo\`. Do not edit manually.\n\n`
+    mdContent += `This document is **AUTO-GENERATED** by \`pnpm run docs:bo\`. Do not edit manually.\n\n`
     mdContent += `Total Business Objects: **${objects.length}**\n\n`
     mdContent += `| Object Name | Description | Path |\n`
     mdContent += `| :--- | :--- | :--- |\n`
@@ -64,7 +64,7 @@ async function main() {
 
     mdContent += `\n\n## Transactions (TX)\n\n`
     mdContent += `Valid transactions are defined in the database \`security.methods\` table.\n`
-    mdContent += `Use \`npm run bo list\` to see the active runtime mapping.\n`
+    mdContent += `Use \`pnpm run bo list\` to see the active runtime mapping.\n`
 
     fs.writeFileSync(outputPath, mdContent)
     console.log(`✅ Documentation generated at: ${outputPath}`)

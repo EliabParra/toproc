@@ -82,6 +82,8 @@ export function parseCliArgs(
     if (getBool('apply')) config.action = 'apply'
     if (getBool('bo')) config.action = 'bo'
 
+    if (getBool('with-data', 'data')) config.security!.introspectData = true
+
     // App options
     if (getBool('yes', 'y')) config.app!.interactive = false
     if (getBool('dry-run', 'dry')) config.app!.dryRun = true
@@ -152,7 +154,7 @@ export function printHelp(): void {
 ${'🚀 ToProc DB CLI'.green.bold} v2.0
 
 ${'Usage:'.cyan.bold}
-  npm run db [action] [options]
+  pnpm run db [action] [options]
 
 ${'Actions:'.cyan.bold}
   sync        Apply schemas to database (Code → DB) [default]
@@ -161,6 +163,9 @@ ${'Actions:'.cyan.bold}
   bo          Sync BO methods (Code ↔ DB)
   reset       Drop and recreate all tables
   print       Print SQL without executing
+
+${'Introspect Options:'.cyan.bold}
+  --data, --with-data Enable data export (INSERTs)
 
 ${'App Options:'.cyan.bold}
   --yes, -y           Non-interactive mode (assume yes)
@@ -199,11 +204,11 @@ ${'Seeding Options:'.cyan.bold}
   --seedPublicAuthPerms  Grant public auth permissions
 
 ${'Examples:'.cyan.bold}
-  npm run db                     # Interactive mode
-  npm run db sync --dry-run      # Preview sync
-  npm run db introspect          # Generate from DB
-  npm run db seed --seedAdmin    # Create admin user
-  npm run db bo --prune          # Sync BOs and prune orphans
-  npm run db reset --yes         # Drop all tables
+  pnpm run db                     # Interactive mode
+  pnpm run db sync --dry-run      # Preview sync
+  pnpm run db introspect          # Generate from DB
+  pnpm run db seed --seedAdmin    # Create admin user
+  pnpm run db bo --prune          # Sync BOs and prune orphans
+  pnpm run db reset --yes         # Drop all tables
 `)
 }

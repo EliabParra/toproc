@@ -6,17 +6,17 @@ ToProccess includes several scripts to automate your workflow.
 
 We have created exhaustive documentation for the most complex tools:
 
-1.  **[BO Generator (npm run bo)](CLI_BO.en.md)**
+1.  **[BO Generator (pnpm run bo)](CLI_BO.en.md)**
     Learn how to create modules, services, and repositories automatically with a single command.
 
-2.  **[Database CLI (npm run db)](CLI_DB.en.md)**
+2.  **[Database CLI (pnpm run db)](CLI_DB.en.md)**
     The central tool for managing schemas, syncing BOs, and keeping the DB in sync across your team.
 
 ---
 
 ## Other Important Tools
 
-### Health Check (`npm run verify`)
+### Health Check (`pnpm run verify`)
 
 The quality guardian. Run it before every commit.
 
@@ -29,37 +29,37 @@ The quality guardian. Run it before every commit.
 5.  `test`: Passes all unit tests.
 
 ```bash
-npm run verify
+pnpm run verify
 ```
 
-### Business Documentation Generator (`npm run docs:bo`)
+### Business Documentation Generator (`pnpm run docs:bo`)
 
 Automatically generates an index of all **Business Objects** and transactions available in your system.
 
 ```bash
-npm run docs:bo
+pnpm run docs:bo
 ```
 
 - **Output**: `docs/05-Guides/BO_INDEX.md`
 - **Usage**: Run after creating new BOs to keep documentation up to date.
 
-### Interactive Playground (`npm run playground`)
+### Interactive Playground (`pnpm run playground`)
 
 Test your validation rules (Zod) interactively without Postman or starting the server.
 
 ```bash
-npm run playground
+pnpm run playground
 ```
 
 - **Commands**: `auth.login {"email":"x", "password":"123"}`
 - **Benefit**: Immediate feedback on whether your schemas are correct.
 
-### Code Audit (`npm run audit`)
+### Code Audit (`pnpm run audit`)
 
 Scans your source code for architectural anti-patterns.
 
 ```bash
-npm run audit
+pnpm run audit
 ```
 
 - **Rules**: Forbids `console.log` (use `this.log`), direct `req.body` access, deep imports, etc.

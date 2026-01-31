@@ -46,8 +46,26 @@ export function templateSchemas(objectName: string, methods: string[]) {
 
     const methodSchemas = methods
         .map((m) => {
+            const lower = m.toLowerCase()
+            const isStandardWithId =
+                (lower === 'get' ||
+                    lower.includes('update') ||
+                    lower.includes('delete') ||
+                    lower.includes('remove') ||
+                    lower.includes('findbyid')) &&
+                !lower.includes('getall')
+
+            let content = `        // TODO: Definir validación usando ${pascalName}Messages.VALIDATION`
+
+            if (isStandardWithId) {
+                content = `        id: z.coerce.number(),
+        // TODO: Definir validación adicional si es necesario`
+            } else if (lower.includes('getall')) {
+                content = `        // Parámetros de paginación o filtros opcionales`
+            }
+
             return `    ${m}: z.object({
-        // TODO: Definir validación usando ${pascalName}Messages.VALIDATION
+${content}
     }),`
         })
         .join('\n')
@@ -245,11 +263,44 @@ export function templateBO(className: string, methods: string[]) {
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
     const boClassName = `${pascalName}BO`
 
+    // Build Schema Imports
+    const inputTypes = methods
+        .map((m) => `${m.charAt(0).toUpperCase() + m.slice(1)}Input`)
+        .join(', ')
+
     const methodStubs = methods
         .map((m) => {
             const isCreate =
                 m.toLowerCase().includes('create') || m.toLowerCase().includes('register')
+            const isDelete =
+                m.toLowerCase().includes('delete') || m.toLowerCase().includes('remove')
+            const isGet = m.toLowerCase().includes('get') || m.toLowerCase().includes('find')
+
             const methodPascal = m.charAt(0).toUpperCase() + m.slice(1)
+            const inputType = `${methodPascal}Input`
+
+            // Infer return type and service call
+            let returnType = 'any'
+            let serviceCall = `await this.service.${m}(data)`
+
+            if (m.toLowerCase().includes('getall')) {
+                returnType = `Array<${pascalName}>`
+            } else if (isGet || isCreate || m.toLowerCase().includes('update')) {
+                returnType = pascalName
+            } else if (isDelete) {
+                returnType = 'void'
+            }
+
+            // Intelligent defaults for service calls
+            if (isGet && m === 'get') {
+                serviceCall = `await this.service.getById(data.id)`
+            } else if (m.toLowerCase().includes('update')) {
+                serviceCall = `await this.service.update(data.id, data)`
+            } else if (isDelete) {
+                serviceCall = `await this.service.delete(data.id)`
+            } else if (m.toLowerCase().includes('getall')) {
+                serviceCall = `await this.service.getAll(data)`
+            }
 
             return `    /**
      * Operación ${methodPascal}
@@ -257,29 +308,26 @@ export function templateBO(className: string, methods: string[]) {
      * @param params - Parámetros de la solicitud
      * @returns ApiResponse con el resultado
      */
-    async ${m}(params: unknown): Promise<ApiResponse> {
-        return this.exec<z.infer<typeof ${pascalName}Schemas.${m}>, any>(
+    async ${m}(params: ${inputType}): Promise<ApiResponse> {
+        return this.exec<${inputType}, ${returnType}>(
             params,
             ${pascalName}Schemas.${m},
             async (data) => {
-                // TODO: Implementar lógica de negocio
-                // const result = await this.service.${m}(data)
+                const result: ${returnType} = ${serviceCall}
                 
-                return this.${isCreate ? 'created' : 'success'}(null, ${pascalName}Messages.${m.toUpperCase()})
+                return this.${isCreate ? 'created' : 'success'}(${isDelete ? 'null' : 'result'}, ${pascalName}Messages.${m.toUpperCase()})
             }
         )
     }`
         })
         .join('\n\n')
 
-    return `import { BaseBO, BODependencies } from '../../src/core/base/BaseBO.js'
-import { ApiResponse } from '../../src/core/response/ApiResponse.js'
+    return `import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
 import { ${pascalName}Repository } from './${pascalName}.Repository.js'
 import { ${pascalName}Service } from './${pascalName}.Service.js'
-import { ${pascalName}Schemas } from './${pascalName}.Schemas.js'
+import { ${pascalName}Schemas, ${inputTypes} } from './${pascalName}.Schemas.js'
 import { ${pascalName}Messages } from './${pascalName}.Messages.js'
-import { is${pascalName}Error, handle${pascalName}Error } from './${pascalName}.Errors.js'
-import { z } from 'zod'
+import { ${pascalName} } from './${pascalName}.Types.js'
 
 /**
  * Business Object para el dominio ${pascalName}.
@@ -294,13 +342,8 @@ import { z } from 'zod'
 export class ${boClassName} extends BaseBO {
     private service: ${pascalName}Service
 
-    constructor(deps?: BODependencies) {
-        super(deps ?? {
-            db: (globalThis as any).db,
-            log: (globalThis as any).log,
-            config: (globalThis as any).config,
-            v: (globalThis as any).validator,
-        })
+    constructor(deps: BODependencies) {
+        super(deps)
         const repo = new ${pascalName}Repository(this.db)
         this.service = new ${pascalName}Service(repo, this.log, this.config, this.db)
     }

@@ -1,7 +1,9 @@
 import {
     BODependencies,
     IAuditService,
+    IConfig,
     IDatabase,
+    II18nService,
     ILogger,
     ISecurityService,
     ISessionService,
@@ -38,7 +40,7 @@ export class SecurityService implements ISecurityService {
     private executor: TransactionExecutor
 
     // config/msgs/log needed for error handling/responses
-    private config: any
+    private config: IConfig
     private msgs: any
     private log: ILogger
 
@@ -55,11 +57,12 @@ export class SecurityService implements ISecurityService {
     constructor(deps: {
         db: IDatabase
         log: ILogger
-        config: any
+        config: IConfig
         msgs: any
         audit: IAuditService
         session: ISessionService
         validator: IValidator
+        i18n?: II18nService
     }) {
         this.log = deps.log
         this.config = deps.config
@@ -74,11 +77,11 @@ export class SecurityService implements ISecurityService {
             db: deps.db,
             log: deps.log,
             config: deps.config,
-            msgs: deps.msgs,
             audit: deps.audit,
             session: deps.session,
             validator: deps.validator,
             security: this,
+            i18n: deps.i18n,
         }
         this.executor = new TransactionExecutor(boDeps)
     }

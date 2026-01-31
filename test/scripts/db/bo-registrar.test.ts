@@ -18,6 +18,9 @@ function createMockDB(initialMethods: any[] = []) {
             if (query.includes('MAX(tx)')) {
                 return { rows: [{ next_tx: state.nextTx }] }
             }
+            if (query.includes('security.profiles')) {
+                return { rows: [{}], rowCount: 1 }
+            }
             if (query.includes('security.objects') && query.includes('INSERT')) {
                 return { rows: [{ object_id: 42 }] }
             }

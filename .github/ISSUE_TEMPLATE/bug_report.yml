@@ -39,7 +39,7 @@ body:
           placeholder: |
               - OS:
               - Node:
-              - npm:
+              - pnpm:
               - Postgres:
       validations:
           required: false

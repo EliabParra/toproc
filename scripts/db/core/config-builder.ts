@@ -12,144 +12,129 @@ export class ConfigBuilder {
     constructor() {}
 
     /**
-     * Builds the complete configuration.
+     * Builds basic configuration from defaults, profiles, and CLI args.
+     * No interactive prompts here.
      */
-    async build(cliConfig: PartialInitConfig & { action?: string }): Promise<InitConfig> {
-        // 1. Determine profile
+    async buildBasic(cliConfig: PartialInitConfig): Promise<InitConfig> {
         const profile = cliConfig.app?.profile || DEFAULT_CONFIG.app.profile
         const profileConfig = PROFILES[profile] || {}
 
-        // 2. Deep merge: Defaults → Profile → CLI
-        let config = deepMerge(
+        return deepMerge(
             DEFAULT_CONFIG,
             profileConfig as Partial<InitConfig>,
             cliConfig as Partial<InitConfig>
         ) as InitConfig
-
-        // 3. Interactive prompts (if enabled and TTY)
-        if (config.app.interactive && process.stdin.isTTY && process.stdout.isTTY) {
-            this.interactor = new Interactor()
-            config = await this.runInteractiveWizard(config, cliConfig)
-            this.interactor.close()
-        }
-
-        return config
     }
 
     /**
-     * Runs the interactive configuration wizard.
+     * Runs the interactive configuration wizard based on the action.
      */
-    private async runInteractiveWizard(
+    async runWizard(
         config: InitConfig,
-        cliConfig: PartialInitConfig
+        cliConfig: PartialInitConfig,
+        action: string
     ): Promise<InitConfig> {
-        if (!this.interactor) return config
+        if (!config.app.interactive || !process.stdin.isTTY) {
+            return config
+        }
 
-        await this.interactor.header()
+        this.interactor = new Interactor()
 
-        // Profile selection (if not set via CLI)
-        if (!cliConfig.app?.profile) {
+        // 1. Profile selection (only if not set via CLI and in a setup-like action)
+        if (!cliConfig.app?.profile && (action === 'seed' || action === 'sync')) {
             const profiles = ['development', 'production', 'testing']
             const selected = await this.interactor.select(
                 'Environment Profile',
                 profiles,
                 config.app.profile
             )
-            config.app.profile = selected
-            const profileConfig = PROFILES[selected] || {}
-            config = deepMerge(config, profileConfig)
+            if (selected !== config.app.profile) {
+                config.app.profile = selected
+                const profileConfig = PROFILES[selected] || {}
+                config = deepMerge(config, profileConfig)
+            }
         }
 
-        // Database configuration
-        console.log(colors.cyan(colors.bold('\n[Database]')))
+        // 2. Database configuration (only if missing or if user wants to reconfigure)
+        const hasDbConfig = config.db.host && config.db.database && config.db.user
+        let reconfigureDb = false
 
-        if (!cliConfig.db?.host) {
+        if (!hasDbConfig) {
+            console.log(colors.yellow('\n⚠️  Database configuration is incomplete.'))
+            reconfigureDb = true
+        } else if (action === 'sync' || action === 'seed') {
+            // Optional: ask if they want to re-verify DB config
+            // config.db.host + "..."
+        }
+
+        if (reconfigureDb) {
+            console.log(colors.cyan(colors.bold('\n[Database Connection]')))
             config.db.host = await this.interactor.ask('DB Host', config.db.host || 'localhost')
-        }
-        if (!cliConfig.db?.port) {
             const portStr = await this.interactor.ask('DB Port', String(config.db.port || 5432))
             config.db.port = parseInt(portStr)
-        }
-        if (!cliConfig.db?.database) {
             config.db.database = await this.interactor.ask(
                 'DB Name',
                 config.db.database || 'toproc_dev'
             )
-        }
-        if (!cliConfig.db?.user) {
             config.db.user = await this.interactor.ask('DB User', config.db.user || 'postgres')
-        }
-        if (!cliConfig.db?.password && !config.db.password) {
-            config.db.password = await this.interactor.ask('DB Password', '')
-        }
-
-        // Auth options
-        console.log(colors.cyan(colors.bold('\n[Authentication]')))
-
-        if (cliConfig.auth?.enabled === undefined) {
-            config.auth.enabled = await this.interactor.confirm(
-                'Enable Auth module?',
-                config.auth.enabled || false
-            )
-        }
-
-        if (config.auth.enabled) {
-            if (cliConfig.auth?.loginId === undefined) {
-                const loginId = await this.interactor.select(
-                    'Primary Login Identifier',
-                    ['email', 'username'],
-                    config.auth.loginId || 'email'
-                )
-                config.auth.loginId = loginId as 'email' | 'username'
-            }
-
-            if (
-                config.auth.loginId === 'email' &&
-                cliConfig.auth?.usernameSupported === undefined
-            ) {
-                config.auth.usernameSupported = await this.interactor.confirm(
-                    'Keep username as optional field?',
-                    config.auth.usernameSupported !== false
-                )
+            if (!config.db.password) {
+                config.db.password = await this.interactor.ask('DB Password', '')
             }
         }
 
-        // Seeding options
-        console.log(colors.cyan(colors.bold('\n[Seeding]')))
+        // 3. Action-specific Wizardry
+        if (action === 'seed') {
+            console.log(colors.cyan(colors.bold('\n[Seeding Options]')))
 
-        if (cliConfig.security?.seedProfiles === undefined) {
-            config.security.seedProfiles = await this.interactor.confirm(
-                'Seed default profiles (public/session)?',
-                true
-            )
-        }
-
-        if (cliConfig.security?.seedAdmin === undefined) {
-            config.security.seedAdmin = await this.interactor.confirm('Seed admin user?', false)
-        }
-
-        if (config.security.seedAdmin) {
-            if (!cliConfig.security?.adminUser) {
-                config.security.adminUser = await this.interactor.ask(
-                    'Admin username',
-                    config.security.adminUser || 'admin'
+            if (cliConfig.security?.seedProfiles === undefined) {
+                config.security.seedProfiles = await this.interactor.confirm(
+                    'Seed default profiles (public/session)?',
+                    config.security.seedProfiles ?? true
                 )
             }
-            if (!cliConfig.security?.adminPassword) {
-                config.security.adminPassword = await this.interactor.ask(
-                    'Admin password (leave empty to generate)',
-                    ''
+
+            if (cliConfig.security?.seedAdmin === undefined) {
+                config.security.seedAdmin = await this.interactor.confirm(
+                    'Seed admin user?',
+                    config.security.seedAdmin ?? false
+                )
+            }
+
+            if (config.security.seedAdmin) {
+                if (!cliConfig.security?.adminUser) {
+                    config.security.adminUser = await this.interactor.ask(
+                        'Admin username',
+                        config.security.adminUser || 'admin'
+                    )
+                }
+                if (!cliConfig.security?.adminPassword) {
+                    config.security.adminPassword = await this.interactor.ask(
+                        'Admin password (leave empty to generate)',
+                        ''
+                    )
+                }
+            }
+        }
+
+        if (action === 'seed' || action === 'sync' || action === 'bo') {
+            if (cliConfig.security?.registerBo === undefined) {
+                config.security.registerBo = await this.interactor.confirm(
+                    'Auto-register Business Object methods?',
+                    config.security.registerBo ?? true
                 )
             }
         }
 
-        if (cliConfig.security?.registerBo === undefined) {
-            config.security.registerBo = await this.interactor.confirm(
-                'Auto-register BO methods?',
-                true
-            )
+        if (action === 'introspect') {
+            if (cliConfig.security?.introspectData === undefined) {
+                config.security.introspectData = await this.interactor.confirm(
+                    'Include data records (INSERTs) in generated files?',
+                    config.security.introspectData ?? false
+                )
+            }
         }
 
+        this.interactor.close()
         return config
     }
 }

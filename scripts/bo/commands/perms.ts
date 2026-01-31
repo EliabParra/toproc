@@ -9,10 +9,14 @@ interface Profile {
     profileName: string
 }
 
-interface MethodPermission {
+interface MethodInfo {
+    methodId: number
     methodName: string
-    profiles: number[]
+    tx: number
 }
+
+// In-memory state for deferred saving
+type PermissionState = Map<number, Set<number>> // MethodId -> Set<ProfileId>
 
 /**
  * Permission management command
@@ -27,70 +31,37 @@ export class PermsCommand {
     async run(objectName?: string, opts: any = {}) {
         // Handle Dry Run / Non-interactive mode from flags
         if (opts.allow || opts.deny) {
-            if (opts.profile && isNaN(Number(opts.profile))) {
-                console.error('Invalid method format: --profile must be a positive integer') // Matching test expectation roughly?
-                // Test says: /--profile must be a positive integer/
-                // And /Invalid method format/ is another test.
-                process.exit(1)
-            }
-            if (opts.profile && Number(opts.profile) <= 0) {
-                console.error('--profile must be a positive integer')
-                process.exit(1)
-            }
-
-            const action = opts.allow ? 'allow' : 'deny'
-            const methods = opts.allow || opts.deny
-
-            // Validate method format (Object.method)
-            if (!methods.includes('.')) {
-                console.error('Invalid method format. Expected Object.method')
-                process.exit(1)
-            }
-
-            if (opts.isDryRun) {
-                console.log(`\n${'🔐'.cyan} Permission Manager (Dry Run)`)
-                console.log(`Action: '${action}'`)
-                console.log(`Profile: ${opts.profile}`)
-                console.log(`Methods: ${methods}`)
-                console.log('Would update permissions without DB connection.')
-                return
-            }
+            this.handleLegacyFlags(objectName, opts)
+            return
         }
 
-        console.log(`\n${'🔐'.cyan} Permission Manager`.cyan.bold)
-        console.log('══════════════════════════════════════════════════'.gray)
+        this.interactor.header()
 
-        // ... existing interactive logic ...
-        // If no object specified, list available BOs
+        // 1. Select BO
         if (!objectName) {
             const bos = await this.listBOs()
             if (bos.length === 0) {
-                console.log(`${'⚠️'.yellow} No BOs found`)
+                this.interactor.warn('No BOs found')
                 return
             }
-
-            console.log(`\n${'📦'.blue} Select a BO to manage permissions:`)
-            for (let i = 0; i < bos.length; i++) {
-                console.log(`   ${String(i + 1).gray}. ${bos[i]}`)
-            }
-
-            const answer = await this.interactor.ask('Select BO', '1')
-            const idx = parseInt(answer) - 1
-            if (idx >= 0 && idx < bos.length) {
-                objectName = bos[idx]
-            } else {
-                console.log(`${'❌'.red} Invalid selection`)
-                this.interactor.close()
-                return
-            }
+            objectName = await this.interactor.select('Select a BO to manage permissions', bos)
         }
 
+        // 2. Manage Permissions Loop
         await this.managePermissions(objectName)
         this.interactor.close()
     }
 
+    private handleLegacyFlags(objectName: string | undefined, opts: any) {
+        if (opts.profile && isNaN(Number(opts.profile))) {
+            console.error('Invalid method format: --profile must be a positive integer')
+            process.exit(1)
+        }
+        console.log('Legacy flags not fully supported in new interactive mode refactor yet.')
+    }
+
     private async managePermissions(objectName: string) {
-        console.log(`\n${'🔐'.cyan} Managing permissions for ${objectName}BO`.cyan.bold)
+        console.log(`\n🔐 Loading permissions for ${objectName}BO...`.gray)
 
         await this.ctx.ensureGlobals()
 
@@ -105,280 +76,272 @@ export class PermsCommand {
         })
 
         try {
-            // Get profiles
-            const profilesResult = await db.exeRaw(`
-                SELECT profile_id, profile_name 
-                FROM security.profiles 
-                ORDER BY profile_id
-            `)
-            const profiles: Profile[] = profilesResult.rows.map((r: any) => ({
-                profileId: r.profile_id,
-                profileName: r.profile_name,
-            }))
+            // 1. Load Data
+            const profiles = await this.getProfiles(db)
+            if (profiles.length === 0) return
 
-            if (profiles.length === 0) {
-                console.log(`${'⚠️'.yellow} No profiles found. Run: npm run db seed --seedProfiles`)
-                return
-            }
+            const objectId = await this.getObjectId(db, objectName)
+            if (!objectId) return
 
-            // Get object and methods
-            const objectResult = await db.exeRaw(
-                `
-                SELECT object_id FROM security.objects WHERE object_name = $1
-            `,
-                [objectName]
-            )
-
-            if (objectResult.rows.length === 0) {
-                console.log(
-                    `${'⚠️'.yellow} BO "${objectName}" not registered. Run: npm run bo sync ${objectName}`
-                )
-                return
-            }
-
-            const objectId = objectResult.rows[0].object_id
-
-            // Get methods with permissions
-            const methodsResult = await db.exeRaw(
-                `
-                SELECT 
-                    m.method_id,
-                    m.method_name,
-                    m.tx,
-                    COALESCE(array_agg(pm.profile_id) FILTER (WHERE pm.profile_id IS NOT NULL), '{}') as profile_ids
-                FROM security.methods m
-                LEFT JOIN security.permission_methods pm ON pm.method_id = m.method_id
-                WHERE m.object_id = $1
-                GROUP BY m.method_id, m.method_name, m.tx
-                ORDER BY m.method_name
-            `,
-                [objectId]
-            )
-
-            const methods = methodsResult.rows
-
+            const methods = await this.getMethods(db, objectId)
             if (methods.length === 0) {
-                console.log(`${'⚠️'.yellow} No methods found for ${objectName}BO`)
+                this.interactor.warn(`No methods found for ${objectName}BO`)
                 return
             }
 
-            // Display permission matrix
-            this.printPermissionMatrix(methods, profiles)
+            // 2. Build Initial State (In-Memory)
+            const currentPerms = await this.getPermissions(db, objectId)
+            const state: PermissionState = new Map()
 
-            // Interactive editing
-            console.log(`\n${'💡'.blue} Options:`)
-            console.log('   1. Grant permission to profile')
-            console.log('   2. Revoke permission from profile')
-            console.log('   3. Apply template')
-            console.log('   4. Exit')
-
-            const choice = await this.interactor.ask('Select action', '4')
-
-            switch (choice) {
-                case '1':
-                    await this.grantPermission(db, methods, profiles, objectId)
-                    break
-                case '2':
-                    await this.revokePermission(db, methods, profiles)
-                    break
-                case '3':
-                    await this.applyTemplate(db, methods, profiles, objectId)
-                    break
-                case '4':
-                default:
-                    console.log('👋 Done'.gray)
+            // Populate state
+            for (const m of methods) {
+                const existing = currentPerms.find((p: any) => p.method_id === m.methodId)
+                const profileIds = existing ? existing.profile_ids : []
+                state.set(m.methodId, new Set(profileIds))
             }
+
+            // 3. Interaction Loop
+            let dirty = false
+            while (true) {
+                console.clear()
+                this.interactor.header()
+                console.log(`\n🔐 Editing Permissions: ${objectName}BO`.bold)
+                if (dirty) console.log(`${'⚠️  Unsaved changes'.yellow}`)
+
+                this.printPermissionMatrix(methods, profiles, state)
+
+                console.log(`\n💡 Actions:`)
+                console.log(`   1-${methods.length}   Toggle permissions (comma separated, e.g. "1, 3")`)
+                console.log(`   ${'s'.green.bold}     Save & Exit`)
+                console.log(`   ${'x'.red}     Cancel / Exit without saving`)
+
+                const answer = await this.interactor.ask('Action')
+                const choice = answer.trim().toLowerCase()
+
+                if (choice === 's') {
+                    if (dirty) {
+                        await this.saveChanges(db, state, objectId)
+                    } else {
+                        console.log('No changes to save.')
+                    }
+                    break
+                } else if (choice === 'x') {
+                    if (dirty) {
+                        const confirm = await this.interactor.confirm('Discard unsaved changes?')
+                        if (!confirm) continue
+                    }
+                    console.log('Changes discarded.')
+                    break
+                } else {
+                    // Try parsing numbers
+                    const indices = choice
+                        .split(',')
+                        .map((s) => parseInt(s.trim()) - 1)
+                        .filter((i) => !isNaN(i))
+
+                    if (indices.length > 0) {
+                        // Validate indices
+                        const validInfo = indices.every((i) => i >= 0 && i < methods.length)
+                        if (!validInfo) {
+                            this.interactor.error('Invalid method numbers selected.')
+                            await this.wait()
+                            continue
+                        }
+
+                        // Ask for Profile to toggle
+                        console.log('\nSelect Profile to toggle for selected methods:')
+                        profiles.forEach((p, i) => console.log(`  ${i + 1}. ${p.profileName}`))
+
+                        const pAns = await this.interactor.ask('Profile #')
+                        const pIdx = parseInt(pAns) - 1
+
+                        if (pIdx >= 0 && pIdx < profiles.length) {
+                            const profileId = profiles[pIdx].profileId
+
+                            // Apply toggle
+                            let changesCount = 0
+                            for (const mIdx of indices) {
+                                const methodId = methods[mIdx].methodId
+                                const pSet = state.get(methodId)!
+                                if (pSet.has(profileId)) {
+                                    pSet.delete(profileId)
+                                } else {
+                                    pSet.add(profileId)
+                                }
+                                changesCount++
+                            }
+                            if (changesCount > 0) dirty = true
+                        } else {
+                            this.interactor.error('Invalid profile selected.')
+                            await this.wait()
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(e)
+            this.interactor.error('An error occurred managing permissions.')
         } finally {
             await db.close()
         }
     }
 
-    private printPermissionMatrix(methods: any[], profiles: Profile[]) {
-        // Header
-        const methodColWidth = Math.max(12, ...methods.map((m: any) => m.method_name.length))
+    private async wait() {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+    }
+
+    // --- Data Fetching Helpers ---
+
+    private async getProfiles(db: any): Promise<Profile[]> {
+        const res = await db.exeRaw(
+            `SELECT profile_id, profile_name FROM security.profiles ORDER BY profile_id`
+        )
+        return res.rows.map((r: any) => ({ profileId: r.profile_id, profileName: r.profile_name }))
+    }
+
+    private async getObjectId(db: any, name: string): Promise<number | null> {
+        const res = await db.exeRaw(
+            `SELECT object_id FROM security.objects WHERE object_name = $1`,
+            [name]
+        )
+        if (res.rows.length === 0) {
+            this.interactor.warn(`BO "${name}" not registered. Run 'pnpm run bo sync ${name}'`)
+            return null
+        }
+        return res.rows[0].object_id
+    }
+
+    private async getMethods(db: any, objectId: number): Promise<MethodInfo[]> {
+        const res = await db.exeRaw(
+            `SELECT method_id, method_name, tx FROM security.methods WHERE object_id = $1 ORDER BY method_name`,
+            [objectId]
+        )
+        return res.rows.map((r: any) => ({
+            methodId: r.method_id,
+            methodName: r.method_name,
+            tx: r.tx,
+        }))
+    }
+
+    private async getPermissions(db: any, objectId: number): Promise<any[]> {
+        const res = await db.exeRaw(
+            `
+            SELECT m.method_id, 
+                   COALESCE(array_agg(pm.profile_id) FILTER (WHERE pm.profile_id IS NOT NULL), '{}') as profile_ids
+            FROM security.methods m
+            LEFT JOIN security.permission_methods pm ON pm.method_id = m.method_id
+            WHERE m.object_id = $1
+            GROUP BY m.method_id
+        `,
+            [objectId]
+        )
+        return res.rows
+    }
+
+    // --- State Management ---
+
+    private async saveChanges(db: any, state: PermissionState, objectId: number) {
+        this.interactor.startSpinner('Saving changes...')
+
+        try {
+            await db.exeRaw('BEGIN')
+
+            const methodIds = Array.from(state.keys())
+            if (methodIds.length > 0) {
+                const params = methodIds.map((_, i) => `$${i + 1}`).join(',')
+                await db.exeRaw(
+                    `DELETE FROM security.permission_methods WHERE method_id IN (${params})`,
+                    methodIds
+                )
+            }
+
+            for (const [methodId, profileSet] of state.entries()) {
+                for (const profileId of profileSet) {
+                    await db.exeRaw(
+                        `INSERT INTO security.permission_methods (profile_id, method_id) VALUES ($1, $2)`,
+                        [profileId, methodId]
+                    )
+                }
+            }
+
+            await db.exeRaw('COMMIT')
+            this.interactor.stopSpinner(true)
+            this.interactor.success('Permissions saved successfully!')
+        } catch (e) {
+            await db.exeRaw('ROLLBACK')
+            this.interactor.stopSpinner(false)
+            console.error(e)
+            this.interactor.error('Failed to save changes.')
+        }
+    }
+
+    // --- Render ---
+
+    private printPermissionMatrix(
+        methods: MethodInfo[],
+        profiles: Profile[],
+        state: PermissionState
+    ) {
+        const idColWidth = 4
+        const methodColWidth = Math.max(12, ...methods.map((m) => m.methodName.length))
         const profileColWidth = 10
 
-        let header = '│ ' + 'Method'.padEnd(methodColWidth) + ' │'
-        let divider = '├' + '─'.repeat(methodColWidth + 2) + '┼'
+        let header = '│ ' + '#'.padEnd(idColWidth) + '│ ' + 'Method'.padEnd(methodColWidth) + ' │'
+        let divider = '├' + '─'.repeat(idColWidth + 1) + '┼' + '─'.repeat(methodColWidth + 2) + '┼'
 
         for (const p of profiles) {
-            const name = p.profileName.substring(0, profileColWidth - 2)
-            header += ' ' + name.padEnd(profileColWidth - 1) + '│'
+            header +=
+                ' ' + p.profileName.slice(0, profileColWidth - 2).padEnd(profileColWidth - 1) + '│'
             divider += '─'.repeat(profileColWidth) + '┼'
         }
+
+        const topBorder =
+            '┌' +
+            '─'.repeat(idColWidth + 1) +
+            '┬' +
+            '─'.repeat(methodColWidth + 2) +
+            '┬' +
+            profiles.map(() => '─'.repeat(profileColWidth)).join('┬') +
+            '┐'
+        const bottomBorder =
+            '└' +
+            '─'.repeat(idColWidth + 1) +
+            '┴' +
+            '─'.repeat(methodColWidth + 2) +
+            '┴' +
+            profiles.map(() => '─'.repeat(profileColWidth)).join('┴') +
+            '┘'
+
         divider = divider.slice(0, -1) + '┤'
 
-        console.log(
-            '\n┌' +
-                '─'.repeat(methodColWidth + 2) +
-                '┬' +
-                profiles.map(() => '─'.repeat(profileColWidth)).join('┬') +
-                '┐'
-        )
+        console.log(topBorder)
         console.log(header.bold)
         console.log(divider)
 
-        // Rows
-        for (const m of methods) {
-            const profileIds = Array.isArray(m.profile_ids) ? m.profile_ids : []
-            let row = '│ ' + m.method_name.padEnd(methodColWidth) + ' │'
+        methods.forEach((m, idx) => {
+            const num = (idx + 1).toString()
+            let row =
+                '│ ' + num.padEnd(idColWidth) + '│ ' + m.methodName.padEnd(methodColWidth) + ' │'
+
+            const activeProfiles = state.get(m.methodId) || new Set()
 
             for (const p of profiles) {
-                const hasPermission = profileIds.includes(p.profileId)
-                const icon = hasPermission ? '✅'.green : '❌'.red
+                const checked = activeProfiles.has(p.profileId)
+                const icon = checked ? '✅'.green : '❌'.red
                 row += ' ' + icon.padEnd(profileColWidth + 8) + '│'
             }
             console.log(row)
-        }
-
-        console.log(
-            '└' +
-                '─'.repeat(methodColWidth + 2) +
-                '┴' +
-                profiles.map(() => '─'.repeat(profileColWidth)).join('┴') +
-                '┘'
-        )
-    }
-
-    private async grantPermission(db: any, methods: any[], profiles: Profile[], objectId: number) {
-        console.log('\n${"📝".blue} Grant permission:')
-
-        // Select method
-        console.log('Methods:')
-        methods.forEach((m: any, i: number) => console.log(`  ${i + 1}. ${m.method_name}`))
-        const methodIdx = parseInt(await this.interactor.ask('Select method')) - 1
-        if (methodIdx < 0 || methodIdx >= methods.length) return
-
-        // Select profile
-        console.log('Profiles:')
-        profiles.forEach((p, i) => console.log(`  ${i + 1}. ${p.profileName}`))
-        const profileIdx = parseInt(await this.interactor.ask('Select profile')) - 1
-        if (profileIdx < 0 || profileIdx >= profiles.length) return
-
-        const methodId = methods[methodIdx].method_id
-        const profileId = profiles[profileIdx].profileId
-
-        await db.exeRaw(
-            `
-            INSERT INTO security.permission_methods (profile_id, method_id)
-            VALUES ($1, $2)
-            ON CONFLICT DO NOTHING
-        `,
-            [profileId, methodId]
-        )
-
-        console.log(`${'✅'.green} Permission granted!`)
-    }
-
-    private async revokePermission(db: any, methods: any[], profiles: Profile[]) {
-        console.log('\n${"📝".blue} Revoke permission:')
-
-        // Select method
-        console.log('Methods:')
-        methods.forEach((m: any, i: number) => console.log(`  ${i + 1}. ${m.method_name}`))
-        const methodIdx = parseInt(await this.interactor.ask('Select method')) - 1
-        if (methodIdx < 0 || methodIdx >= methods.length) return
-
-        // Select profile
-        console.log('Profiles:')
-        profiles.forEach((p, i) => console.log(`  ${i + 1}. ${p.profileName}`))
-        const profileIdx = parseInt(await this.interactor.ask('Select profile')) - 1
-        if (profileIdx < 0 || profileIdx >= profiles.length) return
-
-        const methodId = methods[methodIdx].method_id
-        const profileId = profiles[profileIdx].profileId
-
-        await db.exeRaw(
-            `
-            DELETE FROM security.permission_methods 
-            WHERE profile_id = $1 AND method_id = $2
-        `,
-            [profileId, methodId]
-        )
-
-        console.log(`${'✅'.green} Permission revoked!`)
-    }
-
-    private async applyTemplate(db: any, methods: any[], profiles: Profile[], objectId: number) {
-        console.log('\n${"📋".blue} Permission Templates:')
-        console.log(
-            '   1. Public Read, Private Write (read methods public, write methods admin only)'
-        )
-        console.log('   2. Admin Only (all methods admin only)')
-        console.log('   3. All Authenticated (all methods for session profile)')
-        console.log('   4. All Public (all methods for everyone)')
-
-        const template = await this.interactor.ask('Select template', '1')
-
-        // Find profile IDs
-        const adminId =
-            profiles.find((p) => p.profileName.toLowerCase().includes('admin'))?.profileId ?? 1
-        const publicId =
-            profiles.find((p) => p.profileName.toLowerCase().includes('public'))?.profileId ?? 2
-        const sessionId =
-            profiles.find((p) => p.profileName.toLowerCase().includes('session'))?.profileId ?? 3
-
-        // Clear existing permissions for this object
-        for (const m of methods) {
-            await db.exeRaw(`DELETE FROM security.permission_methods WHERE method_id = $1`, [
-                m.method_id,
-            ])
-        }
-
-        // Apply template
-        for (const m of methods) {
-            const isReadMethod = ['get', 'list', 'search', 'find'].some((r) =>
-                m.method_name.toLowerCase().includes(r)
-            )
-
-            let profileIds: number[] = []
-
-            switch (template) {
-                case '1': // Public Read, Private Write
-                    profileIds = isReadMethod
-                        ? [adminId, publicId, sessionId]
-                        : [adminId, sessionId]
-                    break
-                case '2': // Admin Only
-                    profileIds = [adminId]
-                    break
-                case '3': // All Authenticated
-                    profileIds = [adminId, sessionId]
-                    break
-                case '4': // All Public
-                    profileIds = [adminId, publicId, sessionId]
-                    break
-            }
-
-            for (const pid of profileIds) {
-                await db.exeRaw(
-                    `
-                    INSERT INTO security.permission_methods (profile_id, method_id)
-                    VALUES ($1, $2) ON CONFLICT DO NOTHING
-                `,
-                    [pid, m.method_id]
-                )
-            }
-        }
-
-        console.log(`${'✅'.green} Template applied!`)
+        })
+        console.log(bottomBorder)
     }
 
     private async listBOs(): Promise<string[]> {
         const boRoot = path.join(this.ctx.config.rootDir, 'BO')
-        const bos: string[] = []
-
         try {
             const entries = await fs.readdir(boRoot, { withFileTypes: true })
-            for (const entry of entries) {
-                if (entry.isDirectory()) {
-                    bos.push(entry.name)
-                }
-            }
+            return entries.filter((e) => e.isDirectory()).map((e) => e.name)
         } catch {
-            // BO directory doesn't exist
+            return []
         }
-
-        return bos
     }
 }

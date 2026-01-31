@@ -6,17 +6,17 @@ ToProccess incluye varios scripts para automatizar tu flujo de trabajo.
 
 Hemos creado documentación exhaustiva para las herramientas más complejas:
 
-1.  **[Generador de BOs (npm run bo)](CLI_BO.es.md)**
+1.  **[Generador de BOs (pnpm run bo)](CLI_BO.es.md)**
     Aprende a crear módulos, servicios y repositorios automáticamente con un solo comando.
 
-2.  **[CLI de Base de Datos (npm run db)](CLI_DB.es.md)**
+2.  **[CLI de Base de Datos (pnpm run db)](CLI_DB.es.md)**
     La herramienta central para gestionar esquemas, sincronizar BOs, y mantener la BD al día con el equipo.
 
 ---
 
 ## Otras Herramientas Importantes
 
-### Verificador de Salud (`npm run verify`)
+### Verificador de Salud (`pnpm run verify`)
 
 El guardián de la calidad. Ejecútalo antes de cada commit.
 
@@ -29,37 +29,37 @@ El guardián de la calidad. Ejecútalo antes de cada commit.
 5.  `test`: Pasa todos los tests unitarios.
 
 ```bash
-npm run verify
+pnpm run verify
 ```
 
-### Generador de Documentación de Negocio (`npm run docs:bo`)
+### Generador de Documentación de Negocio (`pnpm run docs:bo`)
 
 Genera automáticamente un índice de todos los **Business Objects** y transacciones disponibles en tu sistema.
 
 ```bash
-npm run docs:bo
+pnpm run docs:bo
 ```
 
 - **Salida**: `docs/05-Guides/BO_INDEX.md`
 - **Uso**: Ejecútalo tras crear nuevos BOs para mantener la documentación al día.
 
-### Playground Interactivo (`npm run playground`)
+### Playground Interactivo (`pnpm run playground`)
 
 Prueba tus reglas de validación (Zod) interactivamente sin necesidad de Postman ni de levantar el servidor.
 
 ```bash
-npm run playground
+pnpm run playground
 ```
 
 - **Comandos**: `auth.login {"email":"x", "password":"123"}`
 - **Beneficio**: Feedback inmediato sobre si tus schemas son correctos.
 
-### Auditor de Código (`npm run audit`)
+### Auditor de Código (`pnpm run audit`)
 
 Escanea tu código fuente buscando malas prácticas arquitectónicas.
 
 ```bash
-npm run audit
+pnpm run audit
 ```
 
 - **Reglas**: Prohíbe `console.log` (usa `this.log`), acceso directo a `req.body`, imports profundos, etc.
