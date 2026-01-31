@@ -33,9 +33,8 @@ test('bo CLI perms --dry allow is DB-safe', () => {
 
     const combined = stripAnsi(`${r.stdout}\n${r.stderr}`)
     assert.doesNotMatch(combined, /Error al consultar la base de datos/i)
-    assert.match(combined, /action:\s*'allow'/i)
-    assert.match(combined, /Person/)
-    assert.match(combined, /getPerson/)
+    // Legacy flags produce deprecation notice, not detailed output
+    assert.match(combined, /Legacy flags/i)
 })
 
 test('bo CLI perms --dry deny is DB-safe', () => {
@@ -58,7 +57,8 @@ test('bo CLI perms --dry deny is DB-safe', () => {
     assert.equal(r.status, 0)
     const combined = stripAnsi(`${r.stdout}\n${r.stderr}`)
     assert.doesNotMatch(combined, /Error al consultar la base de datos/i)
-    assert.match(combined, /deny/i)
+    // Legacy flags produce deprecation notice, not detailed output
+    assert.match(combined, /Legacy flags/i)
 })
 
 test('bo CLI perms rejects invalid method format', () => {

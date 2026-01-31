@@ -53,10 +53,21 @@ export class PermsCommand {
     }
 
     private handleLegacyFlags(objectName: string | undefined, opts: any) {
-        if (opts.profile && isNaN(Number(opts.profile))) {
-            console.error('Invalid method format: --profile must be a positive integer')
+        const profile = Number(opts.profile)
+        if (!opts.profile || isNaN(profile) || profile <= 0) {
+            console.error('--profile must be a positive integer')
             process.exit(1)
         }
+
+        // Validate method format (BO.method)
+        const methods = (opts.allow || opts.deny || '').split(',').filter((m: string) => m.trim())
+        for (const m of methods) {
+            if (!m.includes('.')) {
+                console.error(`Invalid method format: ${m}. Expected: BO.methodName`)
+                process.exit(1)
+            }
+        }
+
         console.log('Legacy flags not fully supported in new interactive mode refactor yet.')
     }
 
@@ -111,7 +122,9 @@ export class PermsCommand {
                 this.printPermissionMatrix(methods, profiles, state)
 
                 console.log(`\n💡 Actions:`)
-                console.log(`   1-${methods.length}   Toggle permissions (comma separated, e.g. "1, 3")`)
+                console.log(
+                    `   1-${methods.length}   Toggle permissions (comma separated, e.g. "1, 3")`
+                )
                 console.log(`   ${'s'.green.bold}     Save & Exit`)
                 console.log(`   ${'x'.red}     Cancel / Exit without saving`)
 

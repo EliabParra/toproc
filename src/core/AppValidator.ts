@@ -147,7 +147,6 @@ export class AppValidator {
             }
 
             return { message }
-            return { message }
         })
     }
 

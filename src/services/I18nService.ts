@@ -44,7 +44,7 @@ export class I18nService {
         if (!fs.existsSync(dirPath)) return
 
         const files = fs.readdirSync(dirPath)
-        const localeData: any = {}
+        const localeData: Record<string, any> = {}
 
         for (const file of files) {
             if (path.extname(file) !== '.json') continue

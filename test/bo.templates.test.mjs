@@ -16,10 +16,10 @@ test('templateBO genera arquitectura 7 archivos con nomenclatura Name.Type.ts', 
     const out = templateBO('Order', ['getOrder'])
     assert.match(out, /extends BaseBO/)
     // New naming: Name.Schemas.js, Name.Messages.js, Name.Errors.js
-    assert.match(out, /import { OrderSchemas } from '\.\/Order\.Schemas\.js'/)
-    assert.match(out, /import { OrderMessages } from '\.\/Order\.Messages\.js'/)
-    assert.match(out, /isOrderError, handleOrderError/)
-    assert.match(out, /from '\.\/Order\.Errors\.js'/)
+    assert.match(out, /import \{ OrderSchemas.*\} from '\.\/Order\.Schemas\.js'/)
+    assert.match(out, /import \{ OrderMessages \} from '\.\/Order\.Messages\.js'/)
+    // Error imports removed from templateBO - now only in Service
+    assert.match(out, /this\.exec/)
     // Now uses exec
     assert.match(out, /this\.exec/)
     assert.match(out, /OrderSchemas\.getOrder/)
