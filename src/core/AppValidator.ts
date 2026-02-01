@@ -1,6 +1,6 @@
 import { ZodType, ZodError, ZodIssue } from 'zod'
 import { IValidator, II18nService } from '../types/core.js'
-import { ValidationResult, ValidationError } from '../types/Validation.js'
+import type { ValidationResult, ValidationError } from '../types/api.js'
 
 // Interface compatible with ZodIssue to avoid strict type mismatch issues
 interface ZodIssueCompatible {

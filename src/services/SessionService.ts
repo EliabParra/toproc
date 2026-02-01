@@ -7,16 +7,15 @@ import {
     IAuditService,
     II18nService,
 } from '../types/core.js'
+import type { AppRequest, AppResponse } from '../types/http.js'
+import type { LocalizedMessages, ValidationError } from '../types/api.js'
 import { LoginSchema, LoginInput, SessionUserRow } from './schemas/session.js'
 import { AppValidator } from './ValidatorService.js'
-import { ValidationError } from '../types/Validation.js'
 import { SessionQueries } from './queries/session.js'
 
 type ValidationResponse =
     | { success: true; data: LoginInput }
     | { success: false; errors: ValidationError[] }
-
-type LocalizedMessages = Record<string, { code: number; msg: string }>
 
 /**
  * Gestor de sesiones de usuario.

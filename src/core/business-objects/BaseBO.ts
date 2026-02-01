@@ -1,6 +1,7 @@
 import { ZodType } from 'zod'
 import { IDatabase, ILogger, IConfig, IValidator, II18nService } from '../../types/core.js'
 import type { BODependencies } from '../../types/core.js'
+import type { ApiResponse } from '../../types/api.js'
 
 export type { BODependencies }
 

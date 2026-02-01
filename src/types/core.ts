@@ -1,4 +1,5 @@
 import { Pool } from 'pg'
+import type { AppRequest, AppResponse } from './http.js'
 
 /**
  * Interfaz para servicios de logging.
@@ -104,28 +105,12 @@ export interface IDatabase {
 
 /**
  * Configuración global de la aplicación.
+ * Re-exportado desde config.ts para compatibilidad.
  */
-export interface IConfig {
-    app: {
-        port: number
-        host: string
-        name: string
-        lang: string
-        frontendMode: string
-        /** Límite de tamaño para body de requests (e.g. '100kb') */
-        bodyLimit?: string
-        trustProxy?: number | boolean | string
-    }
-    db: any
-    session: any
-    cors: any
-    bo: {
-        path: string
-    }
-    log: any
-    auth: any
-    email: any
-}
+export type { IAppConfig as IConfig } from './config.js'
+
+// Import para uso en interfaces locales
+import type { IAppConfig } from './config.js'
 
 /**
  * Servicio de seguridad y orquestación de transacciones.
@@ -210,7 +195,7 @@ export interface IAuditService {
 export interface BODependencies {
     db: IDatabase
     log: ILogger
-    config: IConfig
+    config: IAppConfig
     audit: IAuditService
     security: ISecurityService
     session: ISessionService

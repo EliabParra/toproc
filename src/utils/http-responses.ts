@@ -1,3 +1,5 @@
+import type { AppResponse } from '../types/http.js'
+
 /**
  * Sends a standardized `invalidParameters` response.
  */

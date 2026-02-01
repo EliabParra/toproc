@@ -1,5 +1,5 @@
 import { z, ZodType } from 'zod'
-import { ValidationResult, ValidationError } from '../types/Validation.js'
+import type { ValidationResult, ValidationError } from '../types/api.js'
 import { I18nService } from './I18nService.js'
 
 // Define a robust interface compatible with the installed Zod version's output

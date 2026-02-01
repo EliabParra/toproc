@@ -17,6 +17,7 @@ import {
     IDatabase,
     II18nService,
 } from '../types/core.js'
+import type { AppRequest, AppResponse, LocalizedMessages } from '../types/index.js'
 import { registerFrontendHosting } from '../frontend-adapters/index.js'
 
 // Middlewares consolidados
@@ -45,9 +46,6 @@ import { createHealthHandler, createReadyHandler } from './http/handlers/index.j
 // Utilidades
 import { sendInvalidParameters } from '../utils/http-responses.js'
 import { redactSecretsInString } from '../utils/sanitize.js'
-
-// Tipos locales
-type LocalizedMessages = Record<string, { code: number; msg: string }>
 
 /**
  * Dependencias requeridas para instanciar el Dispatcher.

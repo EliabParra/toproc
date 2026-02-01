@@ -1,5 +1,6 @@
 import { BaseBO } from '../../src/core/business-objects/BaseBO.js'
 import type { BODependencies } from '../../src/core/business-objects/BaseBO.js'
+import type { ApiResponse } from '../../src/types/api.js'
 import { AuthService } from './Auth.Service.js'
 import {
     AuthSchemas,

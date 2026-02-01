@@ -1,3 +1,5 @@
+import type { AppRequest, AppResponse } from '../../../types/http.js'
+
 type HealthHandlerArgs = {
     name: string
 }

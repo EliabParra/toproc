@@ -1,4 +1,5 @@
 import { BaseBO, BODependencies } from './BaseBO.js'
+import type { ApiResponse } from '../../types/api.js'
 
 /**
  * Clase base para Business Objects que manejan operaciones CRUD estándar.

@@ -1,0 +1,28 @@
+src/foundation.ts(43,35): error TS2345: Argument of type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to parameter of type 'IAppConfig'.
+  The types of 'log.format' are incompatible between these types.
+    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
+      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
+src/foundation.ts(51,35): error TS2322: Type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to type 'IAppConfig'.
+  The types of 'log.format' are incompatible between these types.
+    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
+      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
+src/foundation.ts(56,30): error TS2322: Type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to type 'IAppConfig'.
+  The types of 'log.format' are incompatible between these types.
+    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
+      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
+src/foundation.ts(66,34): error TS2322: Type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to type 'IAppConfig'.
+  The types of 'log.format' are incompatible between these types.
+    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
+      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
+src/foundation.ts(73,5): error TS2322: Type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to type 'IAppConfig'.
+  The types of 'log.format' are incompatible between these types.
+    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
+      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
+src/foundation.ts(84,5): error TS2322: Type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to type 'IAppConfig'.
+  The types of 'log.format' are incompatible between these types.
+    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
+      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
+src/foundation.ts(94,5): error TS2322: Type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to type 'IAppConfig'.
+  The types of 'log.format' are incompatible between these types.
+    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
+      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.

@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit'
+import type { AppRequest, AppResponse } from '../../../types/http.js'
 
 /** @param {{ objectName?: string, methodName?: string } | null | undefined} txData */
 function isAuthPublicSensitiveMethod(txData: any) {
