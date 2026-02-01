@@ -1,9 +1,11 @@
 import { redactSecretsInString } from '../../../utils/sanitize.js'
-import { ILogger } from '../../../types/core.js'
+import { ILogger, LocalizedMessage } from '../../../types/index.js'
+import { AppRequest, AppResponse } from '../../../types/http.js'
+import { NextFunction } from 'express'
 
 export type FinalErrorHandlerArgs = {
-    clientErrors: any
-    serverErrors: any
+    clientErrors: Record<string, LocalizedMessage>
+    serverErrors: Record<string, LocalizedMessage>
     log: ILogger
 }
 
@@ -17,38 +19,40 @@ export type FinalErrorHandlerArgs = {
  * - Sanitización de mensajes de error
  * - Traducción a códigos HTTP estándar
  * - Evita doble respuesta si headers ya fueron enviados
- *
- * @function createFinalErrorHandler
- * @param deps - Dependencias (errores configurados, logger)
- * @returns {Function} Middleware de error de Express
  */
 export function createFinalErrorHandler({
     clientErrors,
     serverErrors,
     log,
 }: FinalErrorHandlerArgs) {
-    return function finalErrorHandler(err: any, req: any, res: any, next: any) {
-        if ((res as any).headersSent) return next(err)
+    return function finalErrorHandler(
+        err: unknown,
+        req: AppRequest,
+        res: AppResponse,
+        next: NextFunction
+    ) {
+        if (res.headersSent) return next(err)
 
-        let status = Number(err?.status ?? err?.statusCode)
+        const errorObj = err as Record<string, unknown>
+        let status = Number(errorObj?.status ?? errorObj?.statusCode)
 
         // Common infra errors we may emit
         if (
-            typeof err?.message === 'string' &&
-            err.message.startsWith('CORS origin not allowed:')
+            typeof errorObj?.message === 'string' &&
+            errorObj.message.startsWith('CORS origin not allowed:')
         ) {
             status = 403
         }
 
-        if (err?.type === 'entity.too.large' || (err?.limit && err?.length)) {
+        if (errorObj?.type === 'entity.too.large' || (errorObj?.limit && errorObj?.length)) {
             status = 413
-        } else if (typeof err?.message === 'string' && /too large/i.test(err.message)) {
+        } else if (typeof errorObj?.message === 'string' && /too large/i.test(errorObj.message)) {
             status = 413
         }
 
         if (!Number.isInteger(status) || status < 400 || status > 599) status = 500
 
-        let response = clientErrors.unknown
+        let response: LocalizedMessage = clientErrors.unknown
         if (status === 400) response = clientErrors.invalidParameters
         else if (status === 413) response = clientErrors.payloadTooLarge ?? clientErrors.unknown
         else if (status === 401) response = serverErrors.unauthorized
@@ -57,15 +61,20 @@ export function createFinalErrorHandler({
         else if (status === 503) response = clientErrors.serviceUnavailable
 
         const rawMessage =
-            typeof err?.message === 'string' ? redactSecretsInString(err.message.trim()) : ''
+            typeof errorObj?.message === 'string'
+                ? redactSecretsInString(errorObj.message.trim())
+                : ''
         const errorName =
-            typeof err?.name === 'string' && err.name.trim() ? err.name.trim() : undefined
-        const errorCode = err?.code != null ? String(err.code) : undefined
+            typeof errorObj?.name === 'string' && errorObj.name.trim()
+                ? errorObj.name.trim()
+                : undefined
+        const errorCode = errorObj?.code != null ? String(errorObj.code) : undefined
         const safeErrorMessage = rawMessage || errorName || errorCode || 'unknown'
 
         try {
-            ;(res as any).locals.__errorLogged = true
+            res.locals.__errorLogged = true
         } catch {}
+
         log.show({
             type: log.TYPE_ERROR,
             msg: `${serverErrors.serverError.msg}, unhandled: ${safeErrorMessage}`,
@@ -74,8 +83,8 @@ export function createFinalErrorHandler({
                 method: req.method,
                 path: req.originalUrl,
                 status,
-                user_id: req.session?.user_id,
-                profile_id: req.session?.profile_id,
+                user_id: req.session?.userId,
+                profile_id: req.session?.profileId,
                 durationMs:
                     typeof req.requestStartMs === 'number'
                         ? Date.now() - req.requestStartMs

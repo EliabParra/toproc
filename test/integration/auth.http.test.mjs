@@ -102,33 +102,21 @@ function createDeps() {
 
     const sessionService = {
         sessionExists: (req) => !!req.session?.userId,
-        createSession: async (req, res) => {
-            // Simplified login logic for test
-            // The real implementation validates creds.
-            // Dispatcher login handler calls this.session.createSession(req, res)
-            // But validation logic is duplicated or handled inside?
-            // Legacy session implementation DOES DB CHECK.
-            // If we mock SessionService, we skip Auth logic!
-            // BUT user wants to test "Auth module".
-            // If Dispatcher delegates to SessionService for login...
-            // Check Dispatcher.ts line 439: `return await this.session.createSession(req, res)`
-            // So if I mock SessionService, I mock Login!
-            // I should use REAL SessionService with MOCK DB if I want to test Auth logic.
-            // But creating Real SessionService requires more setup.
-            // Let's mock it for now to test HTTP/CSRF flow,
-            // OR use a "Partial Mock" that behaves like real one?
-
-            // Wait, if I want to test "Auth Methods" (BO), that's /toProccess.
-            // /login and /logout are separate.
-            // I'll implement a functional mock for SessionService.
+        createSession: async (req) => {
             const body = req.body
             if (body.loginId === 'test@example.com' && body.password === 'password') {
                 req.session.userId = 1
                 req.session.profileId = 1
-                // Set cookie? supertest/express-session handles this if middleware is active.
-                return res.status(200).send({ code: 200, msg: 'Login OK' })
+                return {
+                    status: 'success',
+                    user: { id: 1, username: 'TestUser', email: body.loginId, profile_id: 1 },
+                    msg: { code: 200, msg: 'Login OK' },
+                }
             }
-            return res.status(401).send({ code: 401, msg: 'Auth Failed' })
+            return {
+                status: 'error',
+                error: { code: 401, msg: 'Auth Failed' },
+            }
         },
         destroySession: (req) => {
             req.session.destroy()

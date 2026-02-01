@@ -1,6 +1,7 @@
 import express, { NextFunction } from 'express'
 import path from 'path'
 import { routes, pagesPath } from './routes.js'
+import { createAuthCheckMiddleware } from '../middleware/auth-check.js'
 import type {
     IConfig,
     ILogger,
@@ -43,13 +44,9 @@ export function buildPagesRouter({
     const clientErrors = i18n.get('errors.client') as Record<string, { msg: string; code: number }>
     const router = express.Router()
 
-    const requireAuth = (req: AppRequest, res: AppResponse, next: NextFunction) => {
-        if (!session?.sessionExists?.(req)) {
-            const returnTo = encodeURIComponent(req.originalUrl || '/')
-            return res.redirect(302, `/?returnTo=${returnTo}`)
-        }
-        next()
-    }
+    const requireAuth = session
+        ? createAuthCheckMiddleware(session)
+        : (_req: AppRequest, res: AppResponse, _next: NextFunction) => res.redirect('/')
 
     activeRoutes.forEach((r: PageRoute) => {
         const handler = (req: AppRequest, res: AppResponse) => {
