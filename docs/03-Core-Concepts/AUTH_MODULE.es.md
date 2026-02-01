@@ -27,7 +27,19 @@ Sigue la arquitectura de 4 capas:
     5.  Si `REQUIRE_EMAIL_VERIFICATION=true`, genera OTP y token.
 - **Output**: 201 Created.
 
-### 2. Verificar Email (`verifyEmail`)
+### 2. Login (`createSession`)
+
+**Refactorizado (Clean Architecture)**:
+En versiones recientes, el `SessionService` ya no manipula la respuesta HTTP (`res`).
+
+- **Input**: `AppRequest` (para obtener body y sesión).
+- **Proceso**:
+    1. Valida credenciales (`SessionService`).
+    2. Retorna un objeto `SessionResult` (Success, Error, ValidationError).
+    3. **Dispatcher**: Se encarga de enviar la respuesta HTTP (`res.send`) basándose en el resultado.
+- **Output**: JSON con usuario y mensaje.
+
+### 3. Verificar Email (`verifyEmail`)
 
 - **Mecanismo**: Doble factor (Token URL + Código OTP de 6 dígitos).
 - **Seguridad**:

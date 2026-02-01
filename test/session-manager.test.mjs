@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { SessionManager } from '../src/services/SessionService.js'
+// Assuming this path is correct or will be fixed if broken, keeping original
 import { AppValidator } from '../src/core/AppValidator.js'
 
 // Mock i18n data
@@ -122,8 +123,10 @@ test('sessionExists returns false when no session', () => {
 
     assert.equal(sm.sessionExists(req), false)
 })
-// ...
-test('createSession returns 400 if session already exists', async () => {
+
+// --- createSession tests (Updated for Clean Architecture) ---
+
+test('createSession returns error if session already exists', async () => {
     const deps = createMockDeps()
     const sm = new SessionManager(deps)
 
@@ -131,21 +134,15 @@ test('createSession returns 400 if session already exists', async () => {
         body: { identifier: 'user@test.com', password: 'password123' },
         session: { userId: 1 },
     }
-    let statusCode = null
-    const res = {
-        status: (code) => {
-            statusCode = code
-            return res
-        },
-        send: () => res,
-    }
 
-    await sm.createSession(req, res)
+    const result = await sm.createSession(req)
 
-    assert.equal(statusCode, 400)
+    assert.equal(result.status, 'error')
+    assert.equal(result.error.code, 400)
+    assert.equal(result.error.msg, 'Session exists')
 })
 
-test('createSession returns 401 for non-existent user', async () => {
+test('createSession returns error for non-existent user', async () => {
     const deps = createMockDeps({
         db: { query: async () => ({ rows: [] }) },
     })
@@ -155,18 +152,11 @@ test('createSession returns 401 for non-existent user', async () => {
         body: { identifier: 'nonexistent@test.com', password: 'password123' },
         session: {},
     }
-    let statusCode = null
-    const res = {
-        status: (code) => {
-            statusCode = code
-            return res
-        },
-        send: () => res,
-    }
 
-    await sm.createSession(req, res)
+    const result = await sm.createSession(req)
 
-    assert.equal(statusCode, 401)
+    assert.equal(result.status, 'error')
+    assert.equal(result.error.code, 401) // Incorrect credentials
 })
 
 test('createSession uses getUserByUsername for non-email identifier', async () => {
@@ -185,14 +175,10 @@ test('createSession uses getUserByUsername for non-email identifier', async () =
         body: { identifier: 'admin', password: 'password123' },
         session: {},
     }
-    const res = {
-        status: () => res,
-        send: () => res,
-    }
 
-    await sm.createSession(req, res)
+    const result = await sm.createSession(req)
 
-    // Check for new schema column name
+    // Check for new schema column name or query logic
     assert.ok(sqlCalled.includes('u.username = $1'), 'Should use username lookup query')
 })
 
@@ -212,12 +198,8 @@ test('createSession uses getUserByEmail for email identifier', async () => {
         body: { identifier: 'user@email.com', password: 'password123' },
         session: {},
     }
-    const res = {
-        status: () => res,
-        send: () => res,
-    }
 
-    await sm.createSession(req, res)
+    await sm.createSession(req)
 
     // Check for new schema column name
     assert.ok(sqlCalled.includes('u.email = $1'), 'Should use email lookup query')
@@ -247,18 +229,10 @@ test('createSession handles error gracefully and logs', async () => {
         method: 'POST',
         originalUrl: '/login',
     }
-    let statusCode = null
-    const res = {
-        status: (code) => {
-            statusCode = code
-            return res
-        },
-        send: () => res,
-        locals: {},
-    }
 
-    await sm.createSession(req, res)
+    const result = await sm.createSession(req)
 
-    assert.equal(statusCode, 500)
+    assert.equal(result.status, 'error')
+    assert.equal(result.error.code, 500)
     assert.equal(logCalled, true)
 })

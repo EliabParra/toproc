@@ -54,4 +54,5 @@ export type {
     IContainer,
     IAuditService,
     BODependencies,
+    SessionResult,
 } from './core.js'

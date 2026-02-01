@@ -135,11 +135,28 @@ export interface ISecurityService {
 }
 
 /**
+ * Resultado de inicio de sesión.
+ */
+export type SessionResult =
+    | {
+          status: 'success'
+          user: { id: number; username: string; email: string; profile_id: number }
+          msg: { code: number; msg: string }
+      }
+    | { status: 'error'; error: { code: number; msg: string } }
+    | {
+          status: 'validation_error'
+          error: { code: number; msg: string }
+          errors: { path: string; message: string }[]
+          alerts: unknown
+      }
+
+/**
  * Servicio de gestión de sesiones.
  */
 export interface ISessionService {
     sessionExists(req: AppRequest): boolean
-    createSession(req: AppRequest, res: AppResponse): Promise<AppResponse>
+    createSession(req: AppRequest): Promise<SessionResult>
     destroySession(req: AppRequest): void
 }
 

@@ -47,6 +47,15 @@ type Dependencies = {
  *
  * @param app - Instancia de Express
  * @param deps - Dependencias necesarias (config, log, db)
+ *
+ * @example
+ * ```typescript
+ * applySessionMiddleware(app, {
+ *   config: appConfig,
+ *   log: logger,
+ *   db: database
+ * })
+ * ```
  */
 export function applySessionMiddleware(app: Express, deps: Dependencies) {
     const { config, log, db } = deps

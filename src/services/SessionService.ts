@@ -7,9 +7,9 @@ import type {
     IAuditService,
     II18nService,
     AppRequest,
-    AppResponse,
     LocalizedMessages,
     ValidationError,
+    SessionResult,
 } from '../types/index.js'
 import { LoginSchema, LoginInput, SessionUserRow } from './schemas/session.js'
 import { AppValidator } from './ValidatorService.js'
@@ -63,6 +63,9 @@ export class SessionManager implements ISessionService {
 
     /**
      * Verifica si una sesión de usuario está actualmente activa.
+     *
+     * @param req - Objeto Request de Express con la sesión
+     * @returns `true` si existe userId en la sesión
      */
     sessionExists(req: AppRequest): boolean {
         return !!(req.session && req.session.userId)
@@ -70,27 +73,35 @@ export class SessionManager implements ISessionService {
 
     /**
      * Autentica a un usuario y establece una nueva sesión.
+     *
+     * @param req - Objeto Request que contiene las credenciales (body) y la sesión
+     * @returns Promesa con el resultado de la operación (éxito, error o fallo de validación)
      */
-    async createSession(req: AppRequest, res: AppResponse) {
+    async createSession(req: AppRequest): Promise<SessionResult> {
         try {
             const validation = this.validateLoginRequest(req)
             if (!validation.success) {
-                return this.respondValidationFailed(res, validation.errors)
+                return {
+                    status: 'validation_error',
+                    error: this.clientErrors.invalidParameters,
+                    errors: validation.errors,
+                    alerts: this.validator.getAlerts(validation.errors),
+                }
             }
 
             if (this.sessionExists(req)) {
-                return this.respondClientError(res, this.clientErrors.sessionExists)
+                return { status: 'error', error: this.clientErrors.sessionExists }
             }
 
             const { identifier, password } = validation.data
             const user = await this.findUserByIdentifier(identifier)
 
             if (!user || !(await this.passwordsMatch(password, user.password_hash))) {
-                return this.respondClientError(res, this.clientErrors.usernameOrPasswordIncorrect)
+                return { status: 'error', error: this.clientErrors.usernameOrPasswordIncorrect }
             }
 
             if (this.isEmailVerificationPending(user)) {
-                return this.respondClientError(res, this.clientErrors.emailNotVerified)
+                return { status: 'error', error: this.clientErrors.emailNotVerified }
             }
 
             this.initializeUserSession(req, user)
@@ -98,19 +109,27 @@ export class SessionManager implements ISessionService {
             await this.updateUserStats(user.id)
             await this.auditLoginSuccess(req, user)
 
-            return res.status(this.successMsgs.login.code).send(this.successMsgs.login)
+            return { status: 'success', user, msg: this.successMsgs.login }
         } catch (error) {
-            return this.handleSystemError(req, res, error)
+            // En caso de error de sistema, lo relanzamos o devolvemos error genérico
+            // Para mantener consistencia con dispatcher, devolvemos result de error tras loguear
+            this.logSystemError(req, error)
+            return {
+                status: 'error',
+                error: this.clientErrors.unknown || { code: 500, msg: 'Unknown Error' },
+            }
         }
     }
 
     /**
      * Destruye la sesión actual del usuario (Logout).
+     *
+     * @param req - Objeto Request con la sesión a destruir
      */
-    destroySession(req: AppRequest) {
+    destroySession(req: AppRequest): void {
         try {
             req.session?.destroy?.(() => {})
-        } catch {} // Fail silent is acceptable for logout
+        } catch {}
     }
 
     // =========================================================================
@@ -174,30 +193,12 @@ export class SessionManager implements ISessionService {
     }
 
     // =========================================================================
-    // Response Helpers
+    // Private Helpers (SRP & Readability)
     // =========================================================================
 
-    private respondValidationFailed(res: AppResponse, errors: ValidationError[]) {
-        const alerts = this.validator.getAlerts(errors)
-        return res.status(this.clientErrors.invalidParameters.code).send({
-            msg: this.clientErrors.invalidParameters.msg,
-            code: this.clientErrors.invalidParameters.code,
-            alerts,
-            errors,
-        })
-    }
-
-    private respondClientError(res: AppResponse, error: { code: number; msg: string }) {
-        return res.status(error.code).send(error)
-    }
-
-    private handleSystemError(req: AppRequest, res: AppResponse, error: unknown) {
-        try {
-            res.locals.__errorLogged = true
-        } catch {}
-
-        const status = this.serverErrors.serverError.code || 500
+    private logSystemError(req: AppRequest, error: unknown): void {
         const msg = this.serverErrors.serverError.msg || 'Server Error'
+        const status = this.serverErrors.serverError.code || 500
 
         this.log.show({
             type: this.log.TYPE_ERROR,
@@ -210,9 +211,5 @@ export class SessionManager implements ISessionService {
                 userId: req.session?.userId,
             },
         })
-
-        return res
-            .status(status)
-            .send(this.clientErrors.unknown || { msg: 'Unknown Error', code: 500 })
     }
 }

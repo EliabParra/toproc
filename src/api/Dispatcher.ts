@@ -412,7 +412,25 @@ export class Dispatcher {
      */
     private async login(req: AppRequest, res: AppResponse): Promise<void> {
         try {
-            await this.session.createSession(req, res)
+            const result = await this.session.createSession(req)
+
+            if (result.status === 'success') {
+                res.status(result.msg.code).send(result.msg)
+                return
+            }
+
+            if (result.status === 'validation_error') {
+                res.status(result.error.code).send({
+                    msg: result.error.msg,
+                    code: result.error.code,
+                    alerts: result.alerts,
+                    errors: result.errors,
+                })
+                return
+            }
+
+            // Error general (credenciales, verificación, etc)
+            res.status(result.error.code).send(result.error)
         } catch (err: unknown) {
             this.handleError(req, res, err, '/login', null)
         }
