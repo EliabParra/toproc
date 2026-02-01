@@ -8,6 +8,13 @@ const TxQueries = {
     `,
 }
 
+/** Row resultado de la query de transacciones */
+interface TxRow {
+    tx: number | string
+    object_name: string
+    method_name: string
+}
+
 /**
  * Define la ruta de ejecución para una transacción.
  */
@@ -69,7 +76,7 @@ export class TransactionMapper {
 
             this.txMap.clear()
 
-            for (const row of result.rows) {
+            for (const row of result.rows as unknown as TxRow[]) {
                 const tx = typeof row.tx === 'number' ? row.tx : Number(row.tx)
 
                 if (Number.isFinite(tx) && row.object_name && row.method_name) {

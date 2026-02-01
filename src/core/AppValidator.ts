@@ -59,12 +59,20 @@ export class AppValidator implements IValidator {
      */
     private resolveLocalizedError(issue: ZodIssueCompatible): string | null {
         try {
-            const msgs = this.i18n.messages.alerts // Access alerts directly
+            // Type-safe access to validation alert messages
+            interface AlertMessages {
+                string?: string
+                number?: string
+                lengthMin?: string
+                lengthMax?: string
+                email?: string
+                notEmpty?: string
+            }
+            const msgs = (this.i18n.messages as { alerts?: AlertMessages }).alerts
             if (!msgs) return null
 
             if (issue.code === 'invalid_type') {
-                // params no está en ZodIssueCompatible simple, pero en ZodIssue real sí
-                const realIssue = issue as any
+                const realIssue = issue as { expected?: string }
                 if (realIssue.expected === 'string') return msgs.string || 'Must be a string'
                 if (realIssue.expected === 'number') return msgs.number || 'Must be a number'
                 return this.i18n.t('errors.client.invalidParameters.msg')
@@ -76,10 +84,9 @@ export class AppValidator implements IValidator {
                 return msgs.lengthMax || 'Too long'
             }
             if (issue.code === 'invalid_string') {
-                const realIssue = issue as any
+                const realIssue = issue as { validation?: string }
                 if (realIssue.validation === 'email') return msgs.email || 'Invalid email'
             }
-            // Zod 3.23 / 4.x sometimes uses invalid_string for email
 
             return null
         } catch (e) {

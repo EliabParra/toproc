@@ -1,28 +1,32 @@
-src/foundation.ts(43,35): error TS2345: Argument of type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to parameter of type 'IAppConfig'.
-  The types of 'log.format' are incompatible between these types.
-    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
-      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
-src/foundation.ts(51,35): error TS2322: Type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to type 'IAppConfig'.
-  The types of 'log.format' are incompatible between these types.
-    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
-      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
-src/foundation.ts(56,30): error TS2322: Type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to type 'IAppConfig'.
-  The types of 'log.format' are incompatible between these types.
-    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
-      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
-src/foundation.ts(66,34): error TS2322: Type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to type 'IAppConfig'.
-  The types of 'log.format' are incompatible between these types.
-    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
-      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
-src/foundation.ts(73,5): error TS2322: Type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to type 'IAppConfig'.
-  The types of 'log.format' are incompatible between these types.
-    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
-      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
-src/foundation.ts(84,5): error TS2322: Type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to type 'IAppConfig'.
-  The types of 'log.format' are incompatible between these types.
-    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
-      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
-src/foundation.ts(94,5): error TS2322: Type '{ app: { name: string; host: string; port: number; env: "development" | "production" | "test" | "staging"; frontendMode: "spa" | "pages" | "none"; trustProxy: string | number | boolean; lang: "es" | "en"; }; ... 6 more ...; bo: { ...; }; }' is not assignable to type 'IAppConfig'.
-  The types of 'log.format' are incompatible between these types.
-    Type '"json" | "text"' is not assignable to type '"json" | "pretty" | undefined'.
-      Type '"text"' is not assignable to type '"json" | "pretty" | undefined'.
+src/api/http/middleware/csrf.ts(33,39): error TS2345: Argument of type 'string' is not assignable to parameter of type '(msgs: unknown) => { msg: string; code: number; }'.
+src/api/http/middleware/csrf.ts(66,39): error TS2345: Argument of type 'string' is not assignable to parameter of type '(msgs: unknown) => { msg: string; code: number; }'.
+src/api/http/middleware/csrf.ts(70,39): error TS2345: Argument of type 'string' is not assignable to parameter of type '(msgs: unknown) => { msg: string; code: number; }'.
+src/api/http/middleware/json-syntax-error.ts(24,37): error TS2345: Argument of type 'string' is not assignable to parameter of type '(msgs: unknown) => { msg: string; code: number; }'.
+src/foundation.ts(56,38): error TS2322: Type 'I18nService' is not assignable to type 'II18nService'.
+  Types of property 'error' are incompatible.
+    Type '(selector: (msgs: { server: { notFound: { msg: string; code: number; }; badRequest: { msg: string; code: number; }; unauthorized: { msg: string; code: number; }; forbidden: { msg: string; code: number; }; serverError: { msg: string; code: number; }; txNotFound: { ...; }; dbError: { ...; }; }; client: { ...; }; }) =>...' is not assignable to type '<M>(selector: (msgs: M) => { msg: string; code: number; }) => { msg: string; code: number; }'.
+      Types of parameters 'selector' and 'selector' are incompatible.
+        Types of parameters 'msgs' and 'msgs' are incompatible.
+          Type '{ server: { notFound: { msg: string; code: number; }; badRequest: { msg: string; code: number; }; unauthorized: { msg: string; code: number; }; forbidden: { msg: string; code: number; }; serverError: { msg: string; code: number; }; txNotFound: { ...; }; dbError: { ...; }; }; client: { ...; }; }' is not assignable to type 'M'.
+            'M' could be instantiated with an arbitrary type which could be unrelated to '{ server: { notFound: { msg: string; code: number; }; badRequest: { msg: string; code: number; }; unauthorized: { msg: string; code: number; }; forbidden: { msg: string; code: number; }; serverError: { msg: string; code: number; }; txNotFound: { ...; }; dbError: { ...; }; }; client: { ...; }; }'.
+src/foundation.ts(74,5): error TS2322: Type 'I18nService' is not assignable to type 'II18nService'.
+  Types of property 'error' are incompatible.
+    Type '(selector: (msgs: { server: { notFound: { msg: string; code: number; }; badRequest: { msg: string; code: number; }; unauthorized: { msg: string; code: number; }; forbidden: { msg: string; code: number; }; serverError: { msg: string; code: number; }; txNotFound: { ...; }; dbError: { ...; }; }; client: { ...; }; }) =>...' is not assignable to type '<M>(selector: (msgs: M) => { msg: string; code: number; }) => { msg: string; code: number; }'.
+      Types of parameters 'selector' and 'selector' are incompatible.
+        Types of parameters 'msgs' and 'msgs' are incompatible.
+          Type '{ server: { notFound: { msg: string; code: number; }; badRequest: { msg: string; code: number; }; unauthorized: { msg: string; code: number; }; forbidden: { msg: string; code: number; }; serverError: { msg: string; code: number; }; txNotFound: { ...; }; dbError: { ...; }; }; client: { ...; }; }' is not assignable to type 'M'.
+            'M' could be instantiated with an arbitrary type which could be unrelated to '{ server: { notFound: { msg: string; code: number; }; badRequest: { msg: string; code: number; }; unauthorized: { msg: string; code: number; }; forbidden: { msg: string; code: number; }; serverError: { msg: string; code: number; }; txNotFound: { ...; }; dbError: { ...; }; }; client: { ...; }; }'.
+src/foundation.ts(85,5): error TS2322: Type 'I18nService' is not assignable to type 'II18nService'.
+  Types of property 'error' are incompatible.
+    Type '(selector: (msgs: { server: { notFound: { msg: string; code: number; }; badRequest: { msg: string; code: number; }; unauthorized: { msg: string; code: number; }; forbidden: { msg: string; code: number; }; serverError: { msg: string; code: number; }; txNotFound: { ...; }; dbError: { ...; }; }; client: { ...; }; }) =>...' is not assignable to type '<M>(selector: (msgs: M) => { msg: string; code: number; }) => { msg: string; code: number; }'.
+      Types of parameters 'selector' and 'selector' are incompatible.
+        Types of parameters 'msgs' and 'msgs' are incompatible.
+          Type '{ server: { notFound: { msg: string; code: number; }; badRequest: { msg: string; code: number; }; unauthorized: { msg: string; code: number; }; forbidden: { msg: string; code: number; }; serverError: { msg: string; code: number; }; txNotFound: { ...; }; dbError: { ...; }; }; client: { ...; }; }' is not assignable to type 'M'.
+            'M' could be instantiated with an arbitrary type which could be unrelated to '{ server: { notFound: { msg: string; code: number; }; badRequest: { msg: string; code: number; }; unauthorized: { msg: string; code: number; }; forbidden: { msg: string; code: number; }; serverError: { msg: string; code: number; }; txNotFound: { ...; }; dbError: { ...; }; }; client: { ...; }; }'.
+src/foundation.ts(98,5): error TS2322: Type 'I18nService' is not assignable to type 'II18nService'.
+  Types of property 'error' are incompatible.
+    Type '(selector: (msgs: { server: { notFound: { msg: string; code: number; }; badRequest: { msg: string; code: number; }; unauthorized: { msg: string; code: number; }; forbidden: { msg: string; code: number; }; serverError: { msg: string; code: number; }; txNotFound: { ...; }; dbError: { ...; }; }; client: { ...; }; }) =>...' is not assignable to type '<M>(selector: (msgs: M) => { msg: string; code: number; }) => { msg: string; code: number; }'.
+      Types of parameters 'selector' and 'selector' are incompatible.
+        Types of parameters 'msgs' and 'msgs' are incompatible.
+          Type '{ server: { notFound: { msg: string; code: number; }; badRequest: { msg: string; code: number; }; unauthorized: { msg: string; code: number; }; forbidden: { msg: string; code: number; }; serverError: { msg: string; code: number; }; txNotFound: { ...; }; dbError: { ...; }; }; client: { ...; }; }' is not assignable to type 'M'.
+            'M' could be instantiated with an arbitrary type which could be unrelated to '{ server: { notFound: { msg: string; code: number; }; badRequest: { msg: string; code: number; }; unauthorized: { msg: string; code: number; }; forbidden: { msg: string; code: number; }; serverError: { msg: string; code: number; }; txNotFound: { ...; }; dbError: { ...; }; }; client: { ...; }; }'.

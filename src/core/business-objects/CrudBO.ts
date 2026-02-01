@@ -24,13 +24,13 @@ export abstract class CrudBO<T, TCreate = T, TUpdate = Partial<T>> extends BaseB
         return this.exec<number | string, T>(
             id,
             null, // No validamos el ID simple aquí, asumimos que viene limpio o validar en ruta
-            async (cleanId) => {
+            async (cleanId): Promise<ApiResponse<T>> => {
                 const res = await this.db.exeRaw(
                     `SELECT * FROM ${this.tableName} WHERE ${this.idColumn} = $1`,
                     [cleanId]
                 )
-                if (res.rows.length === 0) return this.error('No encontrado', 404)
-                return this.success(res.rows[0])
+                if (res.rows.length === 0) return this.error('No encontrado', 404) as ApiResponse<T>
+                return this.success(res.rows[0] as T)
             }
         )
     }
@@ -45,9 +45,9 @@ export abstract class CrudBO<T, TCreate = T, TUpdate = Partial<T>> extends BaseB
                 limit,
                 offset,
             ])
-            return this.success(res.rows)
+            return this.success(res.rows as T[])
         } catch (e) {
-            return this.safeCatch(e) as any
+            return this.safeCatch(e) as ApiResponse<T[]>
         }
     }
 

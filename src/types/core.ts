@@ -40,7 +40,7 @@ export interface IValidator {
  */
 export interface II18nService {
     currentLocale: string
-    messages: any
+    messages: Record<string, unknown>
 
     /**
      * Obtiene una traducción por su clave (Legacy).
@@ -64,6 +64,7 @@ export interface II18nService {
      * Obtiene un objeto de error HTTP con código y mensaje.
      * Soporta selector function (Typed) o key string (Legacy).
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     error(
         selectorOrKey: string | ((msgs: any) => { msg: string; code: number }),
         params?: Record<string, unknown>
@@ -92,12 +93,15 @@ export interface IDatabase {
     /**
      * Executes a raw query or query definition.
      */
-    exeRaw(sql: string, params?: unknown): Promise<{ rows: any[]; rowCount: number | null }>
+    exeRaw(
+        sql: string,
+        params?: unknown
+    ): Promise<{ rows: Record<string, unknown>[]; rowCount: number | null }>
 
     /**
      * Executes a raw query or query definition.
      */
-    query<T extends Record<string, any> = any>(
+    query<T extends Record<string, unknown> = Record<string, unknown>>(
         queryDef: string | { sql: string },
         params?: unknown[]
     ): Promise<{ rows: T[]; rowCount: number | null }>
@@ -126,8 +130,8 @@ export interface ISecurityService {
     executeMethod(data: {
         objectName: string
         methodName: string
-        params: any
-    }): Promise<{ code: number; msg: string; [key: string]: any }>
+        params: Record<string, unknown>
+    }): Promise<{ code: number; msg: string; [key: string]: unknown }>
 }
 
 /**
@@ -135,7 +139,7 @@ export interface ISecurityService {
  */
 export interface ISessionService {
     sessionExists(req: AppRequest): boolean
-    createSession(req: AppRequest, res: AppResponse): Promise<any>
+    createSession(req: AppRequest, res: AppResponse): Promise<AppResponse>
     destroySession(req: AppRequest): void
 }
 
