@@ -58,8 +58,7 @@ The framework engine. Divided into very specific areas:
 
 Here are the base classes that BOs extend.
 
-- `business-objects/`: `BaseBO`, `CrudBO`, `BOService`.
-- `errors/`: `BOError` and standard error types.
+- `business-objects/`: `BaseBO`, `CrudBO`, `BOService`, `BOError`.
 
 #### `src/services/` (Infrastructure & Utilities)
 

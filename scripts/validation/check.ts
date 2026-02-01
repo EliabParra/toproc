@@ -11,7 +11,7 @@ async function main() {
     // 1. Valid Case
     console.log('\n1️⃣  Valid Case:'.bold)
     const schema = z.object({
-        email: z.string().email(),
+        email: z.email(),
     })
     const input = { email: 'test@example.com' }
     const result = validator.validate(input, schema)

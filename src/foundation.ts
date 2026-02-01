@@ -7,7 +7,7 @@ import { container } from './core/Container.js'
 import { ConfigLoader } from './config/index.js'
 import { I18nService } from './services/I18nService.js'
 import { FeatureFlags } from './config/FeatureFlags.js'
-import { AppValidator } from './core/AppValidator.js'
+import { AppValidator } from './services/ValidatorService.js'
 import { AppLogger } from './services/LoggerService.js'
 import { SecurityService } from './services/SecurityService.js'
 import { SessionManager } from './services/SessionService.js'
@@ -85,7 +85,7 @@ container.register('db', db)
 // 8. Service Layer Initialization
 
 // Initialize Audit
-const audit = new AuditService({ db })
+const audit = new AuditService({ db, logger: appLogger })
 container.register('audit', audit)
 
 // Initialize Email Service
@@ -98,9 +98,8 @@ const session = new SessionManager({
     log: appLogger,
     config,
     i18n,
-    email,
     audit,
-    v: validator,
+    validator,
 })
 container.register('session', session)
 

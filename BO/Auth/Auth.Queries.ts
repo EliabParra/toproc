@@ -1,46 +1,48 @@
 export const AuthQueries = {
     // --- Users
+    // --- Users
+    // --- Users
     getUserByEmail: `
-        SELECT u.user_id, u.user_na, u.user_em, u.email_verified_at, u.user_pw, p.profile_id
+        SELECT u.id, u.username, u.email, u.email_verified_at, u.password_hash, p.profile_id
         FROM security.users u
-        LEFT JOIN security.users_profiles p ON u.user_id = p.user_id
-        WHERE u.user_em = $1
+        LEFT JOIN security.user_profiles p ON u.id = p.user_id
+        WHERE u.email = $1
     `,
 
-    getUserByUsername: `SELECT user_id, user_na, user_em, user_pw, email_verified_at FROM security.users WHERE user_na = $1`,
+    getUserByUsername: `SELECT id, username, email, password_hash, email_verified_at FROM security.users WHERE username = $1`,
 
-    getUserBaseByEmail: `SELECT user_id, user_na, user_em, user_pw, email_verified_at FROM security.users WHERE user_em = $1`,
+    getUserBaseByEmail: `SELECT id, username, email, password_hash, email_verified_at FROM security.users WHERE email = $1`,
 
     insertUser: `
-        INSERT INTO security.users (user_na, user_em, user_pw)
+        INSERT INTO security.users (username, email, password_hash)
         VALUES ($1, $2, $3)
-        RETURNING user_id
+        RETURNING id
     `,
 
     upsertUserProfile: `
         INSERT INTO security.user_profiles (user_id, profile_id, assigned_at)
         VALUES ($1, $2, NOW())
-        ON CONFLICT (user_id) DO UPDATE SET profile_id = EXCLUDED.profile_id, assigned_at = NOW()
+        ON CONFLICT (user_id, profile_id) DO UPDATE SET assigned_at = NOW()
     `,
 
     setUserEmailVerified: `
         UPDATE security.users
         SET email_verified_at = NOW()
-        WHERE user_id = $1
+        WHERE id = $1
     `,
 
     updateUserPassword: `
         UPDATE security.users
-        SET user_pw = $2
-        WHERE user_id = $1
+        SET password_hash = $2
+        WHERE id = $1
     `,
 
     // --- Password reset
     insertPasswordReset: `
         INSERT INTO security.password_resets 
-        (user_id, token_hash, expires_at, created_at, used_at, attempt_count, sent_to, ip_address, user_agent)
+        (user_id, token_hash, expires_at, created_at, used_at, attempt_count, token_sent_to, request_ip, user_agent)
         VALUES ($1, $2, NOW() + ($3 || ' seconds')::INTERVAL, NOW(), NULL, 0, $4, $5, $6)
-        RETURNING reset_id
+        RETURNING id
     `,
 
     invalidateActivePasswordResetsForUser: `
@@ -57,7 +59,7 @@ export const AuthQueries = {
     markPasswordResetUsed: `
         UPDATE security.password_resets
         SET used_at = NOW()
-        WHERE reset_id = $1
+        WHERE id = $1
     `,
 
     // --- One-time codes
@@ -65,13 +67,13 @@ export const AuthQueries = {
         INSERT INTO security.one_time_codes
         (user_id, purpose, code_hash, expires_at, created_at, meta)
         VALUES ($1, $2, $3, NOW() + ($4 || ' seconds')::INTERVAL, NOW(), $5)
-        RETURNING code_id
+        RETURNING id
     `,
 
     consumeOneTimeCode: `
         UPDATE security.one_time_codes
         SET consumed_at = NOW()
-        WHERE code_id = $1
+        WHERE id = $1
     `,
 
     getActiveOneTimeCodeForPurposeAndTokenHash: `

@@ -17,7 +17,7 @@ export class AuthBO extends BaseBO {
 
     constructor(deps: BODependencies) {
         super(deps)
-        this.service = new AuthService(this.log, this.config, this.db)
+        this.service = new AuthService(deps.log, deps.config, deps.db)
     }
 
     private get m() {

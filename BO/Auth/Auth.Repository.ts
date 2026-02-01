@@ -46,7 +46,7 @@ export class AuthRepository {
             params.passwordHash,
         ])
         const row = r.rows[0]
-        if (!row.user_id) throw new Error('insertUser did not return user_id')
+        if (!row.id) throw new Error('insertUser did not return id')
         return row
     }
 

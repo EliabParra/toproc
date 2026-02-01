@@ -1,8 +1,8 @@
 export const AuthMessages = {
     es: {
-        loginSuccess: 'Sesión iniciada exitosamente',
-        logoutSuccess: 'Sesión cerrada exitosamente',
-        registerSuccess: 'Usuario registrado exitosamente',
+        loginSuccess: 'Inicio de sesión exitoso',
+        logoutSuccess: 'Cierre de sesión exitoso',
+        registerSuccess: 'Registro exitoso',
         emailVerified: 'Email verificado exitosamente',
         passwordResetSent: 'Enlace de recuperación enviado',
         passwordChanged: 'Contraseña actualizada exitosamente',
@@ -29,7 +29,7 @@ export const AuthMessages = {
     en: {
         loginSuccess: 'Login successful',
         logoutSuccess: 'Logout successful',
-        registerSuccess: 'User registered successfully',
+        registerSuccess: 'Registered successfully',
         emailVerified: 'Email verified successfully',
         passwordResetSent: 'Recovery link sent',
         passwordChanged: 'Password updated successfully',

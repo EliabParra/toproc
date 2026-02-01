@@ -3,9 +3,9 @@ import { Session, SessionData } from 'express-session'
 
 declare module 'express-session' {
     interface SessionData {
-        user_id?: number
-        user_na?: string
-        profile_id?: number
+        userId?: number
+        username?: string
+        profileId?: number
         [key: string]: any
     }
 }

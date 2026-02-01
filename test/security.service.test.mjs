@@ -174,8 +174,8 @@ test('Security.executeMethod dynamically imports BO and caches the instance', as
             [
                 `globalThis.__securityBoCtorCount ??= 0;`,
                 `export class ${objectName}BO {`,
-                `  constructor() { globalThis.__securityBoCtorCount++; }`,
-                `  async ping(params) { return { code: 200, msg: 'ok', data: params }; }`,
+                `  constructor() { globalThis.__securityBoCtorCount++; this.bound = true; }`,
+                `  async ping(params) { if (!this.bound) throw new Error('Context lost'); return { code: 200, msg: 'ok', data: params }; }`,
                 `}`,
                 ``,
             ].join('\n'),

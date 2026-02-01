@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const AuthSchemas = {
     login: z.object({
-        loginId: z.string().min(1, 'bo.auth.validation.loginIdRequired'),
+        identifier: z.string().min(1, 'bo.auth.validation.loginIdRequired'),
         password: z.string().min(1, 'bo.auth.validation.passwordRequired'),
     }),
 

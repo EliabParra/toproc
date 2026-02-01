@@ -1,17 +1,17 @@
 import rateLimit from 'express-rate-limit'
 
-/** @param {{ object_na?: string, method_na?: string } | null | undefined} txData */
+/** @param {{ objectName?: string, methodName?: string } | null | undefined} txData */
 function isAuthPublicSensitiveMethod(txData: any) {
-    const object_na = txData?.object_na
-    const method_na = txData?.method_na
-    if (object_na !== 'Auth') return false
+    const objectName = txData?.objectName
+    const methodName = txData?.methodName
+    if (objectName !== 'Auth') return false
     return (
-        method_na === 'register' ||
-        method_na === 'requestEmailVerification' ||
-        method_na === 'verifyEmail' ||
-        method_na === 'requestPasswordReset' ||
-        method_na === 'verifyPasswordReset' ||
-        method_na === 'resetPassword'
+        methodName === 'register' ||
+        methodName === 'requestEmailVerification' ||
+        methodName === 'verifyEmail' ||
+        methodName === 'requestPasswordReset' ||
+        methodName === 'verifyPasswordReset' ||
+        methodName === 'resetPassword'
     )
 }
 
@@ -65,7 +65,7 @@ export function createAuthPasswordResetRateLimiter(clientErrors: any, security: 
         windowMs: 60 * 1000,
         limit: (req: any) => {
             const txData = getTxDataFromReq(req, security)
-            const method = txData?.method_na
+            const method = txData?.methodName
             if (method === 'register') return 5
             if (method === 'requestEmailVerification') return 5
             if (method === 'verifyEmail') return 10
@@ -82,7 +82,7 @@ export function createAuthPasswordResetRateLimiter(clientErrors: any, security: 
         },
         keyGenerator: (req: any) => {
             const txData = getTxDataFromReq(req, security)
-            const method = txData?.method_na
+            const method = txData?.methodName
             const ip = req.ip
 
             if (method === 'register') {
@@ -149,7 +149,7 @@ export function createToProccessRateLimiter(clientErrors: any) {
         standardHeaders: true,
         legacyHeaders: false,
         keyGenerator: (req: any) => {
-            const userId = (req as any)?.session?.user_id
+            const userId = (req as any)?.session?.userId
             return userId ? `user:${userId}` : `ip:${(req as any).ip}`
         },
         handler: (req: AppRequest, res: AppResponse) =>

@@ -78,7 +78,7 @@ export class SecurityService implements ISecurityService {
             config: deps.config,
             audit: deps.audit,
             session: deps.session,
-            validator: deps.validator,
+            v: deps.validator,
             security: this,
             i18n: deps.i18n,
         }
@@ -120,9 +120,9 @@ export class SecurityService implements ISecurityService {
      * Resuelve un código de transacción a su ruta de ejecución (BO y método).
      *
      * @param tx - Código de transacción (e.g., "AUTH_LOGIN")
-     * @returns {{ object_na: string; method_na: string } | false} Objeto con ruta o false si no existe
+     * @returns {{ objectName: string; methodName: string } | false} Objeto con ruta o false si no existe
      */
-    getDataTx(tx: unknown): { object_na: string; method_na: string } | false {
+    getDataTx(tx: unknown): { objectName: string; methodName: string } | false {
         const route = this.mapper.resolve(tx)
         return route || false
     }
@@ -131,37 +131,37 @@ export class SecurityService implements ISecurityService {
      * Verifica si un perfil tiene permisos para ejecutar un método.
      *
      * @param jsonData - Datos para verificación
-     * @param jsonData.profile_id - ID del perfil del usuario
-     * @param jsonData.method_na - Nombre del método
-     * @param jsonData.object_na - Nombre del Business Object
+     * @param jsonData.profileId - ID del perfil del usuario (was profile_id)
+     * @param jsonData.methodName - Nombre del método (was method_na)
+     * @param jsonData.objectName - Nombre del Business Object (was object_na)
      * @returns {boolean} True si tiene permiso, False en caso contrario
      */
     getPermissions(jsonData: {
-        profile_id: number
-        method_na: string
-        object_na: string
+        profileId: number
+        methodName: string
+        objectName: string
     }): boolean {
-        return this.guard.check(jsonData.profile_id, jsonData.object_na, jsonData.method_na)
+        return this.guard.check(jsonData.profileId, jsonData.objectName, jsonData.methodName)
     }
 
     /**
      * Ejecuta un método de negocio a través del Executor.
      *
      * @param jsonData - Datos de ejecución
-     * @param jsonData.object_na - Nombre del Business Object
-     * @param jsonData.method_na - Nombre del método
+     * @param jsonData.objectName - Nombre del Business Object
+     * @param jsonData.methodName - Nombre del método
      * @param jsonData.params - Parámetros para la función
      * @returns {Promise<{ code: number; msg: string; [key: string]: any }>} Resultado de la ejecución
      */
     async executeMethod(jsonData: {
-        object_na: string
-        method_na: string
+        objectName: string
+        methodName: string
         params: Record<string, unknown> | null | undefined
     }): Promise<{ code: number; msg: string; [key: string]: any }> {
         try {
             return await this.executor.execute(
-                jsonData.object_na,
-                jsonData.method_na,
+                jsonData.objectName,
+                jsonData.methodName,
                 jsonData.params
             )
         } catch (err: unknown) {
@@ -169,8 +169,8 @@ export class SecurityService implements ISecurityService {
                 type: this.log.TYPE_ERROR,
                 msg: `${this.serverErrors.serverError.msg}, SecurityService.executeMethod: ${err instanceof Error ? err.message : String(err)}`,
                 ctx: {
-                    object_na: jsonData.object_na,
-                    method_na: jsonData.method_na,
+                    objectName: jsonData.objectName,
+                    methodName: jsonData.methodName,
                 },
             })
             return this.serverErrors.serverError

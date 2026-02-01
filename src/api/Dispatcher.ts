@@ -203,7 +203,7 @@ export class Dispatcher {
             const hasSession = this.session.sessionExists(req)
             const publicProfileId = Number(this.config.auth?.publicProfileId)
             effectiveProfileId = hasSession
-                ? (req.session?.profile_id ?? null)
+                ? (req.session?.profileId ?? null)
                 : Number.isInteger(publicProfileId) && publicProfileId > 0
                   ? publicProfileId
                   : null
@@ -300,8 +300,8 @@ export class Dispatcher {
                 throw new Error(this.serverErrors.txNotFound.msg.replace('{tx}', String(tx)))
 
             let effectiveParams = body?.params
-            if (txData?.object_na === 'Auth') {
-                const method = txData?.method_na
+            if (txData?.objectName === 'Auth') {
+                const method = txData?.methodName
                 if (
                     [
                         'register',
@@ -328,19 +328,17 @@ export class Dispatcher {
                 }
             }
             const data = {
-                profile_id: effectiveProfileId!, // check null handled above? effectiveProfileId IS number | null.
-                // Logic above: if (!hasSession && effectiveProfileId == null) return error.
-                // So here effectiveProfileId is likely number.
-                method_na: txData.method_na,
-                object_na: txData.object_na,
+                profileId: effectiveProfileId!,
+                methodName: txData.methodName,
+                objectName: txData.objectName,
                 params: effectiveParams,
             }
 
-            if (!this.security.getPermissions(data as any)) {
+            if (!this.security.getPermissions(data)) {
                 await this.audit.log(req, {
                     action: 'tx_denied',
-                    object_na: data.object_na,
-                    method_na: data.method_na,
+                    objectName: data.objectName,
+                    methodName: data.methodName,
                     tx,
                     profile_id: effectiveProfileId,
                     details: { reason: 'permissionDenied' },
@@ -355,8 +353,8 @@ export class Dispatcher {
 
             await this.audit.log(req, {
                 action: 'tx_exec',
-                object_na: data.object_na,
-                method_na: data.method_na,
+                objectName: data.objectName,
+                methodName: data.methodName,
                 tx,
                 profile_id: effectiveProfileId,
                 details: { responseCode: response?.code },
@@ -379,8 +377,8 @@ export class Dispatcher {
 
             await this.audit.log(req, {
                 action: 'tx_error',
-                object_na: txData?.object_na,
-                method_na: txData?.method_na,
+                objectName: txData?.objectName,
+                methodName: txData?.methodName,
                 tx,
                 profile_id: effectiveProfileId,
                 details: { error: String(err?.message || err) },
@@ -397,10 +395,10 @@ export class Dispatcher {
                     path: req.originalUrl,
                     status,
                     tx,
-                    object_na: txData?.object_na,
-                    method_na: txData?.method_na,
-                    user_id: req.session?.user_id,
-                    profile_id: req.session?.profile_id,
+                    objectName: txData?.objectName,
+                    methodName: txData?.methodName,
+                    userId: req.session?.userId,
+                    profileId: req.session?.profileId,
                     durationMs:
                         typeof req.requestStartMs === 'number'
                             ? Date.now() - req.requestStartMs
@@ -456,8 +454,8 @@ export class Dispatcher {
                         typeof req.requestStartMs === 'number'
                             ? Date.now() - req.requestStartMs
                             : undefined,
-                    user_id: req.session?.user_id,
-                    profile_id: req.session?.profile_id,
+                    userId: req.session?.userId,
+                    profileId: req.session?.profileId,
                 },
             })
             res.status(status).send(this.clientErrors.unknown)

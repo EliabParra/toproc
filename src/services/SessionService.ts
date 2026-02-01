@@ -1,293 +1,215 @@
 import bcrypt from 'bcryptjs'
-import { createHash, randomBytes } from 'node:crypto'
 import {
     IDatabase,
     ILogger,
     ISessionService,
-    IEmailService,
     IConfig,
     IAuditService,
     II18nService,
 } from '../types/core.js'
+import { LoginSchema, LoginInput, SessionUserRow } from './schemas/session.js'
+import { AppValidator } from './ValidatorService.js'
+import { ValidationError } from '../types/Validation.js'
+import { SessionQueries } from './queries/session.js'
 
-function sha256Hex(value: unknown) {
-    return createHash('sha256').update(String(value), 'utf8').digest('hex')
-}
-
-function looksLikeEmail(value: string) {
-    return value.includes('@')
-}
-
-function getCookie(req: AppRequest, name: string) {
-    const header = req.headers?.cookie
-    if (typeof header !== 'string' || header.length === 0) return null
-    const parts = header.split(';')
-    for (const part of parts) {
-        const i = part.indexOf('=')
-        if (i <= 0) continue
-        const k = part.slice(0, i).trim()
-        if (k !== name) continue
-        return decodeURIComponent(part.slice(i + 1).trim())
-    }
-    return null
-}
-
-function redactSecretsInString(s: string): string {
-    return s
-}
-// ...
-// Helper imports - assuming we can import them from original locations or duplicates
-
-const SessionQueries = {
-    getUserByEmail: `
-        SELECT u.user_id, u.user_na, u.user_em, u.email_verified_at, u.user_pw, p.profile_id
-        FROM security.users u
-        LEFT JOIN security.users_profiles p ON u.user_id = p.user_id
-        WHERE u.user_em = $1
-    `,
-    getUserByUsername: `SELECT user_id, user_na, user_em, user_pw, email_verified_at FROM security.users WHERE user_na = $1`,
-    updateUserLastLogin: `
-        UPDATE security.users SET last_login_at = NOW(), updated_at = NOW() WHERE user_id = $1
-    `,
-}
+type ValidationResponse =
+    | { success: true; data: LoginInput }
+    | { success: false; errors: ValidationError[] }
 
 /**
  * Gestor de sesiones de usuario.
- *
- * Responsable de:
- * 1. Autenticación de usuarios (login)
- * 2. Validación de credenciales (bcrypt)
- * 3. Gestión del estado de sesión (cookie/store)
- * 4. Auditoría de accesos
- *
+ * Maneja la autenticación segura de usuarios y la gestión de sesiones.
  */
 export class SessionManager implements ISessionService {
     private db: IDatabase
     private log: ILogger
     private config: IConfig
     private i18n: II18nService
-    private email: IEmailService
     private audit: IAuditService
-    private v: any // Validator
+    private validator: AppValidator
 
-    // Cache config values
-    private serverErrors: any
-    private clientErrors: any
-    private successMsgs: any
-    private authCfg: any
-    private loginId: string
+    // Cache localized messages
+    private serverErrors: Record<string, { code: number; msg: string }>
+    private clientErrors: Record<string, { code: number; msg: string }>
+    private successMsgs: Record<string, { code: number; msg: string }>
+    private authCfg: Record<string, unknown>
     private requireEmailVerification: boolean
 
-    /**
-     * Crea una instancia de SessionManager.
-     *
-     * @param deps - Dependencias requeridas
-     */
     constructor(deps: {
         db: IDatabase
         log: ILogger
         config: IConfig
         i18n: II18nService
-        email: IEmailService
         audit: IAuditService
-        v?: any
+        validator: AppValidator
     }) {
         this.db = deps.db
         this.log = deps.log
         this.config = deps.config
         this.i18n = deps.i18n
-        this.email = deps.email
         this.audit = deps.audit
-        this.v = deps.v
+        this.validator = deps.validator
 
-        this.serverErrors = this.i18n.get('errors.server')
-        this.clientErrors = this.i18n.get('errors.client')
-        this.successMsgs = this.i18n.get('success')
+        this.serverErrors = this.i18n.get('errors.server') as any
+        this.clientErrors = this.i18n.get('errors.client') as any
+        this.successMsgs = this.i18n.get('success') as any
 
-        this.authCfg = this.config.auth ?? {}
-        this.loginId = String(this.authCfg.loginId ?? 'email')
-            .trim()
-            .toLowerCase()
+        this.authCfg = (this.config.auth ?? {}) as Record<string, unknown>
         this.requireEmailVerification = Boolean(this.authCfg.requireEmailVerification)
     }
 
     /**
-     * Verifica si existe una sesión activa en el request.
-     *
-     * @param req - Request Express
-     * @returns {boolean} True si hay sesión con user_id
+     * Verifica si una sesión de usuario está actualmente activa.
      */
-    sessionExists(req: AppRequest) {
-        if (req.session && req.session.user_id) return true
-        return false
+    sessionExists(req: AppRequest): boolean {
+        return !!(req.session && req.session.userId)
     }
 
     /**
-     * Crea una nueva sesión (Login).
-     * Valida credenciales, crea la sesión y retorna respuesta HTTP.
-     *
-     * @param req - Request Express
-     * @param res - Response Express
-     * @returns {Promise<any>} Respuesta HTTP
+     * Autentica a un usuario y establece una nueva sesión.
      */
     async createSession(req: AppRequest, res: AppResponse) {
         try {
-            // Context for helpers that need it
-            const ctxHelper = {
-                config: this.config,
-                i18n: this.i18n,
-                log: this.log,
-                db: this.db,
-                v: this.v,
+            const validation = this.validateLoginRequest(req)
+            if (!validation.success) {
+                return this.respondValidationFailed(res, validation.errors)
             }
-
-            // Inline validation logic from legacy http-validators
-            const body = req.body
-            const alerts: string[] = []
-
-            if (!body || typeof body !== 'object' || Array.isArray(body)) {
-                alerts.push(this.v.getMessage('object', { value: body, label: 'body' }))
-            } else {
-                const hasIdentifier =
-                    typeof (body as any).identifier === 'string' ||
-                    typeof (body as any).email === 'string' ||
-                    typeof (body as any).username === 'string'
-
-                if (!hasIdentifier) {
-                    const value =
-                        (body as any).identifier ?? (body as any).email ?? (body as any).username
-                    alerts.push(this.v.getMessage('string', { value, label: 'identifier' }))
-                }
-
-                if (typeof (body as any).password !== 'string') {
-                    alerts.push(
-                        this.v.getMessage('string', {
-                            value: (body as any).password,
-                            label: 'password',
-                        })
-                    )
-                } else if ((body as any).password.length < 8) {
-                    alerts.push(
-                        this.v.getMessage('length', {
-                            value: (body as any).password,
-                            label: 'password',
-                            min: 8,
-                        })
-                    )
-                }
-            }
-
-            if (alerts.length > 0) {
-                return res.status(this.clientErrors.invalidParameters.code).send({
-                    msg: this.clientErrors.invalidParameters.msg,
-                    code: this.clientErrors.invalidParameters.code,
-                    alerts: alerts,
-                })
-            }
-
-            // Normalize body
-            const b = body as {
-                identifier?: string
-                email?: string
-                username?: string
-                password: string
-            }
-            const identifier =
-                typeof b.identifier === 'string'
-                    ? b.identifier
-                    : typeof b.email === 'string'
-                      ? b.email
-                      : (b.username as string)
 
             if (this.sessionExists(req)) {
-                return res.status(this.clientErrors.sessionExists.code).send({
-                    msg: this.clientErrors.sessionExists.msg,
-                    code: this.clientErrors.sessionExists.code,
-                })
+                return this.respondClientError(res, this.clientErrors.sessionExists)
             }
 
-            // b and identifier are already defined above
-            const queryName = looksLikeEmail(identifier)
-                ? SessionQueries.getUserByEmail
-                : SessionQueries.getUserByUsername
-            const result = await this.db.query(queryName, [identifier])
-            if (!result?.rows || result.rows.length === 0) {
-                return res
-                    .status(this.clientErrors.usernameOrPasswordIncorrect.code)
-                    .send(this.clientErrors.usernameOrPasswordIncorrect)
+            const { identifier, password } = validation.data
+            const user = await this.findUserByIdentifier(identifier)
+
+            if (!user || !(await this.passwordsMatch(password, user.password_hash))) {
+                return this.respondClientError(res, this.clientErrors.usernameOrPasswordIncorrect)
             }
 
-            const user = result.rows[0]
-            const storedHash = user.user_pw || user.password || user.password_hash // Support legacy/refactored columns
-            const ok =
-                typeof storedHash === 'string' && (await bcrypt.compare(b.password, storedHash))
-            if (!ok)
-                return res
-                    .status(this.clientErrors.usernameOrPasswordIncorrect.code)
-                    .send(this.clientErrors.usernameOrPasswordIncorrect)
-
-            if (this.requireEmailVerification) {
-                const email = user.user_em || user.email
-                if (typeof email !== 'string' || email.trim().length === 0) {
-                    return res
-                        .status(this.clientErrors.emailRequired.code)
-                        .send(this.clientErrors.emailRequired)
-                }
-                if (!user.email_verified_at) {
-                    return res
-                        .status(this.clientErrors.emailNotVerified.code)
-                        .send(this.clientErrors.emailNotVerified)
-                }
+            if (this.isEmailVerificationPending(user)) {
+                return this.respondClientError(res, this.clientErrors.emailNotVerified)
             }
 
-            req.session!.user_id = user.user_id
-            req.session!.user_na = user.user_na || user.username
-            req.session!.profile_id = user.profile_id
+            this.initializeUserSession(req, user)
 
-            try {
-                await this.db.query(SessionQueries.updateUserLastLogin, [user.user_id])
-            } catch {}
-
-            try {
-                await this.db.query(SessionQueries.updateUserLastLogin, [user.user_id])
-            } catch {}
-
-            await this.audit.log(req, {
-                action: 'login',
-                user_id: user.user_id,
-                profile_id: user.profile_id,
-                details: { user_na: user.user_na || user.username },
-            })
+            await this.updateUserStats(user.id)
+            await this.auditLoginSuccess(req, user)
 
             return res.status(this.successMsgs.login.code).send(this.successMsgs.login)
-        } catch (err: any) {
-            const status = this.clientErrors.unknown.code
-            try {
-                res.locals.__errorLogged = true
-            } catch {}
-            this.log.show({
-                type: this.log.TYPE_ERROR,
-                msg: `${this.serverErrors.serverError.msg}, SessionManager.createSession: ${err?.message || err}`,
-                ctx: {
-                    requestId: req.requestId,
-                    method: req.method,
-                    path: req.originalUrl,
-                    status,
-                    user_id: req.session?.user_id,
-                },
-            })
-            return res.status(status).send(this.clientErrors.unknown)
+        } catch (error) {
+            return this.handleSystemError(req, res, error)
         }
     }
 
     /**
-     * Destruye la sesión actual (Logout).
-     *
-     * @param req - Request Express
+     * Destruye la sesión actual del usuario (Logout).
      */
     destroySession(req: AppRequest) {
         try {
             req.session?.destroy?.(() => {})
+        } catch {} // Fail silent is acceptable for logout
+    }
+
+    // =========================================================================
+    // Private Helpers (SRP & Readability)
+    // =========================================================================
+
+    private validateLoginRequest(req: AppRequest): ValidationResponse {
+        const result = this.validator.validate<LoginInput>(req.body, LoginSchema)
+        if (!result.valid) {
+            return { success: false, errors: result.errors }
+        }
+        return { success: true, data: result.data }
+    }
+
+    private async findUserByIdentifier(identifier: string): Promise<SessionUserRow | null> {
+        const isEmail = identifier.includes('@')
+        const query = isEmail ? SessionQueries.getUserByEmail : SessionQueries.getUserByUsername
+
+        const result = await this.db.query<SessionUserRow>(query, [identifier])
+
+        if (!result.rows || result.rows.length === 0) {
+            return null
+        }
+        return result.rows[0]
+    }
+
+    private async passwordsMatch(provided: string, storedHash: string | null): Promise<boolean> {
+        if (!storedHash) return false
+        return bcrypt.compare(provided, storedHash)
+    }
+
+    private isEmailVerificationPending(user: SessionUserRow): boolean {
+        return this.requireEmailVerification && !user.email_verified_at
+    }
+
+    private initializeUserSession(req: AppRequest, user: SessionUserRow): void {
+        if (req.session) {
+            req.session.userId = user.id
+            req.session.username = user.username
+            req.session.profileId = user.profile_id
+            req.session.email = user.email
+        }
+    }
+
+    private async updateUserStats(userId: number): Promise<void> {
+        try {
+            await this.db.query(SessionQueries.updateUserLastLogin, [userId])
+        } catch (err) {
+            // Stats update failure should not block login flow
+            // Could log warning here if strict monitoring needed
+        }
+    }
+
+    private async auditLoginSuccess(req: AppRequest, user: SessionUserRow): Promise<void> {
+        await this.audit.log(req, {
+            action: 'login',
+            user_id: user.id,
+            profile_id: user.profile_id,
+            details: { username: user.username },
+        })
+    }
+
+    // =========================================================================
+    // Response Helpers
+    // =========================================================================
+
+    private respondValidationFailed(res: AppResponse, errors: ValidationError[]) {
+        const alerts = this.validator.getAlerts(errors)
+        return res.status(this.clientErrors.invalidParameters.code).send({
+            msg: this.clientErrors.invalidParameters.msg,
+            code: this.clientErrors.invalidParameters.code,
+            alerts,
+            errors,
+        })
+    }
+
+    private respondClientError(res: AppResponse, error: { code: number; msg: string }) {
+        return res.status(error.code).send(error)
+    }
+
+    private handleSystemError(req: AppRequest, res: AppResponse, error: any) {
+        try {
+            res.locals.__errorLogged = true
         } catch {}
+
+        const status = this.serverErrors.serverError.code || 500
+        const msg = this.serverErrors.serverError.msg || 'Server Error'
+
+        this.log.show({
+            type: this.log.TYPE_ERROR,
+            msg: `${msg}, SessionManager.createSession: ${error?.message || error}`,
+            ctx: {
+                requestId: req.requestId,
+                method: req.method,
+                path: req.originalUrl,
+                status,
+                userId: req.session?.userId,
+            },
+        })
+
+        return res
+            .status(status)
+            .send(this.clientErrors.unknown || { msg: 'Unknown Error', code: 500 })
     }
 }

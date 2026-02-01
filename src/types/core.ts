@@ -30,13 +30,6 @@ export interface IValidator {
     ):
         | { valid: true; data: T; errors?: never }
         | { valid: false; data?: never; errors: { path: string; message: string; code?: string }[] }
-
-    // Legacy support
-    getAlerts?(): string[]
-    // Legacy methods
-    validateString?(opts: any): boolean
-    validateLength?(opts: any, min: number, max: number): boolean
-    validateEmail?(opts: any): boolean
 }
 
 /**
@@ -138,13 +131,13 @@ export interface ISecurityService {
     isReady: boolean
     ready: Promise<boolean>
     /** Resuelve una transacción a BO/Método */
-    getDataTx(tx: unknown): { object_na: string; method_na: string } | false
+    getDataTx(tx: unknown): { objectName: string; methodName: string } | false
     /** Verifica permisos de acceso */
-    getPermissions(data: { profile_id: number; method_na: string; object_na: string }): boolean
+    getPermissions(data: { profileId: number; methodName: string; objectName: string }): boolean
     /** Ejecuta un método de negocio */
     executeMethod(data: {
-        object_na: string
-        method_na: string
+        objectName: string
+        methodName: string
         params: any
     }): Promise<{ code: number; msg: string; [key: string]: any }>
 }
@@ -200,8 +193,8 @@ export interface IAuditService {
         req: AppRequest,
         args: {
             action: string
-            object_na?: string | null
-            method_na?: string | null
+            objectName?: string | null
+            methodName?: string | null
             tx?: unknown
             user_id?: number | null
             profile_id?: number | null
@@ -220,6 +213,6 @@ export interface BODependencies {
     audit: IAuditService
     security: ISecurityService
     session: ISessionService
-    validator: IValidator
+    v: IValidator
     i18n: II18nService
 }

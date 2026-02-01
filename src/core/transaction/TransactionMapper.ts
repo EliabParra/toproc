@@ -2,7 +2,7 @@ import { IDatabase, ILogger } from '../../types/core.js'
 
 const TxQueries = {
     loadDataTx: `
-        SELECT m.tx as tx_nu, o.object_name as object_na, m.method_name as method_na 
+        SELECT m.tx, o.object_name, m.method_name 
         FROM security.methods m 
         INNER JOIN security.objects o ON m.object_id = o.object_id
     `,
@@ -13,23 +13,23 @@ const TxQueries = {
  */
 export type TransactionRoute = {
     /** Nombre del Business Object */
-    object_na: string
+    objectName: string
     /** Nombre del método a ejecutar */
-    method_na: string
+    methodName: string
 }
 
 /**
  * Mapeador de transacciones que resuelve códigos TX a rutas de ejecución (BO/Método).
  *
  * Mantiene un caché en memoria de la tabla `security.methods` para resolución rápida.
- * Se encarga de cargar y mantener la relación entre `tx_nu` (código de transacción)
- * y el par `{ object_na, method_na }` que lo maneja.
+ * Se encarga de cargar y mantener la relación entre `tx` (código de transacción)
+ * y el par `{ objectName, methodName }` que lo maneja.
  *
  * @example
  * ```typescript
  * const mapper = new TransactionMapper(db, log)
  * await mapper.load()
- * const route = mapper.resolve(100) // { object_na: 'Auth', method_na: 'login' }
+ * const route = mapper.resolve(100) // { objectName: 'Auth', methodName: 'login' }
  * ```
  */
 export class TransactionMapper {
@@ -70,12 +70,12 @@ export class TransactionMapper {
             this.txMap.clear()
 
             for (const row of result.rows) {
-                const tx = typeof row.tx_nu === 'number' ? row.tx_nu : Number(row.tx_nu)
+                const tx = typeof row.tx === 'number' ? row.tx : Number(row.tx)
 
-                if (Number.isFinite(tx) && row.object_na && row.method_na) {
+                if (Number.isFinite(tx) && row.object_name && row.method_name) {
                     this.txMap.set(tx, {
-                        object_na: row.object_na,
-                        method_na: row.method_na,
+                        objectName: row.object_name,
+                        methodName: row.method_name,
                     })
                 }
             }
@@ -97,7 +97,7 @@ export class TransactionMapper {
      * Resuelve un número de transacción a su ruta de ejecución.
      *
      * @param tx - Código de transacción (número o string numérico)
-     * @returns {TransactionRoute | null} La ruta { object_na, method_na } o null si no existe
+     * @returns {TransactionRoute | null} La ruta { objectName, methodName } o null si no existe
      */
     resolve(tx: unknown): TransactionRoute | null {
         const key = typeof tx === 'number' ? tx : Number(tx)

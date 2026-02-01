@@ -40,15 +40,23 @@ export class AuthService extends BOService {
 
         const sessionProfileId = Number(this.config.auth.sessionProfileId ?? 1)
         await this.repo.upsertUserProfile({
-            userId: user.user_id,
+            userId: user.id,
             profileId: sessionProfileId,
         })
 
         if (this.config.auth.requireEmailVerification) {
-            await this.sendVerificationEmail(user.user_id, data.email)
+            await this.sendVerificationEmail(user.id, data.email)
         }
 
-        return this.mapUser({ ...user, user_em: data.email, user_na: data.name, user_pw: hash })
+        return this.mapUser({
+            ...user,
+            email: data.email,
+            username: data.name ?? '',
+            password_hash: hash,
+            email_verified_at: null,
+            is_active: true,
+            profile_id: sessionProfileId,
+        })
     }
 
     async requestEmailVerification(identifier: string): Promise<void> {
@@ -59,8 +67,8 @@ export class AuthService extends BOService {
             user = await this.repo.getUserByUsername(identifier)
         }
 
-        if (user && user.user_em) {
-            await this.sendVerificationEmail(user.user_id, user.user_em)
+        if (user && user.email) {
+            await this.sendVerificationEmail(user.id, user.email)
         }
     }
 
@@ -76,30 +84,30 @@ export class AuthService extends BOService {
         if (!otp) throw new AuthTokenInvalidError()
 
         await this.repo.setUserEmailVerified(otp.user_id)
-        await this.repo.consumeOneTimeCode(otp.code_id)
+        await this.repo.consumeOneTimeCode(otp.id)
     }
 
     async requestPasswordReset(email: string): Promise<void> {
         const user = await this.repo.getUserByEmail(email)
-        if (!user || !user.user_em) return
+        if (!user || !user.email) return
 
         const purpose = String(this.config.auth.passwordResetPurpose ?? 'password_reset')
         const expiresSeconds = 900
 
-        await this.repo.invalidateActivePasswordResetsForUser(user.user_id)
+        await this.repo.invalidateActivePasswordResetsForUser(user.id)
 
         const token = randomBytes(32).toString('hex')
         const tokenHash = sha256Hex(token)
 
         await this.repo.insertPasswordReset({
-            userId: user.user_id,
+            userId: user.id,
             tokenHash,
-            sentTo: user.user_em,
+            sentTo: user.email,
             expiresSeconds,
         })
 
         await this.emailService.sendPasswordReset({
-            to: user.user_em,
+            to: user.email,
             token,
             code: '000000',
             appName: this.config.app.name,
@@ -114,7 +122,7 @@ export class AuthService extends BOService {
 
         const hash = await bcrypt.hash(newPassword, 10)
         await this.repo.updateUserPassword({ userId: reset.user_id, passwordHash: hash })
-        await this.repo.markPasswordResetUsed(reset.reset_id)
+        await this.repo.markPasswordResetUsed(reset.id)
     }
 
     async verifyPasswordResetToken(token: string): Promise<void> {
@@ -148,12 +156,12 @@ export class AuthService extends BOService {
 
     private mapUser(row: UserRow): User {
         return {
-            userId: row.user_id,
-            email: row.user_em!,
-            name: row.user_na ?? undefined,
-            passwordHash: row.user_pw ?? '',
+            userId: row.id,
+            email: row.email!,
+            name: row.username ?? undefined,
+            passwordHash: row.password_hash ?? '',
             isEmailVerified: !!row.email_verified_at,
-            isActive: true,
+            isActive: !!row.is_active,
             createdAt: new Date(),
         }
     }

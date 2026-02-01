@@ -1,14 +1,15 @@
 export type UserRow = {
-    user_id: number
-    user_na?: string | null
-    user_em?: string | null
+    id: number
+    username: string
+    email: string
+    password_hash: string
     email_verified_at?: string | Date | null
-    user_pw?: string | null
+    is_active?: boolean
     profile_id?: number | null
 }
 
 export type OneTimeCodeRow = {
-    code_id: number
+    id: number
     user_id: number
     purpose?: string | null
     expires_at?: string | Date | null
@@ -18,7 +19,7 @@ export type OneTimeCodeRow = {
 }
 
 export type UserId = {
-    user_id: number
+    id: number // Was user_id
 }
 
 export type UserWithProfileId = {
@@ -33,7 +34,7 @@ export type InsertUserParams = {
 }
 
 export type PasswordResetRow = {
-    reset_id: number
+    id: number
     user_id: number
     expires_at?: string | Date | null
     used_at?: string | Date | null

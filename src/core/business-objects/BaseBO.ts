@@ -1,32 +1,14 @@
-import { IDatabase, ILogger, IConfig, IValidator, II18nService } from '../../types/core.js'
+import { ZodType } from 'zod'
+import {
+    IDatabase,
+    ILogger,
+    IConfig,
+    IValidator,
+    II18nService,
+    BODependencies,
+} from '../../types/core.js'
 
-/**
- * Dependencias requeridas por todos los Business Objects.
- *
- * Se inyectan mediante el constructor para habilitar testabilidad y bajo acoplamiento.
- *
- * @example
- * ```typescript
- * const deps: BODependencies = {
- *     db: databaseInstance,
- *     log: loggerInstance,
- *     config: configInstance,
- *     v: validatorInstance
- * }
- * ```
- */
-export type BODependencies = {
-    /** Capa de acceso a base de datos */
-    db: IDatabase
-    /** Servicio de logging */
-    log: ILogger
-    /** Configuración de la aplicación */
-    config: IConfig
-    /** Instancia del validador (AppValidator con Zod) */
-    v: IValidator
-    /** Servicio i18n opcional para localización de mensajes */
-    i18n?: II18nService
-}
+export { BODependencies }
 
 /**
  * Clase base para todos los Business Objects (BOs) en el framework ToProccess.
@@ -169,9 +151,8 @@ export abstract class BaseBO {
      * if (!parsed.ok) return this.validationError(parsed.alerts)
      * ```
      */
-    protected validationError(alerts?: string[]): ApiResponse {
-        const finalAlerts = alerts ?? (this.v.getAlerts ? this.v.getAlerts() : ['Validation Error'])
-        return { code: 400, msg: 'Validation Error', alerts: finalAlerts }
+    protected validationError(alerts: string[]): ApiResponse {
+        return { code: 400, msg: 'Validation Error', alerts }
     }
 
     /**
@@ -227,13 +208,13 @@ export abstract class BaseBO {
      * @param fn - Función asíncrona que contiene la lógica de negocio
      */
     protected async exec<TIn, TOut>(
-        params: unknown,
-        schema: any,
+        params: TIn,
+        schema: ZodType<TIn>,
         fn: (data: TIn) => Promise<ApiResponse<TOut>>
     ): Promise<ApiResponse<TOut>> {
         try {
             const vRes = this.validate<TIn>(params, schema)
-            if (!vRes.ok) return this.validationError(vRes.alerts) as any
+            if (!vRes.ok) throw this.validationError(vRes.alerts)
 
             return await fn(vRes.data)
         } catch (error) {

@@ -62,9 +62,8 @@ export function applySessionMiddleware(
         const pruneIntervalSeconds = sessionConfig.store?.pruneIntervalSeconds ?? 300
 
         sessionConfig.store = new PgSession({
-            // @ts-ignore - IDatabase abstraction vs generic Pool expectation
-            pool: (db as any).pool, // Assuming IDatabase implementation exposes pool or we pass raw pool?
-            // DBComponent has 'pool' (pg.Pool).
+            // IDatabase abstraction vs generic Pool expectation
+            pool: (db as any).pool,
             tableName,
             ...(schemaName ? { schemaName } : {}),
             ...(ttlSeconds != null ? { ttl: ttlSeconds } : {}),

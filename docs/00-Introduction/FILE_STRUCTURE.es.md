@@ -58,8 +58,7 @@ El motor del framework. Se divide en áreas muy específicas:
 
 Aquí están las clases base que extienden los BOs.
 
-- `business-objects/`: `BaseBO`, `CrudBO`, `BOService`.
-- `errors/`: `BOError` y tipos de errores estándar.
+- `business-objects/`: `BaseBO`, `CrudBO`, `BOService`, `BOError`.
 
 #### `src/services/` (Infraestructura y Utilidades)
 

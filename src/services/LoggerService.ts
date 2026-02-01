@@ -114,27 +114,25 @@ export class AppLogger implements ILogger {
                     case this.TYPE_ERROR:
                         if (this.activation[0])
                             console.log(
-                                '[MESSAGE]: ' + `${String(e.msg)}${ctxText} - TYPE: Error`.red
+                                '[' + level + ']: ' + `${String(e.msg)}${ctxText}`.red
                             )
                         break
                     case this.TYPE_WARNING:
                         if (this.activation[3])
                             console.log(
-                                '[MESSAGE]: ' +
-                                    `${String(e.msg)}${ctxText} - TYPE: Warning`.yellow
+                                '[' + level + ']: ' + `${String(e.msg)}${ctxText}`.yellow
                             )
                         break
                     case this.TYPE_INFO:
                         if (this.activation[1])
                             console.log(
-                                '[MESSAGE]: ' + `${String(e.msg)}${ctxText} - TYPE: Info`.blue
+                                '[' + level + ']: ' + `${String(e.msg)}${ctxText}`.blue
                             )
                         break
                     case this.TYPE_DEBUG:
                         if (this.activation[2])
                             console.log(
-                                '[MESSAGE]: ' +
-                                    `${String(e.msg)}${ctxText} - TYPE: Debug`.magenta
+                                '[' + level + ']: ' + `${String(e.msg)}${ctxText}`.magenta
                             )
                         break
                 }

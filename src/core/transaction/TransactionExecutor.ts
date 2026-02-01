@@ -90,11 +90,10 @@ export class TransactionExecutor {
 
         if (this.instances.has(key)) {
             const instance = this.instances.get(key)
-            const fn = instance?.[methodName]
-            if (typeof fn !== 'function') {
+            if (typeof instance?.[methodName] !== 'function') {
                 throw new Error(`Método de BO no encontrado: ${objectName}.${methodName}`)
             }
-            return await (fn as (p: any) => Promise<any>)(params)
+            return await (instance as any)[methodName](params)
         } else {
             const basePath = this.resolveBOPath(objectName)
 
@@ -115,11 +114,7 @@ export class TransactionExecutor {
                 ) => Record<string, unknown>)(this.deps)
 
                 this.instances.set(key, instance)
-                const fn = instance?.[methodName]
-                if (typeof fn !== 'function') {
-                    throw new Error(`Método de BO no encontrado: ${objectName}.${methodName}`)
-                }
-                return await (fn as (p: any) => Promise<any>)(params)
+                return await (instance as any)[methodName](params)
             } catch (err: any) {
                 this.deps.log.show({
                     type: this.deps.log.TYPE_ERROR,

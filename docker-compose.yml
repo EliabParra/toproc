@@ -25,6 +25,9 @@ services:
             - PORT=3000
             # Conexión a la base de datos definida abajo (hostname: db)
             - DATABASE_URL=postgres://postgres:postgres@db:5432/toproc_dev
+            # Sobrescribir .env para que dentro del contenedor use 'db' y puerto interno
+            - PGHOST=db
+            - PGPORT=5432
         depends_on:
             db:
                 condition: service_healthy # Espera a que la DB esté lista antes de iniciar

@@ -25,7 +25,7 @@ export function templateErrors(objectName: string, _methods: string[]) {
  * - Depuración más fácil
  */
 
-import { BOError } from '../../src/core/errors/BOError.js'
+import { BOError } from '../../src/core/business-objects/BOError.js'
 
 // ============================================================
 // Clase Base de Error

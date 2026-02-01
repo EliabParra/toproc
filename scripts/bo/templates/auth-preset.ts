@@ -45,7 +45,7 @@ export class AuthBO extends BaseBO {
 
     constructor(deps: BODependencies) {
         super(deps)
-        this.service = new AuthService(this.log, this.config, this.db)
+        this.service = new AuthService(deps.log, deps.config, deps.db)
     }
 
     private get m() {
@@ -165,7 +165,7 @@ export class AuthService extends BOService {
             await this.sendVerificationEmail(user.user_id, data.email)
         }
 
-        return this.mapUser({ ...user, user_em: data.email, user_na: data.name, user_pw: hash })
+        return this.mapUser({ ...user, email: data.email, username: data.name, password_hash: hash })
     }
 
     async requestEmailVerification(identifier: string): Promise<void> {
@@ -269,12 +269,12 @@ export class AuthService extends BOService {
 
     private mapUser(row: UserRow): User {
         return {
-            userId: row.user_id,
-            email: row.user_em!,
-            name: row.user_na ?? undefined,
-            passwordHash: row.user_pw ?? '',
+            userId: row.id,
+            email: row.email!,
+            name: row.username ?? undefined,
+            passwordHash: row.password_hash ?? '',
             isEmailVerified: !!row.email_verified_at,
-            isActive: true,
+            isActive: !!row.is_active,
             createdAt: new Date(),
         }
     }
@@ -284,10 +284,10 @@ export class AuthService extends BOService {
     queries: () => `export const AuthQueries = {
     // --- Users
     getUserByEmail: \`
-        SELECT u.user_id, u.user_na, u.user_em, u.email_verified_at, u.user_pw, p.profile_id
+        SELECT u.id, u.username, u.email, u.email_verified_at, u.password_hash, p.profile_id
         FROM security.users u
         LEFT JOIN security.users_profiles p ON u.user_id = p.user_id
-        WHERE u.user_em = $1
+        WHERE u.email = $1
     \`,
 
     getUserByUsername: \`SELECT user_id, user_na, user_em, user_pw, email_verified_at FROM security.users WHERE user_na = $1\`,
@@ -295,9 +295,9 @@ export class AuthService extends BOService {
     getUserBaseByEmail: \`SELECT user_id, user_na, user_em, user_pw, email_verified_at FROM security.users WHERE user_em = $1\`,
 
     insertUser: \`
-        INSERT INTO security.users (user_na, user_em, user_pw)
+        INSERT INTO security.users (username, email, password_hash)
         VALUES ($1, $2, $3)
-        RETURNING user_id
+        RETURNING id
     \`,
 
     upsertUserProfile: \`
@@ -405,7 +405,7 @@ export class AuthRepository {
             params.passwordHash,
         ])
         const row = r.rows[0]
-        if (!row.user_id) throw new Error('insertUser did not return user_id')
+        if (!row.id) throw new Error('insertUser did not return id')
         return row
     }
 
@@ -482,7 +482,7 @@ export class AuthRepository {
 
 export const AuthSchemas = {
     login: z.object({
-        loginId: z.string().min(1, 'bo.auth.validation.loginIdRequired'),
+        identifier: z.string().min(1, 'bo.auth.validation.loginIdRequired'),
         password: z.string().min(1, 'bo.auth.validation.passwordRequired'),
     }),
 
@@ -539,12 +539,13 @@ export type ChangePasswordInput = z.infer<typeof AuthSchemas.changePassword>
 // ============================================================
 
 export type UserRow = {
-    user_id: number
-    user_na?: string | null
-    user_em?: string | null
+    id: number
+    username?: string | null
+    email?: string | null
     email_verified_at?: string | Date | null
-    user_pw?: string | null
+    password_hash?: string | null
     profile_id?: number | null
+    is_active?: boolean | null
 }
 
 export type OneTimeCodeRow = {
@@ -738,7 +739,7 @@ export interface RegisterResult {
 }
 `,
 
-    errors: () => `import { BOError } from '../../src/core/errors/BOError.js'
+    errors: () => `import { BOError } from '../../src/core/business-objects/BOError.js'
 
 export class AuthError extends BOError {
     constructor(

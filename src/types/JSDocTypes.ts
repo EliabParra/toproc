@@ -14,6 +14,7 @@
  * @property {number} code - HTTP status code.
  * @property {string} msg - Human-friendly message.
  * @property {string[]} [alerts] - Optional validation alerts.
+ * @property {ValidationError[]} [errors] - Optional validation errors.
  */
 
 /**

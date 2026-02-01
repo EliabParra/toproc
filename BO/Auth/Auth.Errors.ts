@@ -1,4 +1,4 @@
-import { BOError } from '../../src/core/errors/BOError.js'
+import { BOError } from '../../src/core/business-objects/BOError.js'
 
 export class AuthError extends BOError {
     constructor(

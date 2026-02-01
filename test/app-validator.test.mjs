@@ -2,10 +2,23 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { z } from 'zod'
 
-import { AppValidator } from '../src/core/AppValidator.js'
+import { AppValidator } from '../src/services/ValidatorService.js'
 
 function createValidator() {
-    const i18nStub = { t: (k, params) => `${k}:${JSON.stringify(params)}` }
+    const i18nStub = {
+        t: (k, params) => `${k}:${JSON.stringify(params)}`,
+        format: (k, params) => `${k}:${JSON.stringify(params)}`,
+        messages: {
+            alerts: {
+                notEmpty: 'alerts.notEmpty',
+                email: 'alerts.email',
+                lengthMin: 'alerts.lengthMin',
+                lengthMax: 'alerts.lengthMax',
+                string: 'alerts.string',
+                number: 'alerts.number',
+            },
+        },
+    }
     return new AppValidator(i18nStub)
 }
 
@@ -31,7 +44,7 @@ test('AppValidator.validate handles nested objects', () => {
     const v = createValidator()
     const schema = z.object({
         user: z.object({
-            email: z.string().email(),
+            email: z.email(),
             profile: z.object({
                 bio: z.string().optional(),
             }),
@@ -63,7 +76,7 @@ test('AppValidator.validate returns error paths correctly', () => {
     const v = createValidator()
     const schema = z.object({
         user: z.object({
-            email: z.string().email(),
+            email: z.email(),
         }),
     })
 

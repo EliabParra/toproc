@@ -1,10 +1,10 @@
-import { IAuditService, IDatabase } from '../types/core.js'
+import { IAuditService, IDatabase, ILogger } from '../types/core.js'
 import { redactSecrets } from '../utils/sanitize.js'
 
 export type AuditArgs = {
     action: string
-    object_na?: string | null
-    method_na?: string | null
+    objectName?: string | null
+    methodName?: string | null
     tx?: unknown
     user_id?: number | null
     profile_id?: number | null
@@ -14,7 +14,7 @@ export type AuditArgs = {
 const AuditQueries = {
     insertAuditLog: `
         INSERT INTO security.audit_logs 
-        (request_id, user_id, profile_id, action, object_name, method_name, tx, meta)
+        (request_id, user_id, profile_id, action, object_name, method_name, tx, details)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
     `,
 }
@@ -27,16 +27,18 @@ const AuditQueries = {
  */
 export class AuditService implements IAuditService {
     private db: IDatabase
+    private logger: ILogger
 
-    constructor(deps: { db: IDatabase }) {
+    constructor(deps: { db: IDatabase, logger: ILogger }) {
         this.db = deps.db
+        this.logger = deps.logger
     }
 
     async log(req: any, args: AuditArgs): Promise<void> {
         const {
             action,
-            object_na = null,
-            method_na = null,
+            objectName = null,
+            methodName = null,
             tx = null,
             user_id = req?.session?.user_id ?? null,
             profile_id = req?.session?.profile_id ?? null,
@@ -51,14 +53,17 @@ export class AuditService implements IAuditService {
                 user_id,
                 profile_id,
                 action,
-                object_na,
-                method_na,
+                objectName,
+                methodName,
                 tx,
                 JSON.stringify(safeDetails),
             ])
         } catch (err) {
-            // Audit logging is best-effort, suppress errors but maybe we should log to console if debugging?
-            // For now keep it silent as per original `auditBestEffort` design.
+            this.logger.show({
+                type: this.logger.TYPE_ERROR,
+                msg: 'Error al registrar auditoría',
+                ctx: err,
+            })
         }
     }
 }
