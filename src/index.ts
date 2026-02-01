@@ -5,11 +5,11 @@
  *
  * @module index
  */
-import { dispatcher, log, security } from './foundation.js'
+import { appServer, log, security } from './foundation.js'
 
 await security.init()
-await dispatcher.init()
-dispatcher.serverOn()
+await appServer.init()
+appServer.serverOn()
 
 // Manejo de cierre graceful
 let shuttingDown = false
@@ -24,7 +24,7 @@ async function shutdown(signal: string): Promise<void> {
     shuttingDown = true
     try {
         log.show({ type: log.TYPE_INFO, msg: `Cerrando aplicación (${signal})...` })
-        await dispatcher.shutdown()
+        await appServer.shutdown()
         process.exit(0)
     } catch (err: unknown) {
         try {

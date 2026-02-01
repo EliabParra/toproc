@@ -1,9 +1,21 @@
-import { Dispatcher } from '../../src/api/Dispatcher.js'
+import { AppServer } from '../../src/api/AppServer.js'
+// ... import other deps if needed
+
+// ...
+
+export function createTestAppServer(globals) {
+    // ... setup
+    const appServer = new AppServer({
+        // ... deps
+        ...globals,
+    })
+    return appServer
+}
 import { SessionManager } from '../../src/services/SessionService.js'
 import { AuditService } from '../../src/services/AuditService.js'
 import { applySessionMiddleware } from '../../src/api/http/session/apply-session-middleware.js'
 
-export function createTestDispatcher(globals) {
+export function createTestAppServer(globals) {
     const audit = new AuditService({ db: globals.db })
 
     // Simple email stub
@@ -28,8 +40,9 @@ export function createTestDispatcher(globals) {
         audit: audit,
         v: globals.v,
     })
+    container.register('session', session)
 
-    const dispatcher = new Dispatcher({
+    const appServer = new AppServer({
         config: globals.config,
         log: globals.log,
         security: globals.security,
@@ -39,11 +52,11 @@ export function createTestDispatcher(globals) {
         db: globals.db,
     })
 
-    applySessionMiddleware(dispatcher.app, {
+    applySessionMiddleware(appServer.app, {
         config: globals.config,
         log: globals.log,
         db: globals.db,
     })
 
-    return dispatcher
+    return appServer
 }

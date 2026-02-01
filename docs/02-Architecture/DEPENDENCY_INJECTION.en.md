@@ -47,28 +47,29 @@ export class BaseBO {
 ## Injection Flow
 
 ```
-┌──────────────┐     ┌─────────────────┐     ┌────────────┐
-│  foundation  │────▶│ SecurityService │────▶│ Dispatcher │
-│   (create)   │     │  (orchestrate)  │     │   (HTTP)   │
-└──────────────┘     └─────────────────┘     └────────────┘
-                              │
-                              ▼
-                    ┌─────────────────────┐
-                    │ TransactionExecutor │
-                    │  (dynamic import)   │
-                    └─────────────────────┘
-                              │
-                              ▼
-                    ┌─────────────────────┐
-                    │   Business Object   │
-                    │  (BODependencies)   │
-                    └─────────────────────┘
+┌──────────────┐     ┌───────────┐     ┌───────────────────────┐
+│  foundation  │────▶│ AppServer │────▶│ TransactionController │
+│   (create)   │     │  (setup)  │     │       (HTTP)          │
+└──────────────┘     └───────────┘     └───────────────────────┘
+                                                   │
+                                                   ▼
+┌───────────────────────┐     ┌────────────────────┐
+│  TransactionExecutor  │◀────│   SecurityService  │
+│    (dynamic import)   │     │    (orchestrate)   │
+└───────────────────────┘     └────────────────────┘
+            │
+            ▼
+  ┌─────────────────────┐
+  │   Business Object   │
+  │  (BODependencies)   │
+  └─────────────────────┘
 ```
 
-1. **foundation.ts**: Creates and injects all core dependencies.
-2. **SecurityService**: Orchestrates transaction execution.
-3. **TransactionExecutor**: Dynamically imports the BO and instantiates it with `BODependencies`.
-4. **Business Object**: Receives typed dependencies in its constructor.
+1. **foundation.ts**: Creates core dependencies (`db`, `log`, etc) and `SecurityService`.
+2. **AppServer**: Receives `SecurityService` and injects it into `TransactionController`.
+3. **TransactionController**: Handles request and invokes `SecurityService.executeMethod()`.
+4. **TransactionExecutor**: Dynamically imports the BO and instantiates it with `BODependencies`.
+5. **Business Object**: Receives typed dependencies in its constructor.
 
 ## Lazy Loading
 
@@ -122,5 +123,5 @@ async getBO(objectName: string): Promise<BaseBO> {
 ## See Also
 
 - [Bootstrap](./BOOTSTRAP.en.md) - Initialization process
-- [Dispatcher Core](./DISPATCHER_CORE.en.md) - HTTP server functionality
+- [AppServer Core](./APPSERVER_CORE.en.md) - HTTP server functionality
 - [Security System](./SECURITY_SYSTEM.en.md) - Permissions and transactions

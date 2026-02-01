@@ -36,8 +36,15 @@ En versiones recientes, el `SessionService` ya no manipula la respuesta HTTP (`r
 - **Proceso**:
     1. Valida credenciales (`SessionService`).
     2. Retorna un objeto `SessionResult` (Success, Error, ValidationError).
-    3. **Dispatcher**: Se encarga de enviar la respuesta HTTP (`res.send`) basándose en el resultado.
+    3. **AuthController**: Recibe el resultado y determina la respuesta HTTP.
 - **Output**: JSON con usuario y mensaje.
+
+### 3. Transacciones (`TransactionController`)
+
+El antiguo `Dispatcher` "Dios" ha sido dividido. Ahora `TransactionController` maneja la orquestación de llamadas BO via `/toProccess`.
+
+- **Delegación**: Valida permisos, resuelve el `tx` a un par `Object.Method` y ejecuta via `SecurityService`.
+- **AppServer**: Se encarga únicamente del setup de Express y routing.
 
 ### 3. Verificar Email (`verifyEmail`)
 

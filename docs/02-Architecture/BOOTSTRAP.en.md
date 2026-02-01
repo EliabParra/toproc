@@ -7,11 +7,11 @@ Technical documentation of the ToProccess application initialization flow.
 The `src/index.ts` file is the application entry point. Its responsibility is minimal:
 
 ```typescript
-import { dispatcher, log, security } from './foundation.js'
+import { appServer, log, security } from './foundation.js'
 
 await security.init()
-await dispatcher.init()
-dispatcher.serverOn()
+await appServer.init()
+appServer.serverOn()
 ```
 
 ## Initialization Order (`foundation.ts`)
@@ -31,7 +31,7 @@ The `src/foundation.ts` file orchestrates the ordered creation of all core servi
 │     ├── EmailService                                    │
 │     ├── SessionManager                                  │
 │     └── SecurityService                                 │
-│  8. Dispatcher (HTTP Server)                            │
+│  8. AppServer (HTTP Server)                            │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -54,9 +54,9 @@ graph TD
     DB --> Security[SecurityService]
     Session --> Security
     Audit --> Security
-    Security --> Dispatcher
-    Session --> Dispatcher
-    I18n --> Dispatcher
+    Security --> AppServer
+    Session --> AppServer
+    I18n --> AppServer
 ```
 
 ## Container (Global Registry)
@@ -90,4 +90,4 @@ The application gracefully handles `SIGINT` and `SIGTERM` signals:
 ## See Also
 
 - [Dependency Injection](./DEPENDENCY_INJECTION.en.md) - How dependencies flow to Business Objects
-- [Dispatcher Core](./DISPATCHER_CORE.en.md) - HTTP server functionality
+- [AppServer Core](./APPSERVER_CORE.en.md) - HTTP server functionality

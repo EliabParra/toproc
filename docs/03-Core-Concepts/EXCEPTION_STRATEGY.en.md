@@ -21,13 +21,13 @@ Bugs or infra failures.
 - `DB Connection Refused`.
 - `Cannot read property of undefined`.
 
-**Action**: `throw new Error()`. Dispatcher will catch it.
+**Action**: `throw new Error()`. AppServer will catch it.
 
 ---
 
 ## 2. The Safety Net (Global Catch)
 
-In `Dispatcher`, all transactions are wrapped in a `try/catch` block.
+In `AppServer`, the `createFinalErrorHandler` middleware wraps the entire request lifecycle.
 
 If uncontrolled exception occurs:
 

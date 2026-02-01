@@ -1,7 +1,7 @@
 import { describe, it, before } from 'node:test'
 import assert from 'node:assert/strict'
 import request from 'supertest'
-import { Dispatcher } from '../../src/api/Dispatcher.js'
+import { AppServer } from '../../src/api/AppServer.js'
 import { AuthQueries } from '../../BO/Auth/Auth.Queries.js'
 
 // Mock Data
@@ -184,7 +184,7 @@ import { SecurityService } from '../../src/services/SecurityService.js'
 
 describe('Auth Module Integration (HTTP)', async () => {
     let app
-    let dispatcher
+    let appServer
     let csrfToken
     let testDeps
 
@@ -204,12 +204,12 @@ describe('Auth Module Integration (HTTP)', async () => {
         })
         await security.init()
 
-        dispatcher = new Dispatcher({
+        appServer = new AppServer({
             ...deps,
             security,
         })
-        await dispatcher.init()
-        app = dispatcher.app
+        await appServer.init()
+        app = appServer.app
     })
 
     it('1. Should obtain CSRF token', async () => {

@@ -47,7 +47,7 @@ Immutable and mandatory for certain industries (Fintech, Health).
 
 ### Typical Usage
 
-Automatically invoked in `Dispatcher` for every transaction, but you can add custom events.
+Automatically invoked in `TransactionController` for every transaction, but you can add custom events.
 
 ```typescript
 await this.audit.log(req, {

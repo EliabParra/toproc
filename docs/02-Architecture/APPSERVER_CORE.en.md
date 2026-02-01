@@ -1,6 +1,6 @@
-# Dispatcher Core: The HTTP Orchestrator
+# AppServer Core: The HTTP Entry Point
 
-The `Dispatcher` is the single entry point to the system. It centralizes routing, security, and error handling to ensure consistency.
+The `AppServer` (formerly Dispatcher) is the core entry point to the system. It bootstraps Express and wires up the Controllers.
 
 ## Architecture
 
@@ -10,38 +10,35 @@ graph TD
     Middleware --> Router{Route}
     Router -->|/health, /ready| Handlers[Simple Handlers]
     Router -->|/csrf| CSRF[CSRF Token]
-    Router -->|/login| Login[SessionManager]
-    Router -->|/logout| Logout[SessionManager]
-    Router -->|/toProccess| ToProccess[Business Logic]
-    ToProccess --> Security[SecurityService]
+    Router -->|/login, /logout| AuthCtrl[AuthController]
+    Router -->|/toProccess| TxCtrl[TransactionController]
+    TxCtrl --> Security[SecurityService]
+    AuthCtrl --> Session[SessionService]
     Security --> BO[Business Object]
     BO --> Response[Response]
 ```
 
-## Lifecycle
+## Responsibilities
 
-### Constructor
+### 1. AppServer (`AppServer.ts`)
 
-Configures Express with base middlewares:
+- **Bootstrap**: Configures Express, Helmet, CORS, BodyParsers.
+- **Routing**: Maps URLs to Controllers.
+- **Lifecycle**: Handles `init()`, `serverOn()`, and `shutdown()`.
 
-1. **Helmet** - Secure HTTP headers
-2. **RequestId** - Unique UUID per request
-3. **RequestLogger** - Structured logging
-4. **CORS** - Cross-domain access control
-5. **BodyParser** - JSON with configurable limit
+### 2. TransactionController (`TransactionController.ts`)
 
-### `init()`
+- **Orchestration**: Handles the master route `/toProccess`.
+- **Logic**: Validates `tx`, checks permissions, executes BOs via `SecurityService`.
 
-Completes initialization:
+### 3. AuthController (`AuthController.ts`)
 
-1. **express-session** - Persistent sessions in PostgreSQL
-2. **Frontend Adapters** - Serve SPA or static pages
-3. **API Routes** - `/health`, `/ready`, `/csrf`, `/toProccess`, `/login`, `/logout`
-4. **Error Handler** - Catches unhandled errors
+- **Authentication**: Handles `/login` and `/logout`.
+- **Logic**: Delegates to `SessionService` and manages HTTP responses.
 
 ## The Master Route: `/toProccess`
 
-99% of business logic flows through this endpoint.
+Managed by `TransactionController`.
 
 ```typescript
 POST /toProccess
@@ -68,38 +65,13 @@ X-CSRF-Token: <token>
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Protections
-
-| Middleware                     | Purpose                           |
-| ------------------------------ | --------------------------------- |
-| `toProccessRateLimiter`        | Request limit per IP              |
-| `authPasswordResetRateLimiter` | Specific limit for password reset |
-| `csrfProtection`               | CSRF token validation             |
-
-## Authentication
-
-### `/login`
-
-Delegates to `SessionManager.createSession()`:
-
-- Validates credentials
-- Creates session in PostgreSQL
-- Sets secure cookie
-
-### `/logout`
-
-- Destroys session
-- Logs audit
-- Responds with success message
-
 ## Error Handling
 
-The `handleError()` method centralizes handling:
+The `createFinalErrorHandler` middleware centralizes handling:
 
 1. **Marks** `res.locals.__errorLogged = true` to avoid duplicate logs
-2. **Logs audit** (only for `/toProccess`)
-3. **Logs** error redacting secrets
-4. **Responds** with generic error (no sensitive information leakage)
+2. **Logs** error redacting secrets
+3. **Responds** with generic error (no sensitive information leakage)
 
 ```typescript
 // Client receives

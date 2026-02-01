@@ -1,0 +1,89 @@
+# AppServer Core: El Punto de Entrada HTTP
+
+El `AppServer` (anteriormente Dispatcher) es el punto de entrada principal. Inicializa Express y conecta los Controladores.
+
+## Arquitectura
+
+```mermaid
+graph TD
+    Request[HTTP Request] --> Middleware[Middlewares]
+    Middleware --> Router{Route}
+    Router -->|/health, /ready| Handlers[Simple Handlers]
+    Router -->|/csrf| CSRF[CSRF Token]
+    Router -->|/login, /logout| AuthCtrl[AuthController]
+    Router -->|/toProccess| TxCtrl[TransactionController]
+    TxCtrl --> Security[SecurityService]
+    AuthCtrl --> Session[SessionService]
+    Security --> BO[Business Object]
+    BO --> Response[Response]
+```
+
+## Responsabilidades
+
+### 1. AppServer (`AppServer.ts`)
+
+- **Bootstrap**: Configura Express, Helmet, CORS, BodyParsers.
+- **Routing**: Mapea URLs a los Controladores.
+- **Ciclo de Vida**: Maneja `init()`, `serverOn()` y `shutdown()`.
+
+### 2. TransactionController (`TransactionController.ts`)
+
+- **Orquestación**: Maneja la ruta maestra `/toProccess`.
+- **Lógica**: Valida `tx`, verifica permisos, ejecuta BOs via `SecurityService`.
+
+### 3. AuthController (`AuthController.ts`)
+
+- **Autenticación**: Maneja `/login` y `/logout`.
+- **Lógica**: Delega a `SessionService` y gestiona respuestas HTTP.
+
+## La Ruta Maestra: `/toProccess`
+
+Gestionada por `TransactionController`.
+
+```typescript
+POST /toProccess
+Content-Type: application/json
+X-CSRF-Token: <token>
+
+{
+  "tx": 1001,
+  "params": { ... }
+}
+```
+
+### Flujo Interno
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. Validar sesión → obtener profileId                      │
+│  2. Validar body (tx: number, params: object)               │
+│  3. Resolver tx → objectName + methodName                   │
+│  4. Verificar permisos (SecurityService.getPermissions)     │
+│  5. Ejecutar método (SecurityService.executeMethod)         │
+│  6. Registrar auditoría                                     │
+│  7. Responder al cliente                                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Manejo de Errores
+
+El middleware `createFinalErrorHandler` centraliza el manejo:
+
+1. **Marca** `res.locals.__errorLogged = true` para evitar logs duplicados.
+2. **Loguea** el error redactando secretos.
+3. **Responde** con un error genérico (sin fugar info sensible).
+
+```typescript
+// Cliente recibe
+{ "code": 500, "msg": "Server error" }
+
+// Log recibe (servidor)
+"[ERROR] Server error, /toProccess: Cannot read property 'x' of undefined"
+// + stack trace + contexto (userId, profileId, tx, etc.)
+```
+
+## Ver También
+
+- [Bootstrap](./BOOTSTRAP.es.md) - Inicialización del sistema
+- [Sistema de Seguridad](./SECURITY_SYSTEM.es.md) - Permisos y transacciones
+- [Flujo de Transacción](./TRANSACTION_FLOW.es.md) - Ejecución de métodos de negocio

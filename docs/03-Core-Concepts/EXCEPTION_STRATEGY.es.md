@@ -21,13 +21,13 @@ Bugs o fallos de infraestructura.
 - `DB Connection Refused`.
 - `Cannot read property of undefined`.
 
-**Acción**: `throw new Error()`. El Dispatcher lo atrapará.
+**Acción**: `throw new Error()`. El AppServer lo atrapará.
 
 ---
 
 ## 2. La Red de Seguridad (Global Catch)
 
-En el `Dispatcher`, todas las transacciones están envueltas en un bloque `try/catch`.
+En el `AppServer`, el middleware `createFinalErrorHandler` envuelve todo el ciclo de vida.
 
 Si ocurre una excepción no controlada:
 

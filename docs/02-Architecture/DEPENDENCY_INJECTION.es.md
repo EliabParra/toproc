@@ -47,28 +47,29 @@ export class BaseBO {
 ## Flujo de Inyección
 
 ```
-┌──────────────┐     ┌─────────────────┐     ┌────────────┐
-│  foundation  │────▶│ SecurityService │────▶│ Dispatcher │
-│   (crear)    │     │  (orquestar)    │     │  (HTTP)    │
-└──────────────┘     └─────────────────┘     └────────────┘
-                              │
-                              ▼
-                    ┌─────────────────────┐
-                    │ TransactionExecutor │
-                    │  (import dinámico)  │
-                    └─────────────────────┘
-                              │
-                              ▼
-                    ┌─────────────────────┐
-                    │   Business Object   │
-                    │  (BODependencies)   │
-                    └─────────────────────┘
+┌──────────────┐     ┌───────────┐     ┌───────────────────────┐
+│  foundation  │────▶│ AppServer │────▶│ TransactionController │
+│   (crear)    │     │  (setup)  │     │       (HTTP)          │
+└──────────────┘     └───────────┘     └───────────────────────┘
+                                                   │
+                                                   ▼
+┌───────────────────────┐     ┌────────────────────┐
+│  TransactionExecutor  │◀────│   SecurityService  │
+│   (import dinámico)   │     │    (orquestar)     │
+└───────────────────────┘     └────────────────────┘
+            │
+            ▼
+  ┌─────────────────────┐
+  │   Business Object   │
+  │  (BODependencies)   │
+  └─────────────────────┘
 ```
 
-1. **foundation.ts**: Crea e inyecta todas las dependencias core.
-2. **SecurityService**: Orquesta la ejecución de transacciones.
-3. **TransactionExecutor**: Importa dinámicamente el BO y lo instancia con `BODependencies`.
-4. **Business Object**: Recibe dependencias tipadas en su constructor.
+1. **foundation.ts**: Crea dependencias core (`db`, `log`) y `SecurityService`.
+2. **AppServer**: Recibe `SecurityService` y lo inyecta en `TransactionController`.
+3. **TransactionController**: Maneja la petición e invoca `SecurityService.executeMethod()`.
+4. **TransactionExecutor**: Importa dinámicamente el BO y lo instancia.
+5. **Business Object**: Recibe dependencias tipadas en su constructor.
 
 ## Lazy Loading (Carga Perezosa)
 
@@ -122,5 +123,5 @@ async getBO(objectName: string): Promise<BaseBO> {
 ## Ver También
 
 - [Bootstrap](./BOOTSTRAP.es.md) - Proceso de inicialización
-- [Dispatcher Core](./DISPATCHER_CORE.es.md) - Funcionamiento del servidor HTTP
+- [AppServer Core](./APPSERVER_CORE.es.md) - Funcionamiento del servidor HTTP
 - [Sistema de Seguridad](./SECURITY_SYSTEM.es.md) - Permisos y transacciones

@@ -12,7 +12,7 @@ import { AppLogger } from './services/LoggerService.js'
 import { SecurityService } from './services/SecurityService.js'
 import { SessionManager } from './services/SessionService.js'
 import { EmailService } from './services/EmailService.js'
-import { Dispatcher } from './api/Dispatcher.js'
+import { AppServer } from './api/AppServer.js'
 import { AuditService } from './services/AuditService.js'
 import { es } from './locales/es.js'
 import { en } from './locales/en.js'
@@ -89,8 +89,8 @@ const security = new SecurityService({
 })
 container.register('security', security)
 
-// Dispatcher (Punto de entrada HTTP)
-const dispatcher = new Dispatcher({
+// AppServer (Punto de entrada HTTP)
+const appServer = new AppServer({
     config,
     log: appLogger,
     security,
@@ -101,4 +101,4 @@ const dispatcher = new Dispatcher({
 })
 
 // Exportar servicios
-export { container, dispatcher, appLogger as log, db, config, validator, session, security, i18n }
+export { container, appServer, appLogger as log, db, config, validator, session, security, i18n }

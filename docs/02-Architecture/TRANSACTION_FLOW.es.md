@@ -10,7 +10,7 @@ sequenceDiagram
     participant Client
     participant Express as Express (Middleware Chain)
     participant RateLimit
-    participant Dispatcher
+    participant TxCtrl as TransactionController
     participant Security as SecurityService
     participant Audit
     participant BO as BusinessObject
@@ -25,55 +25,55 @@ sequenceDiagram
         RateLimit-->>Client: 429 Too Many Requests
     end
 
-    Express->>Dispatcher: toProccess(req, res)
+    Express->>TxCtrl: handle(req, res)
 
-    Dispatcher->>Dispatcher: Validate JSON Syntax (Zod)
+    TxCtrl->>TxCtrl: Validate JSON Structure (Simple Check)
 
-    Note over Dispatcher,Security: 2. Core Orchestration
-    Dispatcher->>Security: isReady?
-    Dispatcher->>Security: getDataTx(101) -> resolve mapped BO
+    Note over TxCtrl,Security: 2. Core Orchestration
+    TxCtrl->>Security: isReady?
+    TxCtrl->>Security: getDataTx(101) -> resolve mapped BO
 
-    Dispatcher->>Security: getPermissions({ profile: 2, tx: 101 })
+    TxCtrl->>Security: getPermissions({ profile: 2, tx: 101 })
     alt Access Denied
-        Security-->>Dispatcher: false
-        Dispatcher->>Audit: Log "tx_denied"
-        Dispatcher-->>Client: 403 Forbidden
+        Security-->>TxCtrl: false
+        TxCtrl->>Audit: Log "tx_denied"
+        TxCtrl-->>Client: 403 Forbidden
     end
 
-    Note over Dispatcher,BO: 3. Business Execution
-    Dispatcher->>Security: executeMethod(101)
+    Note over TxCtrl,BO: 3. Business Execution
+    TxCtrl->>Security: executeMethod(101)
     Security->>BO: Lazy Load & Instantiate(Container)
 
     BO->>BO: Validate Params (Zod Schema)
     alt Invalid Params
         BO-->>Security: Validation Error
-        Security-->>Dispatcher: Error Response
-        Dispatcher-->>Client: 400 Bad Request
+        Security-->>TxCtrl: Error Response
+        TxCtrl-->>Client: 400 Bad Request
     end
 
     BO->>BO: Run Business Logic (Service/Repo)
 
     BO-->>Security: Success Result { data: ... }
-    Security-->>Dispatcher: Pass Result
+    Security-->>TxCtrl: Pass Result
 
-    Dispatcher->>Audit: Log "tx_exec" (Success)
-    Dispatcher-->>Client: 200 OK { ok: true, data: ... }
+    TxCtrl->>Audit: Log "tx_exec" (Success)
+    TxCtrl-->>Client: 200 OK { ok: true, data: ... }
 ```
 
 ## Análisis Paso a Paso
 
 ### 1. La Cadena de Middlewares (El Filtro)
 
-Antes de que nuestro código "inteligente" toque la petición, Express pasa por varios filtros:
+Antes de que nuestro código "inteligente" toque la petición, Express (configurado por `AppServer`) pasa por varios filtros:
 
 - **Helmet**: Añade headers anti-hacker (X-XSS-Protection, etc).
 - **Request ID**: Asigna un ID único (e.g. `req-12345`) a la petición para poder rastrearla en los logs.
 - **Request Logger**: Escribe "INCOMING POST /toProccess" en la consola.
 - **Rate Limit**: Si esa IP ha hecho 100 peticiones en 1 minuto, la bloquea aquí.
 
-### 2. El Dispatcher (El Coordinador)
+### 2. El TransactionController (El Orquestador)
 
-Solo cuando la petición ha sobrevivido a los filtros, llega al método `Dispatcher.toProccess`.
+Solo cuando la petición ha sobrevivido a los filtros, llega al método `handle` del `TransactionController`.
 
 - **Validación Estructural**: Revisa que el JSON tenga `{ tx: number, params: object }`. Si envías basura, te rechaza antes de molestar a la base de datos.
 - **Espera Activa**: Si el sistema está arrancando (`security.isReady == false`), espera unos milisegundos antes de fallar.
@@ -86,7 +86,7 @@ Solo cuando la petición ha sobrevivido a los filtros, llega al método `Dispatc
 
 ### 4. Ejecución del Negocio
 
-El BO se instancia al momento (Lazy Load).
+El BO se instancia al momento (Lazy Load) a través del `SecurityService`.
 
 - Recibe el `Container` con la conexión DB ya abierta.
 - Valida semánticamente los datos (e.g., "El email tiene formato válido?").
@@ -94,5 +94,5 @@ El BO se instancia al momento (Lazy Load).
 
 ### 5. Respuesta
 
-El `Dispatcher` captura el resultado, lo envuelve en `{ ok: true, data: ... }` y lo envía.
+El `TransactionController` captura el resultado, lo envuelve y lo envía.
 Finalmente, registra "OUTGOING 200 OK" y el tiempo que tomó (e.g. `45ms`).
