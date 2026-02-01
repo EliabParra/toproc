@@ -327,7 +327,8 @@ export function templateBO(className: string, methods: string[]) {
         })
         .join('\n\n')
 
-    return `import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
+    return `import { BaseBO } from '../../src/core/business-objects/BaseBO.js'
+import type { BODependencies } from '../../src/core/business-objects/BaseBO.js'
 import { ${pascalName}Repository } from './${pascalName}.Repository.js'
 import { ${pascalName}Service } from './${pascalName}.Service.js'
 import { ${pascalName}Schemas, ${inputTypes} } from './${pascalName}.Schemas.js'

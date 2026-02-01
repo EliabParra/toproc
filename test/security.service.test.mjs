@@ -65,12 +65,19 @@ test('Security.init loads permissions + tx map and sets isReady', async () => {
                 query: async (sql) => {
                     // Check for permissions query
                     if (sql.includes('permission_methods')) {
-                        return { rows: [{ profile_id: 1, method_na: 'm', object_na: 'o' }] }
+                        return { rows: [{ profile_id: 1, method_name: 'm', object_name: 'o' }] }
                     }
                     // Check for tx/methods query
                     if (sql.includes('security.methods')) {
                         return {
-                            rows: [{ tx_nu: 100, object_na: 'Order', method_na: 'createOrder' }],
+                            rows: [
+                                {
+                                    tx_nu: 100,
+                                    object_name: 'Order',
+                                    method_name: 'createOrder',
+                                    tx: 100,
+                                },
+                            ],
                         }
                     }
                     return { rows: [] }
@@ -92,17 +99,17 @@ test('Security.init loads permissions + tx map and sets isReady', async () => {
             assert.equal(security.isReady, true)
 
             assert.equal(
-                security.getPermissions({ profile_id: 1, method_na: 'm', object_na: 'o' }),
+                security.getPermissions({ profileId: 1, methodName: 'm', objectName: 'o' }),
                 true
             )
             assert.equal(
-                security.getPermissions({ profile_id: 2, method_na: 'm', object_na: 'o' }),
+                security.getPermissions({ profileId: 2, methodName: 'm', objectName: 'o' }),
                 false
             )
 
             assert.deepEqual(security.getDataTx(100), {
-                object_na: 'Order',
-                method_na: 'createOrder',
+                objectName: 'Order',
+                methodName: 'createOrder',
             })
             assert.equal(security.getDataTx(999), false)
 
@@ -211,13 +218,13 @@ test('Security.executeMethod dynamically imports BO and caches the instance', as
                 await security.init()
 
                 const r1 = await security.executeMethod({
-                    object_na: objectName,
-                    method_na: 'ping',
+                    objectName: objectName,
+                    methodName: 'ping',
                     params: { a: 1 },
                 })
                 const r2 = await security.executeMethod({
-                    object_na: objectName,
-                    method_na: 'ping',
+                    objectName: objectName,
+                    methodName: 'ping',
                     params: { a: 2 },
                 })
 
@@ -268,8 +275,8 @@ test('Security.executeMethod returns serverError and logs when BO import fails',
             await security.init()
 
             const r = await security.executeMethod({
-                object_na: 'DoesNotExist',
-                method_na: 'nope',
+                objectName: 'DoesNotExist',
+                methodName: 'nope',
                 params: {},
             })
             assert.deepEqual(r, mockLocaleData.errors.server.serverError)

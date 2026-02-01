@@ -1,14 +1,8 @@
 import { ZodType } from 'zod'
-import {
-    IDatabase,
-    ILogger,
-    IConfig,
-    IValidator,
-    II18nService,
-    BODependencies,
-} from '../../types/core.js'
+import { IDatabase, ILogger, IConfig, IValidator, II18nService } from '../../types/core.js'
+import type { BODependencies } from '../../types/core.js'
 
-export { BODependencies }
+export type { BODependencies }
 
 /**
  * Clase base para todos los Business Objects (BOs) en el framework ToProccess.
@@ -209,14 +203,17 @@ export abstract class BaseBO {
      */
     protected async exec<TIn, TOut>(
         params: TIn,
-        schema: ZodType<TIn>,
+        schema: ZodType<TIn> | null,
         fn: (data: TIn) => Promise<ApiResponse<TOut>>
     ): Promise<ApiResponse<TOut>> {
         try {
-            const vRes = this.validate<TIn>(params, schema)
-            if (!vRes.ok) throw this.validationError(vRes.alerts)
+            if (schema) {
+                const vRes = this.validate<TIn>(params, schema)
+                if (!vRes.ok) throw this.validationError(vRes.alerts)
+                return await fn(vRes.data)
+            }
 
-            return await fn(vRes.data)
+            return await fn(params)
         } catch (error) {
             return this.safeCatch(error) as any
         }

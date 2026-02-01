@@ -7,9 +7,15 @@ import { SecurityService } from '../../src/services/SecurityService.js'
 const mockDb = {
     query: async (sql, params) => {
         if (sql.includes('permission_methods'))
-            return { rows: [{ profile_id: 1, method_na: 'testMethod', object_na: 'TestObject' }] }
+            return {
+                rows: [{ profile_id: 1, method_name: 'testMethod', object_name: 'TestObject' }],
+            }
         if (sql.includes('security.methods'))
-            return { rows: [{ tx_nu: 100, object_na: 'TestObject', method_na: 'testMethod' }] }
+            return {
+                rows: [
+                    { tx_nu: 100, object_name: 'TestObject', method_name: 'testMethod', tx: 100 },
+                ],
+            }
         return { rows: [] }
     },
 }
@@ -48,12 +54,12 @@ describe('SecurityService Integration', async () => {
     })
 
     it('should load permissions and tx maps', () => {
-        assert.strictEqual(security.getDataTx(100).method_na, 'testMethod')
+        assert.strictEqual(security.getDataTx(100).methodName, 'testMethod')
         assert.strictEqual(
             security.getPermissions({
-                profile_id: 1,
-                object_na: 'TestObject',
-                method_na: 'testMethod',
+                profileId: 1,
+                objectName: 'TestObject',
+                methodName: 'testMethod',
             }),
             true
         )
@@ -62,9 +68,9 @@ describe('SecurityService Integration', async () => {
     it('should fail permission check for unknown profile', () => {
         assert.strictEqual(
             security.getPermissions({
-                profile_id: 999,
-                object_na: 'TestObject',
-                method_na: 'testMethod',
+                profileId: 999,
+                objectName: 'TestObject',
+                methodName: 'testMethod',
             }),
             false
         )

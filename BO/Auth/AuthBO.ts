@@ -1,4 +1,5 @@
-import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
+import { BaseBO } from '../../src/core/business-objects/BaseBO.js'
+import type { BODependencies } from '../../src/core/business-objects/BaseBO.js'
 import { AuthService } from './Auth.Service.js'
 import {
     AuthSchemas,
