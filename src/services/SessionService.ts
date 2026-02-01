@@ -16,6 +16,8 @@ type ValidationResponse =
     | { success: true; data: LoginInput }
     | { success: false; errors: ValidationError[] }
 
+type LocalizedMessages = Record<string, { code: number; msg: string }>
+
 /**
  * Gestor de sesiones de usuario.
  * Maneja la autenticación segura de usuarios y la gestión de sesiones.
@@ -29,9 +31,9 @@ export class SessionManager implements ISessionService {
     private validator: AppValidator
 
     // Cache localized messages
-    private serverErrors: Record<string, { code: number; msg: string }>
-    private clientErrors: Record<string, { code: number; msg: string }>
-    private successMsgs: Record<string, { code: number; msg: string }>
+    private serverErrors: LocalizedMessages
+    private clientErrors: LocalizedMessages
+    private successMsgs: LocalizedMessages
     private authCfg: Record<string, unknown>
     private requireEmailVerification: boolean
 
@@ -50,9 +52,9 @@ export class SessionManager implements ISessionService {
         this.audit = deps.audit
         this.validator = deps.validator
 
-        this.serverErrors = this.i18n.get('errors.server') as any
-        this.clientErrors = this.i18n.get('errors.client') as any
-        this.successMsgs = this.i18n.get('success') as any
+        this.serverErrors = this.i18n.get('errors.server') as LocalizedMessages
+        this.clientErrors = this.i18n.get('errors.client') as LocalizedMessages
+        this.successMsgs = this.i18n.get('success') as LocalizedMessages
 
         this.authCfg = (this.config.auth ?? {}) as Record<string, unknown>
         this.requireEmailVerification = Boolean(this.authCfg.requireEmailVerification)

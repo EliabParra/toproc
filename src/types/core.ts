@@ -1,3 +1,5 @@
+import { Pool } from 'pg'
+
 /**
  * Interfaz para servicios de logging.
  * Estandariza la salida de logs en toda la aplicación.
@@ -79,6 +81,7 @@ export interface II18nService {
  * Abstrae la ejecución de queries SQL.
  */
 export interface IDatabase {
+    pool: Pool
     /**
      * Ejecuta una query predefinida.
      * @param schema Esquema/Namespace de la query
@@ -141,8 +144,6 @@ export interface ISecurityService {
         params: any
     }): Promise<{ code: number; msg: string; [key: string]: any }>
 }
-
-import { Request, Response } from 'express'
 
 /**
  * Servicio de gestión de sesiones.

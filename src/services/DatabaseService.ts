@@ -6,6 +6,8 @@ export type NamedParamsOptions = {
     enforceSqlArity?: boolean
 }
 
+type LocalizedMessages = Record<string, { code: number; msg: string }>
+
 /**
  * Calcula el índice máximo de parámetro ($N) en una consulta SQL.
  *
@@ -116,7 +118,7 @@ export function prepareNamedParams(
  */
 export default class DBComponent implements IDatabase {
     pool: Pool
-    serverErrors: any
+    serverErrors: LocalizedMessages
     private log: ILogger
 
     /**
@@ -126,8 +128,8 @@ export default class DBComponent implements IDatabase {
      */
     constructor(deps: { config: IConfig; i18n: II18nService; log: ILogger }) {
         const { config, i18n, log } = deps
-        this.pool = new Pool((config as any).db as any)
-        this.serverErrors = i18n.get('errors.server')
+        this.pool = new Pool(config.db)
+        this.serverErrors = i18n.get('errors.server') as LocalizedMessages
         this.log = log
     }
 

@@ -1,77 +1,153 @@
-import session from 'express-session'
+import session, { SessionOptions, Store } from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
 import { IConfig, ILogger, IDatabase } from '../../../types/core.js'
+import { Express } from 'express'
+import { Pool } from 'pg'
+
+// Definición de tipos para la configuración de sesión
+interface SessionCookieConfig {
+    httpOnly?: boolean
+    secure?: boolean
+    maxAge?: number
+    sameSite?: boolean | 'lax' | 'strict' | 'none'
+}
+
+interface SessionStoreConfig {
+    type?: string
+    tableName?: string
+    schemaName?: string
+    ttlSeconds?: number
+    pruneIntervalSeconds?: number
+}
+
+interface SessionConfig {
+    resave?: boolean
+    saveUninitialized?: boolean
+    secret: string
+    name?: string
+    cookie?: SessionCookieConfig
+    store?: SessionStoreConfig
+    duration?: number // Duración heredada para maxAge
+    proxy?: boolean
+}
+
+type Dependencies = {
+    config: IConfig
+    log: ILogger
+    db: IDatabase
+}
 
 /**
  * Configura el middleware de sesión (express-session) con almacenamiento persistente.
  *
- * Soporta PostgreSQL (connect-pg-simple) o MemoryStore.
- * Configura seguridad de cookies (Secure, HttpOnly, SameSite) basada en configuración.
+ * Sigue principios de Clean Code:
+ * - Tipado estricto para configuraciones.
+ * - Separación de lógica de construcción del Store.
+ * - Validación explicita de opciones de seguridad (Cookies).
  *
  * @param app - Instancia de Express
- * @param deps - Dependencias (config, log, db)
+ * @param deps - Dependencias necesarias (config, log, db)
  */
-export function applySessionMiddleware(
-    app: any,
-    deps: { config: IConfig; log: ILogger; db: IDatabase }
-) {
+export function applySessionMiddleware(app: Express, deps: Dependencies) {
     const { config, log, db } = deps
-    const PgSession = connectPgSimple(session)
 
-    const sessionConfig: any = JSON.parse(JSON.stringify(config.session ?? {}))
-    sessionConfig.cookie = sessionConfig.cookie ?? {}
-
-    // Resolve deprecation warnings
-    if (sessionConfig.resave === undefined) sessionConfig.resave = false
-    if (sessionConfig.saveUninitialized === undefined) sessionConfig.saveUninitialized = false
-
-    if (sessionConfig.cookie.httpOnly == null) sessionConfig.cookie.httpOnly = true
-
-    if (typeof sessionConfig.cookie.sameSite === 'boolean') {
-        sessionConfig.cookie.sameSite = sessionConfig.cookie.sameSite ? 'lax' : 'strict'
-    }
-
-    if (sessionConfig.cookie.maxAge == null && sessionConfig.duration != null) {
-        sessionConfig.cookie.maxAge = sessionConfig.duration
-    }
-
-    if (sessionConfig.cookie.sameSite === 'none' && sessionConfig.cookie.secure !== true) {
+    // 1. Normalizar configuración
+    const rawSessionConfig = config.session as SessionConfig | undefined
+    if (!rawSessionConfig) {
         log.show({
             type: log.TYPE_WARNING,
-            msg: 'Session cookie sameSite="none" without secure=true. Browsers will reject this cookie in most cases.',
+            msg: 'Configuración de sesión no encontrada, se usarán valores por defecto inseguros.',
         })
     }
 
-    if (sessionConfig.cookie.secure === true) {
-        // When running behind a proxy/LB that terminates TLS, secure cookies require trust proxy.
-        // Don't override an explicit app-level trust proxy setting.
-        if (app.get('trust proxy') == null) {
-            app.set('trust proxy', 1)
-        }
-        sessionConfig.proxy = true
+    const sessionOptions = buildSessionOptions(
+        rawSessionConfig ?? { secret: 'default-secret' },
+        log
+    )
+
+    // 2. Configurar Store (PostgreSQL o Memoria)
+    if (rawSessionConfig?.store?.type === 'pg') {
+        sessionOptions.store = createPgStore(rawSessionConfig.store, rawSessionConfig.cookie, db)
     }
 
-    if (sessionConfig.store?.type === 'pg') {
-        const tableName = sessionConfig.store?.tableName || 'session'
-        const schemaName = sessionConfig.store?.schemaName
-        const ttlSecondsFromCookie =
-            typeof sessionConfig.cookie?.maxAge === 'number'
-                ? Math.ceil(sessionConfig.cookie.maxAge / 1000)
-                : undefined
-        const ttlSeconds = sessionConfig.store?.ttlSeconds ?? ttlSecondsFromCookie
-        const pruneIntervalSeconds = sessionConfig.store?.pruneIntervalSeconds ?? 300
+    // 3. Ajustes específicos de Proxy
+    if (sessionOptions.cookie?.secure && app.get('trust proxy') == null) {
+        app.set('trust proxy', 1)
+    }
 
-        sessionConfig.store = new PgSession({
-            // IDatabase abstraction vs generic Pool expectation
-            pool: (db as any).pool,
-            tableName,
-            ...(schemaName ? { schemaName } : {}),
-            ...(ttlSeconds != null ? { ttl: ttlSeconds } : {}),
-            ...(pruneIntervalSeconds != null ? { pruneSessionInterval: pruneIntervalSeconds } : {}),
+    app.use(session(sessionOptions))
+}
+
+/**
+ * Construye las opciones de sesión aplicando valores por defecto y correcciones de seguridad.
+ *
+ * @param config - Configuración cruda
+ * @param log - Logger para advertencias
+ * @returns Opciones de sesión listas para express-session
+ */
+function buildSessionOptions(config: SessionConfig, log: ILogger): SessionOptions {
+    const cookie: SessionCookieConfig = {
+        httpOnly: true, // Por defecto true para evitar XSS
+        ...config.cookie,
+    }
+
+    // Normalizar sameSite
+    if (typeof cookie.sameSite === 'boolean') {
+        cookie.sameSite = cookie.sameSite ? 'lax' : 'strict'
+    }
+
+    // Sincronizar duración si maxAge no está definido
+    if (cookie.maxAge == null && config.duration != null) {
+        cookie.maxAge = config.duration
+    }
+
+    // Validación de seguridad para cookies SameSite=None
+    if (cookie.sameSite === 'none' && !cookie.secure) {
+        log.show({
+            type: log.TYPE_WARNING,
+            msg: 'Cookie de sesión tiene sameSite="none" sin secure=true. Los navegadores rechazarán esta cookie.',
         })
-    } else {
-        delete sessionConfig.store
     }
 
-    app.use(session(sessionConfig))
+    return {
+        secret: config.secret,
+        name: config.name,
+        resave: config.resave ?? false,
+        saveUninitialized: config.saveUninitialized ?? false,
+        cookie: cookie as session.CookieOptions,
+        proxy: config.cookie?.secure ? true : undefined,
+    }
+}
+
+/**
+ * Crea una instancia de PostgresStore para persistencia de sesiones.
+ *
+ * @param storeConfig - Configuración específica del almacenamiento
+ * @param cookieConfig - Configuración de cookies (para inferir TTL)
+ * @param db - Adaptador de base de datos
+ * @returns Instancia de Store compatible con express-session
+ */
+function createPgStore(
+    storeConfig: SessionStoreConfig,
+    cookieConfig: SessionCookieConfig | undefined,
+    db: IDatabase
+): Store {
+    const PgSession = connectPgSimple(session)
+
+    // Calcular Tiempo de Vida (TTL)
+    const ttlSecondsFromCookie =
+        typeof cookieConfig?.maxAge === 'number' ? Math.ceil(cookieConfig.maxAge / 1000) : undefined
+
+    const ttl = storeConfig.ttlSeconds ?? ttlSecondsFromCookie
+
+    // connect-pg-simple espera un pool de pg.
+    const pool: Pool = db.pool
+
+    return new PgSession({
+        pool,
+        tableName: storeConfig.tableName ?? 'session',
+        schemaName: storeConfig.schemaName,
+        ttl,
+        pruneSessionInterval: storeConfig.pruneIntervalSeconds ?? 300,
+    })
 }
