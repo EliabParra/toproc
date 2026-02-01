@@ -1,62 +1,117 @@
-# Dispatcher Core: The HTTP Brain
+# Dispatcher Core: The HTTP Orchestrator
 
-The `Dispatcher` is the single entry point to the system. There is no giant `routes.ts` file.
-All routing logic is centralized here to ensure consistency and security.
+The `Dispatcher` is the single entry point to the system. It centralizes routing, security, and error handling to ensure consistency.
 
-## Initialization Lifecycle (`init()`)
+## Architecture
 
-When you call `await dispatcher.init()`, these critical steps happen:
+```mermaid
+graph TD
+    Request[HTTP Request] --> Middleware[Middlewares]
+    Middleware --> Router{Route}
+    Router -->|/health, /ready| Handlers[Simple Handlers]
+    Router -->|/csrf| CSRF[CSRF Token]
+    Router -->|/login| Login[SessionManager]
+    Router -->|/logout| Logout[SessionManager]
+    Router -->|/toProccess| ToProccess[Business Logic]
+    ToProccess --> Security[SecurityService]
+    Security --> BO[Business Object]
+    BO --> Response[Response]
+```
 
-1.  **Config Load**: Dependencies are injected (`ILogger`, `IConfig`, etc).
-2.  **Security Middlewares**:
-    - `Helmet`: Secure HTTP headers.
-    - `CORS`: Cross-origin access control.
-    - `RateLimit`: Brute force protection (Login: strict, API: lax).
-    - `CSRF`: Cross-Site Request Forgery protection (Token in cookie).
-3.  **Parsing Middlewares**:
-    - `BodyParser`: Strict JSON. If you send malformed JSON, a special middleware captures it before crashing the server.
-4.  **Sessions**: The session manager is "plugged in" (`connect-pg-simple` with Postgres).
+## Lifecycle
+
+### Constructor
+
+Configures Express with base middlewares:
+
+1. **Helmet** - Secure HTTP headers
+2. **RequestId** - Unique UUID per request
+3. **RequestLogger** - Structured logging
+4. **CORS** - Cross-domain access control
+5. **BodyParser** - JSON with configurable limit
+
+### `init()`
+
+Completes initialization:
+
+1. **express-session** - Persistent sessions in PostgreSQL
+2. **Frontend Adapters** - Serve SPA or static pages
+3. **API Routes** - `/health`, `/ready`, `/csrf`, `/toProccess`, `/login`, `/logout`
+4. **Error Handler** - Catches unhandled errors
 
 ## The Master Route: `/toProccess`
 
-99% of your API happens in this POST endpoint.
+99% of business logic flows through this endpoint.
 
 ```typescript
-this.app.post(
-    '/toProccess',
-    rateLimiter, // 1. Prevents spam
-    csrfProtection, // 2. Validates CSRF token
-    this.toProccess // 3. Executes logic
-)
+POST /toProccess
+Content-Type: application/json
+X-CSRF-Token: <token>
+
+{
+  "tx": 1001,
+  "params": { ... }
+}
 ```
 
-### Internal Logic of `toProccess`
+### Internal Flow
 
-1.  **Session Validation**:
-    - Has valid cookie? -> Retrieve `profile_id`.
-    - No cookie? -> Assign public `profile_id` (configured in .env).
-    - If route requires login and no session, reject with `401`.
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. Validate session → get profileId                        │
+│  2. Validate body (tx: number, params: object)              │
+│  3. Resolve tx → objectName + methodName                    │
+│  4. Check permissions (SecurityService.getPermissions)      │
+│  5. Execute method (SecurityService.executeMethod)          │
+│  6. Log audit                                               │
+│  7. Respond to client                                       │
+└─────────────────────────────────────────────────────────────┘
+```
 
-2.  **Structure Validation**:
-    - Uses `parseToProccessBody` to ensure JSON has `{ tx: number, params: object }`.
+### Protections
 
-3.  **Transaction Resolution**:
-    - Asks `SecurityService`: "What does tx 1001 mean?".
-    - Answer: `Auth.login`.
+| Middleware                     | Purpose                           |
+| ------------------------------ | --------------------------------- |
+| `toProccessRateLimiter`        | Request limit per IP              |
+| `authPasswordResetRateLimiter` | Specific limit for password reset |
+| `csrfProtection`               | CSRF token validation             |
 
-4.  **Permission Verification**:
-    - Consults memory matrix: "Can profile X execute Auth.login?".
-    - If no -> Logs incident in Audit and responds `403`.
+## Authentication
 
-5.  **Execution**:
-    - Invokes `SecurityService.executeMethod()`.
-    - Records success/failure in Audit.
+### `/login`
 
-## Global Error Handling
+Delegates to `SessionManager.createSession()`:
 
-The Dispatcher wraps everything in a giant `try/catch`.
+- Validates credentials
+- Creates session in PostgreSQL
+- Sets secure cookie
 
-- If a BO does `throw new Error('Boom')`:
-    - User receives: `500 Server Error`.
-    - Log receives: `Error: Boom at line 50...` (Full Stack Trace).
-- This prevents "Information Leakage" to the attacker.
+### `/logout`
+
+- Destroys session
+- Logs audit
+- Responds with success message
+
+## Error Handling
+
+The `handleError()` method centralizes handling:
+
+1. **Marks** `res.locals.__errorLogged = true` to avoid duplicate logs
+2. **Logs audit** (only for `/toProccess`)
+3. **Logs** error redacting secrets
+4. **Responds** with generic error (no sensitive information leakage)
+
+```typescript
+// Client receives
+{ "code": 500, "msg": "Server error" }
+
+// Log receives (server-side)
+"Server error, /toProccess: Cannot read property 'x' of undefined"
+// + full stack trace + context (userId, profileId, tx, etc.)
+```
+
+## See Also
+
+- [Bootstrap](./BOOTSTRAP.en.md) - System initialization
+- [Security System](./SECURITY_SYSTEM.en.md) - Permissions and transactions
+- [Transaction Flow](./TRANSACTION_FLOW.en.md) - Business method execution

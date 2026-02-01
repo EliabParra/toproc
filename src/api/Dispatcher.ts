@@ -1,8 +1,13 @@
 /**
+ * Dispatcher - Orquestador HTTP Principal
+ *
+ * Punto de entrada único para todas las peticiones HTTP del framework.
+ * Configura Express, middlewares de seguridad y rutas de la API.
+ *
  * @module Dispatcher
- * Módulo principal de despacho de peticiones.
  */
-import express from 'express'
+import express, { Express, RequestHandler } from 'express'
+import { Server } from 'http'
 import {
     IConfig,
     ILogger,
@@ -14,67 +19,104 @@ import {
 } from '../types/core.js'
 import { registerFrontendHosting } from '../frontend-adapters/index.js'
 
-// Middleware imports (legacy paths, assume they still work or need minor adjustment)
-import { applyHelmet } from './http/middleware/helmet.js'
-import { applyRequestId } from './http/middleware/request-id.js'
-import { applyRequestLogger } from './http/middleware/request-logger.js'
-import { applyCorsIfEnabled } from './http/middleware/cors.js'
-import { applyBodyParsers } from './http/middleware/body-parsers.js'
-import { createJsonSyntaxErrorHandler } from './http/middleware/json-syntax-error.js'
-import { createCsrfProtection, createCsrfTokenHandler } from './http/middleware/csrf.js'
+// Middlewares consolidados
+import {
+    applyHelmet,
+    applyRequestId,
+    applyRequestLogger,
+    applyCorsIfEnabled,
+    applyBodyParsers,
+    createJsonSyntaxErrorHandler,
+    createCsrfProtection,
+    createCsrfTokenHandler,
+    createFinalErrorHandler,
+} from './http/middleware/index.js'
+
+// Rate limiters
 import {
     createLoginRateLimiter,
     createToProccessRateLimiter,
     createAuthPasswordResetRateLimiter,
-} from './http/rate-limit/limiters.js'
-import { createHealthHandler } from './http/handlers/health.js'
-import { createReadyHandler } from './http/handlers/ready.js'
-// ...
-import { createFinalErrorHandler } from './http/middleware/final-error-handler.js'
+} from './http/rate-limit/index.js'
 
+// Handlers
+import { createHealthHandler, createReadyHandler } from './http/handlers/index.js'
+
+// Utilidades
 import { sendInvalidParameters } from '../utils/http-responses.js'
 import { redactSecretsInString } from '../utils/sanitize.js'
+
+// Tipos locales
+type LocalizedMessages = Record<string, { code: number; msg: string }>
+
+/**
+ * Dependencias requeridas para instanciar el Dispatcher.
+ */
+interface DispatcherDependencies {
+    config: IConfig
+    log: ILogger
+    security: ISecurityService
+    session: ISessionService
+    i18n: II18nService
+    audit: IAuditService
+    db: IDatabase
+}
 
 /**
  * Dispatcher principal de la API.
  *
- * Configura el servidor Express, middlewares y rutas.
- * Orquesta la ejecución de peticiones hacia el SecurityService.
+ * Responsabilidades:
+ * - Configurar middlewares de seguridad (Helmet, CORS, CSRF, Rate Limiting)
+ * - Gestionar rutas de autenticación (/login, /logout)
+ * - Orquestar transacciones de negocio via /toProccess
+ * - Manejar errores de forma centralizada
+ *
+ * @example
+ * ```typescript
+ * const dispatcher = new Dispatcher({ config, log, security, session, i18n, audit, db })
+ * await dispatcher.init()
+ * dispatcher.serverOn()
+ * ```
  */
 export class Dispatcher {
-    public app: any
-    public server: any
+    /** Instancia de Express */
+    public app: Express
+
+    /** Servidor HTTP (null hasta llamar serverOn) */
+    public server: Server | null
+
+    /** Indica si init() fue ejecutado */
     public initialized: boolean
 
-    // Dependencies
-    private config: IConfig
-    private log: ILogger
-    private security: ISecurityService
-    private session: ISessionService
-    private i18n: II18nService
-    private audit: IAuditService
-    private db: IDatabase
+    // Dependencias inyectadas
+    private readonly config: IConfig
+    private readonly log: ILogger
+    private readonly security: ISecurityService
+    private readonly session: ISessionService
+    private readonly i18n: II18nService
+    private readonly audit: IAuditService
+    private readonly db: IDatabase
 
-    // Helper state
-    private serverErrors: any
-    private clientErrors: any
-    private successMsgs: any
+    // Mensajes localizados (cache)
+    private readonly serverErrors: LocalizedMessages
+    private readonly clientErrors: LocalizedMessages
+    private readonly successMsgs: LocalizedMessages
 
-    private loginRateLimiter: any
-    privatetoProccessRateLimiter: any
-    public authPasswordResetRateLimiter: any
-    private csrfTokenHandler: any
-    private csrfProtection: any
+    // Rate limiters
+    private readonly loginRateLimiter: RequestHandler
+    private _toProccessRateLimiter: RequestHandler | null = null
+    public readonly authPasswordResetRateLimiter: RequestHandler
 
-    constructor(deps: {
-        config: IConfig
-        log: ILogger
-        security: ISecurityService
-        session: ISessionService
-        i18n: II18nService
-        audit: IAuditService
-        db: IDatabase
-    }) {
+    // CSRF handlers
+    private readonly csrfTokenHandler: RequestHandler
+    private readonly csrfProtection: RequestHandler
+
+    /**
+     * Crea una instancia del Dispatcher.
+     *
+     * @param deps - Dependencias necesarias para el funcionamiento
+     */
+    constructor(deps: DispatcherDependencies) {
         this.config = deps.config
         this.log = deps.log
         this.security = deps.security
@@ -87,15 +129,46 @@ export class Dispatcher {
         this.server = null
         this.initialized = false
 
-        // Setup Helpers based on i18n
-        this.serverErrors = this.i18n.get('errors.server')
-        this.clientErrors = this.i18n.get('errors.client')
-        this.successMsgs = this.i18n.get('success')
+        // Cache de mensajes localizados
+        this.serverErrors = this.i18n.get('errors.server') as LocalizedMessages
+        this.clientErrors = this.i18n.get('errors.client') as LocalizedMessages
+        this.successMsgs = this.i18n.get('success') as LocalizedMessages
 
+        // Configurar Express base
         this.setupExpress()
+
+        // Inicializar CSRF handlers
+        this.csrfTokenHandler = createCsrfTokenHandler({
+            config: this.config,
+            i18n: this.i18n,
+        } as any)
+        this.csrfProtection = createCsrfProtection({
+            config: this.config,
+            i18n: this.i18n,
+        } as any)
+
+        // Inicializar rate limiters
+        this.loginRateLimiter = createLoginRateLimiter(this.clientErrors)
+        this.authPasswordResetRateLimiter = createAuthPasswordResetRateLimiter(
+            this.clientErrors,
+            this.security
+        )
     }
 
-    private setupExpress() {
+    /**
+     * Rate limiter para /toProccess (lazy initialization).
+     */
+    public get toProccessRateLimiter(): RequestHandler {
+        if (!this._toProccessRateLimiter) {
+            this._toProccessRateLimiter = createToProccessRateLimiter(this.clientErrors)
+        }
+        return this._toProccessRateLimiter
+    }
+
+    /**
+     * Configura Express con middlewares base.
+     */
+    private setupExpress(): void {
         this.app.disable('x-powered-by')
 
         if (this.config.app.trustProxy != null) {
@@ -104,65 +177,43 @@ export class Dispatcher {
 
         applyHelmet(this.app)
         applyRequestId(this.app)
-        applyRequestLogger(this.app, { log: this.log } as any) // Cast for legacy compatibility
+        applyRequestLogger(this.app, { log: this.log } as any)
         applyCorsIfEnabled(this.app, { config: this.config } as any)
         applyBodyParsers(this.app, this.config)
-
-        this.csrfTokenHandler = createCsrfTokenHandler({
-            config: this.config,
-            i18n: this.i18n,
-        } as any)
-        this.csrfProtection = createCsrfProtection({ config: this.config, i18n: this.i18n } as any)
-
         this.app.use(createJsonSyntaxErrorHandler({ config: this.config, i18n: this.i18n }))
-
-        this.loginRateLimiter = createLoginRateLimiter(this.clientErrors)
-        // this.toProccessRateLimiter = createToProccessRateLimiter(this.clientErrors)
-        // Typo in original property name or implementation? Original used "toProccessRateLimiter"
-        this.authPasswordResetRateLimiter = createAuthPasswordResetRateLimiter(
-            this.clientErrors,
-            this.security
-        )
     }
 
-    // Helper to get rate limiter (lazy load or just property)
-    // Actually createToProccessRateLimiter returns a middleware.
-    public get toProccessRateLimiter() {
-        if (!this.privatetoProccessRateLimiter) {
-            this.privatetoProccessRateLimiter = createToProccessRateLimiter(this.clientErrors)
-        }
-        return this.privatetoProccessRateLimiter
-    }
-
-    async init() {
-        // Frontend adapters need "session" object which SHOULD be the "Session" class instance OR compatible middleware
-        // New SessionManager doesn't seem to be a middleware itself?
-        // Wait, old Session class: "Uses cookie-based sessions (`express-session`) wired by `applySessionMiddleware(app)`."
-        // And `new Session(app, ...)` called `applySessionMiddleware(app)`.
-        // My `SessionManager` does NOT call `applySessionMiddleware(app)`.
-        // I need to ensure session middleware is applied!
-        // I should call `applySessionMiddleware(this.app)` here or in constructor.
-
-        // Let's import it:
+    /**
+     * Inicializa el Dispatcher completamente.
+     *
+     * Configura:
+     * - Middleware de sesión (express-session + PostgreSQL)
+     * - Frontend adapters (pre y post API)
+     * - Rutas de la API (/health, /ready, /csrf, /toProccess, /login, /logout)
+     * - Manejador de errores final
+     *
+     * @throws Error si la inicialización falla
+     */
+    async init(): Promise<void> {
+        // Aplicar middleware de sesión
         const { applySessionMiddleware } =
             await import('./http/session/apply-session-middleware.js')
-        applySessionMiddleware(this.app, { config: this.config, log: this.log, db: this.db })
+        applySessionMiddleware(this.app, {
+            config: this.config,
+            log: this.log,
+            db: this.db,
+        })
 
-        // Pass a "session" object that mimics old Session if needed by frontend adapters?
-        // registerFrontendHosting(app, { session: this.session, ... })
-        // Frontend adapters likely use `session.sessionExists(req)`?
-        // Yes. `ISessionService` has `sessionExists(req)`. So passing `this.session` is correct.
-
-        // Initialize Frontend Adapters (Stage: preApi - for 'pages' mode with specific routes)
+        // Frontend adapters (etapa pre-API)
         await registerFrontendHosting(this.app, {
-            session: { sessionExists: (req: any) => this.session.sessionExists(req) },
+            session: { sessionExists: (req: AppRequest) => this.session.sessionExists(req) },
             stage: 'preApi',
             config: this.config,
             i18n: this.i18n,
             log: this.log,
         })
 
-        // API routes
+        // Rutas de la API
         this.app.get('/health', createHealthHandler({ name: this.config.app.name }))
         this.app.get('/ready', createReadyHandler(this.security))
         this.app.get('/csrf', this.csrfTokenHandler)
@@ -177,14 +228,16 @@ export class Dispatcher {
         this.app.post('/login', this.loginRateLimiter, this.csrfProtection, this.login.bind(this))
         this.app.post('/logout', this.csrfProtection, this.logout.bind(this))
 
+        // Frontend adapters (etapa post-API)
         await registerFrontendHosting(this.app, {
-            session: { sessionExists: (req: any) => this.session.sessionExists(req) },
+            session: { sessionExists: (req: AppRequest) => this.session.sessionExists(req) },
             stage: 'postApi',
             config: this.config,
             i18n: this.i18n,
             log: this.log,
         })
 
+        // Manejador de errores final
         this.app.use(
             createFinalErrorHandler({
                 clientErrors: this.clientErrors,
@@ -196,12 +249,28 @@ export class Dispatcher {
         this.initialized = true
     }
 
-    async toProccess(req: any, res: any) {
-        // req: AppRequest, res: AppResponse
+    /**
+     * Procesa una transacción de negocio.
+     *
+     * Flujo:
+     * 1. Valida sesión y obtiene profileId
+     * 2. Valida estructura del body (tx, params)
+     * 3. Resuelve transacción a objectName/methodName
+     * 4. Verifica permisos del perfil
+     * 5. Ejecuta método via SecurityService
+     * 6. Registra auditoría
+     *
+     * @param req - Request de Express
+     * @param res - Response de Express
+     */
+    private async toProccess(req: AppRequest, res: AppResponse): Promise<void> {
         let effectiveProfileId: number | null = null
+
         try {
+            // 1. Determinar profileId
             const hasSession = this.session.sessionExists(req)
             const publicProfileId = Number(this.config.auth?.publicProfileId)
+
             effectiveProfileId = hasSession
                 ? (req.session?.profileId ?? null)
                 : Number.isInteger(publicProfileId) && publicProfileId > 0
@@ -209,70 +278,31 @@ export class Dispatcher {
                   : null
 
             if (!hasSession && effectiveProfileId == null) {
-                return res.status(this.clientErrors.login.code).send(this.clientErrors.login)
+                res.status(this.clientErrors.login.code).send(this.clientErrors.login)
+                return
             }
 
-            // Mock context for validators - no longer needed for inline check
-            // const ctxMock = { config: this.config, msgs: this.msgs, security: this.security }
-            // Inline validation for toProccess
+            // 2. Validar estructura del body
             const body = req.body
             const alerts: string[] = []
 
             if (!body || typeof body !== 'object' || Array.isArray(body)) {
-                // Assuming isPlainObject check
-                // Need access to 'v' (AppValidator) which is not in Dispatcher props??
-                // Dispatcher DOES NOT have 'v' injected?
-                // Wait, Dispatcher constructor has `msgs`. But AppValidator is what generate messages usually.
-                // Legacy `http-validators` used `ctx.v`.
-                // Dispatcher DOES NOT have `v`.
-                // However, `Dispatcher` can access msgs directly for some things?
-                // But `v.getMessage` does interpolation.
-                // CRITICAL: Dispatcher needs AppValidator to validate!
-                // Phase 1 says "Refactor Dispatcher: inyectar todo al SecurityService".
-                // But Dispatcher needs to validate inputs BEFORE calling SecurityService?
-                // Or SecurityService validates?
-                // `http-validators` used `ctx.v`.
-                // I should check if I can inject `v` (AppValidator) into Dispatcher now?
-                // Or reproduce logic using `this.msgs`.
-                // Let's assume I can't inject `v` easily without changing index.ts again (which is fine, I own foundation.ts/index.ts).
-                // Actually, `index.ts` instantiates Dispatcher. I can pass `validator` to it.
-                // But changing Constructor signature is a breaking change? Phase 1?
-                // "Refactor Dispatcher...".
-                // For now, I will use `this.clientErrors.invalidParameters.msg` or similar generic error?
-                // Or better: Inject `v: Any` in Dispatcher constructor?
-                // No, let's keep it simple. If I can't replicate `v.getMessage`, I'm stuck.
-                // WAIT. `http-validators` used `ctx`. `Dispatcher` PASSED `ctxMock` (line 206 original):
-                // `const ctxMock = { config: this.config, msgs: this.msgs, security: this.security }`
-                // It did NOT pass `v`??
-                // Let's check `toProccess` in original file.
-                // `const ctxMock = { config: this.config, msgs: this.msgs, security: this.security }`
-                // `parseToProccessBody(req.body, ctxMock as any)`
-                // `validateToProccessSchema` (in `http-validator.ts`) line 16: `const { v, config, msgs } = ctx`
-                // If `ctxMock` didn't have `v`, `v.getMessage` would CRASH!
-                // Unless `Dispatcher` usage of `http-validators` was ALREADY BROKEN or `ctx` used `v` from global?
-                // Line 16 in http-validators: `const { v, config, msgs } = ctx`
-                // If `ctx` is `{ config, msgs, security }`, then `v` is undefined.
-                // `v.getMessage` call would throw "Cannot read property 'getMessage' of undefined".
-                // Conclusion: `toProccess` endpoint WAS broken or my analysis is missing something (maybe global `v`?).
-                // Or `ctxMock` was cast `as any` hiding the missing property.
-                // If so, deleting `http-validators` is a FIX.
-                // I will implement basic validation without `v`.
+                alerts.push(this.i18n.t('alerts.invalidBody') || 'Invalid body')
             }
 
-            // Re-implement basic validation logic manually
             const tx = body?.tx
             if (!Number.isInteger(tx) || tx <= 0) {
-                alerts.push('Invalid tx') // Fallback since we lack `v`
+                alerts.push(this.i18n.t('alerts.invalidTx') || 'Invalid tx')
             }
 
             const params = body?.params
             if (params !== undefined && params !== null) {
-                const isOk =
+                const isValidParams =
                     typeof params === 'string' ||
                     (typeof params === 'number' && Number.isFinite(params)) ||
                     (typeof params === 'object' && !Array.isArray(params))
 
-                if (!isOk) {
+                if (!isValidParams) {
                     alerts.push(
                         this.i18n.t('alerts.paramsType', { value: 'params' }) || 'Invalid params'
                     )
@@ -280,44 +310,42 @@ export class Dispatcher {
             }
 
             if (alerts.length > 0) {
-                return sendInvalidParameters(res, this.clientErrors.invalidParameters, alerts)
+                sendInvalidParameters(res, this.clientErrors.invalidParameters, alerts)
+                return
             }
 
+            // 3. Esperar a que SecurityService esté listo
             if (!this.security.isReady) {
                 try {
                     await this.security.ready
                 } catch {
-                    return res
-                        .status(this.clientErrors.serviceUnavailable.code)
-                        .send(this.clientErrors.serviceUnavailable)
+                    res.status(this.clientErrors.serviceUnavailable.code).send(
+                        this.clientErrors.serviceUnavailable
+                    )
+                    return
                 }
             }
 
-            // tx already defined above
-            const txData = tx != null ? this.security.getDataTx(tx) : null
-
-            if (!txData)
+            // 4. Resolver transacción
+            const txData = this.security.getDataTx(tx)
+            if (!txData) {
                 throw new Error(this.serverErrors.txNotFound.msg.replace('{tx}', String(tx)))
+            }
 
-            let effectiveParams = body?.params
-            if (txData?.objectName === 'Auth') {
-                const method = txData?.methodName
-                if (
-                    [
-                        'register',
-                        'requestEmailVerification',
-                        'verifyEmail',
-                        'requestPasswordReset',
-                        'verifyPasswordReset',
-                        'resetPassword',
-                    ].includes(method)
-                ) {
+            // 5. Preparar parámetros (inyectar metadata para Auth)
+            let effectiveParams = params
+            if (txData.objectName === 'Auth') {
+                const authMethods = [
+                    'register',
+                    'requestEmailVerification',
+                    'verifyEmail',
+                    'requestPasswordReset',
+                    'verifyPasswordReset',
+                    'resetPassword',
+                ]
+                if (authMethods.includes(txData.methodName)) {
                     const baseParams =
-                        body.params &&
-                        typeof body.params === 'object' &&
-                        !Array.isArray(body.params)
-                            ? body.params
-                            : {}
+                        params && typeof params === 'object' && !Array.isArray(params) ? params : {}
                     effectiveParams = {
                         ...baseParams,
                         _request: {
@@ -327,6 +355,7 @@ export class Dispatcher {
                     }
                 }
             }
+
             const data = {
                 profileId: effectiveProfileId!,
                 methodName: txData.methodName,
@@ -334,6 +363,7 @@ export class Dispatcher {
                 params: effectiveParams,
             }
 
+            // 6. Verificar permisos
             if (!this.security.getPermissions(data)) {
                 await this.audit.log(req, {
                     action: 'tx_denied',
@@ -344,13 +374,16 @@ export class Dispatcher {
                     details: { reason: 'permissionDenied' },
                 })
 
-                return res
-                    .status(this.clientErrors.permissionDenied.code)
-                    .send(this.clientErrors.permissionDenied)
+                res.status(this.clientErrors.permissionDenied.code).send(
+                    this.clientErrors.permissionDenied
+                )
+                return
             }
 
+            // 7. Ejecutar método
             const response = await this.security.executeMethod(data)
 
+            // 8. Registrar auditoría
             await this.audit.log(req, {
                 action: 'tx_exec',
                 objectName: data.objectName,
@@ -361,178 +394,157 @@ export class Dispatcher {
             })
 
             res.status(response.code).send(response)
-        } catch (err: any) {
-            console.error('DEBUG DISPATCHER CATCH:', err)
-            const status = this.clientErrors.unknown.code
-            try {
-                res.locals.__errorLogged = true
-            } catch {}
-
-            const isObj = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
-            const tx = isObj ? req.body.tx : undefined
-            const rawTxData = tx != null ? this.security.getDataTx(tx) : null
-            const txData = rawTxData && typeof rawTxData === 'object' ? rawTxData : null
-
-            const ctxMock = { config: this.config, i18n: this.i18n, log: this.log }
-
-            await this.audit.log(req, {
-                action: 'tx_error',
-                objectName: txData?.objectName,
-                methodName: txData?.methodName,
-                tx,
-                profile_id: effectiveProfileId,
-                details: { error: String(err?.message || err) },
-            })
-
-            this.log.show({
-                type: this.log.TYPE_ERROR,
-                msg: `${this.serverErrors.serverError.msg}, /toProccess: ${redactSecretsInString(
-                    err?.message || err
-                )}`,
-                ctx: {
-                    requestId: req.requestId,
-                    method: req.method,
-                    path: req.originalUrl,
-                    status,
-                    tx,
-                    objectName: txData?.objectName,
-                    methodName: txData?.methodName,
-                    userId: req.session?.userId,
-                    profileId: req.session?.profileId,
-                    durationMs:
-                        typeof req.requestStartMs === 'number'
-                            ? Date.now() - req.requestStartMs
-                            : undefined,
-                },
-            })
-            res.status(status).send(this.clientErrors.unknown)
+        } catch (err: unknown) {
+            this.handleError(req, res, err, '/toProccess', effectiveProfileId)
         }
     }
 
-    async login(req: any, res: any) {
+    /**
+     * Procesa una petición de login.
+     *
+     * Delega la validación y creación de sesión al SessionManager.
+     *
+     * @param req - Request de Express
+     * @param res - Response de Express
+     */
+    private async login(req: AppRequest, res: AppResponse): Promise<void> {
         try {
-            // Need context for parseLoginBody?
-            // In SessionManager.createSession() parseLoginBody is called again?
-            // Yes, SessionManager.createSession calls parseLoginBody.
-            // But Dispatcher.login logic in legacy code:
-            // 1. parseLoginBody
-            // 2. session.createSession(req, res) (which calls parseLoginBody again??)
-            // Let's check legacy Session.ts:
-            // Session.createSession(req, res) calls parseLoginBody!
-            // Legacy Dispatcher.login calls parseLoginBody BEFORE calling session.createSession?
-            // Legacy Dispatcher.ts (Step 39):
-            // async login(req, res) {
-            //    const parsed = parseLoginBody(...)
-            //    if (!ok) return error
-            //    await this.session.createSession(req, res)
-            // }
-            // Legacy Session.ts (Step 41):
-            // async createSession(req, res) {
-            //    const parsed = parseLoginBody(...) ! IT DOES CALL IT AGAIN !
-            //    if (!ok) ...
-            // }
-            // This is redundant but harmless.
-            // I will delegate to session.createSession to handle validation to avoid duplication or having to pass context here.
-
-            return await this.session.createSession(req, res)
-        } catch (err: any) {
-            const status = this.clientErrors.unknown.code
-            try {
-                res.locals.__errorLogged = true
-            } catch {}
-            this.log.show({
-                type: this.log.TYPE_ERROR,
-                msg: `${this.serverErrors.serverError.msg}, /login: ${redactSecretsInString(
-                    err?.message || err
-                )}`,
-                ctx: {
-                    requestId: req.requestId,
-                    method: req.method,
-                    path: req.originalUrl,
-                    status,
-                    durationMs:
-                        typeof req.requestStartMs === 'number'
-                            ? Date.now() - req.requestStartMs
-                            : undefined,
-                    userId: req.session?.userId,
-                    profileId: req.session?.profileId,
-                },
-            })
-            res.status(status).send(this.clientErrors.unknown)
+            await this.session.createSession(req, res)
+        } catch (err: unknown) {
+            this.handleError(req, res, err, '/login', null)
         }
     }
 
-    async logout(req: any, res: any) {
+    /**
+     * Procesa una petición de logout.
+     *
+     * Destruye la sesión activa y registra auditoría.
+     *
+     * @param req - Request de Express
+     * @param res - Response de Express
+     */
+    private async logout(req: AppRequest, res: AppResponse): Promise<void> {
         try {
-            // Inline parseLogoutBody
+            // Validar body
             const body = req.body
-            const alerts: string[] = []
             if (body != null && (typeof body !== 'object' || Array.isArray(body))) {
-                // v missing, just push generic alert
-                alerts.push('Invalid body')
+                sendInvalidParameters(res, this.clientErrors.invalidParameters, ['Invalid body'])
+                return
             }
-
-            if (alerts.length > 0) {
-                return sendInvalidParameters(res, this.clientErrors.invalidParameters, alerts)
-            }
-            // parsed.ok check removed, redundant if alerts check handles it
 
             if (this.session.sessionExists(req)) {
                 await this.audit.log(req, { action: 'logout', details: {} })
-
                 this.session.destroySession(req)
-                return res.status(this.successMsgs.logout.code).send(this.successMsgs.logout)
+                res.status(this.successMsgs.logout.code).send(this.successMsgs.logout)
+                return
             }
-            return res.status(this.clientErrors.login.code).send(this.clientErrors.login)
-        } catch (err: any) {
-            const status = this.clientErrors.unknown.code
-            try {
-                res.locals.__errorLogged = true
-            } catch {}
-            this.log.show({
-                type: this.log.TYPE_ERROR,
-                msg: `${this.serverErrors.serverError.msg}, /logout: ${redactSecretsInString(
-                    err?.message || err
-                )}`,
-                ctx: {
-                    requestId: req.requestId,
-                    // ... same ctx ...
-                },
-            })
-            res.status(status).send(this.clientErrors.unknown)
+
+            res.status(this.clientErrors.login.code).send(this.clientErrors.login)
+        } catch (err: unknown) {
+            this.handleError(req, res, err, '/logout', null)
         }
     }
 
-    serverOn() {
+    /**
+     * Maneja errores de forma centralizada.
+     *
+     * @param req - Request de Express
+     * @param res - Response de Express
+     * @param err - Error capturado
+     * @param endpoint - Nombre del endpoint para logging
+     * @param profileId - ID del perfil (si disponible)
+     */
+    private handleError(
+        req: AppRequest,
+        res: AppResponse,
+        err: unknown,
+        endpoint: string,
+        profileId: number | null
+    ): void {
+        const status = this.clientErrors.unknown.code
+
+        try {
+            res.locals.__errorLogged = true
+        } catch {
+            // Ignorar errores al marcar res.locals
+        }
+
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        const isObj = req.body && typeof req.body === 'object' && !Array.isArray(req.body)
+        const tx = isObj ? req.body.tx : undefined
+        const rawTxData = tx != null ? this.security.getDataTx(tx) : null
+        const txData = rawTxData && typeof rawTxData === 'object' ? rawTxData : null
+
+        // Registrar auditoría si es /toProccess
+        if (endpoint === '/toProccess') {
+            this.audit
+                .log(req, {
+                    action: 'tx_error',
+                    objectName: txData?.objectName,
+                    methodName: txData?.methodName,
+                    tx,
+                    profile_id: profileId,
+                    details: { error: errorMessage },
+                })
+                .catch(() => {})
+        }
+
+        // Logging
+        this.log.show({
+            type: this.log.TYPE_ERROR,
+            msg: `${this.serverErrors.serverError.msg}, ${endpoint}: ${redactSecretsInString(errorMessage)}`,
+            ctx: {
+                requestId: req.requestId,
+                method: req.method,
+                path: req.originalUrl,
+                status,
+                tx,
+                objectName: txData?.objectName,
+                methodName: txData?.methodName,
+                userId: req.session?.userId,
+                profileId: req.session?.profileId,
+                durationMs:
+                    typeof req.requestStartMs === 'number'
+                        ? Date.now() - req.requestStartMs
+                        : undefined,
+            },
+        })
+
+        res.status(status).send(this.clientErrors.unknown)
+    }
+
+    /**
+     * Inicia el servidor HTTP.
+     *
+     * @throws Error si init() no fue llamado previamente
+     * @returns Instancia del servidor HTTP
+     */
+    serverOn(): Server {
         if (!this.initialized) {
             throw new Error(
-                'Dispatcher not initialized. Call await dispatcher.init() before serverOn().'
+                'Dispatcher no inicializado. Ejecuta await dispatcher.init() antes de serverOn().'
             )
         }
+
         this.server = this.app.listen(this.config.app.port, () =>
             this.log.show({
                 type: this.log.TYPE_INFO,
-                msg: `Server running on http://${this.config.app.host}:${this.config.app.port}`,
+                msg: `Servidor ejecutándose en http://${this.config.app.host}:${this.config.app.port}`,
             })
         )
+
         return this.server
     }
 
-    async shutdown() {
-        // Implementation similar to legacy
-        try {
-            await new Promise<void>((resolve, reject) => {
-                if (!this.server) return resolve()
-                this.server.close((err: any) => (err ? reject(err) : resolve()))
-            })
-        } finally {
-            // DB pool closing is handled by IDatabase usually?
-            // Legacy dispatcher manually closed db pool.
-            // Here we use injected DB.
-            // IDatabase doesn't expose 'end' or 'pool' in interface currently?
-            // "exe" and "exeRaw" only.
-            // We should trust container/system shutdown or exposing a close/dispose method on IDatabase.
-            // For now, if we cast it we can close it, or ignore.
-        }
+    /**
+     * Cierra el servidor HTTP de forma graceful.
+     *
+     * @returns Promise que resuelve cuando el servidor está cerrado
+     */
+    async shutdown(): Promise<void> {
+        await new Promise<void>((resolve, reject) => {
+            if (!this.server) return resolve()
+            this.server.close((err) => (err ? reject(err) : resolve()))
+        })
     }
 }

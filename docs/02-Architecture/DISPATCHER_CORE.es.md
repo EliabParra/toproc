@@ -1,62 +1,117 @@
-# Dispatcher Core: El Cerebro HTTP
+# Dispatcher Core: El Orquestador HTTP
 
-El `Dispatcher` es la única puerta de entrada al sistema. No existe un archivo `routes.ts` gigante.
-Toda la lógica de ruteo está centralizada aquí para garantizar consistencia y seguridad.
+El `Dispatcher` es la puerta de entrada única al sistema. Centraliza el ruteo, la seguridad y el manejo de errores para garantizar consistencia.
 
-## Ciclo de Vida de Iniciación (`init()`)
+## Arquitectura
 
-Cuando llamas a `await dispatcher.init()`, suceden estos pasos críticos:
+```mermaid
+graph TD
+    Request[Petición HTTP] --> Middleware[Middlewares]
+    Middleware --> Router{Ruta}
+    Router -->|/health, /ready| Handlers[Handlers simples]
+    Router -->|/csrf| CSRF[Token CSRF]
+    Router -->|/login| Login[SessionManager]
+    Router -->|/logout| Logout[SessionManager]
+    Router -->|/toProccess| ToProccess[Lógica de negocio]
+    ToProccess --> Security[SecurityService]
+    Security --> BO[Business Object]
+    BO --> Response[Respuesta]
+```
 
-1.  **Carga de Configuración**: Se inyectan las dependencias (`ILogger`, `IConfig`, etc).
-2.  **Middlewares de Seguridad**:
-    - `Helmet`: Headers HTTP seguros.
-    - `CORS`: Control de acceso entre dominios.
-    - `RateLimit`: Protección contra fuerza bruta (Login: estricto, API: laxo).
-    - `CSRF`: Protección contra Cross-Site Request Forgery (Token en cookie).
-3.  **Middlewares de Parseo**:
-    - `BodyParser`: JSON estricto. Si envías JSON mal formado, un middleware especial lo captura antes de tirar el servidor.
-4.  **Sesiones**: Se "enchufa" el gestor de sesiones (`connect-pg-simple` con Postgres).
+## Ciclo de Vida
+
+### Constructor
+
+Configura Express con middlewares base:
+
+1. **Helmet** - Headers HTTP seguros
+2. **RequestId** - UUID único por petición
+3. **RequestLogger** - Logging estructurado
+4. **CORS** - Control de acceso entre dominios
+5. **BodyParser** - JSON con límite configurable
+
+### `init()`
+
+Completa la inicialización:
+
+1. **express-session** - Sesiones persistentes en PostgreSQL
+2. **Frontend Adapters** - Servir SPA o páginas estáticas
+3. **Rutas API** - `/health`, `/ready`, `/csrf`, `/toProccess`, `/login`, `/logout`
+4. **Error Handler** - Captura errores no manejados
 
 ## La Ruta Maestra: `/toProccess`
 
-El 99% de tu API ocurre en este endpoint POST.
+El 99% de la lógica de negocio pasa por este endpoint.
 
 ```typescript
-this.app.post(
-    '/toProccess',
-    rateLimiter, // 1. Evita spam
-    csrfProtection, // 2. Valida token CSRF
-    this.toProccess // 3. Ejecuta lógica
-)
+POST /toProccess
+Content-Type: application/json
+X-CSRF-Token: <token>
+
+{
+  "tx": 1001,
+  "params": { ... }
+}
 ```
 
-### Lógica Interna de `toProccess`
+### Flujo interno
 
-1.  **Validación de Sesión**:
-    - ¿Tiene cookie válida? -> Recupera `profile_id`.
-    - ¿No tiene cookie? -> Asigna `profile_id` público (configurado en .env).
-    - Si la ruta requiere login y no hay sesión, rechaza con `401`.
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. Validar sesión → obtener profileId                      │
+│  2. Validar body (tx: number, params: object)               │
+│  3. Resolver tx → objectName + methodName                   │
+│  4. Verificar permisos (SecurityService.getPermissions)     │
+│  5. Ejecutar método (SecurityService.executeMethod)         │
+│  6. Registrar auditoría                                     │
+│  7. Responder al cliente                                    │
+└─────────────────────────────────────────────────────────────┘
+```
 
-2.  **Validación de Estructura**:
-    - Usa `parseToProccessBody` para asegurar que el JSON tiene `{ tx: number, params: object }`.
+### Protecciones
 
-3.  **Resolución de Transacción**:
-    - Consulta a `SecurityService`: "¿Qué significa tx 1001?".
-    - Respuesta: `Auth.login`.
+| Middleware                     | Función                                  |
+| ------------------------------ | ---------------------------------------- |
+| `toProccessRateLimiter`        | Límite de requests por IP                |
+| `authPasswordResetRateLimiter` | Límite específico para reset de password |
+| `csrfProtection`               | Validación de token CSRF                 |
 
-4.  **Verificación de Permisos**:
-    - Consulta matriz en memoria: "¿El perfil X puede ejecutar Auth.login?".
-    - Si no -> Loguea incidente en Auditoría y responde `403`.
+## Autenticación
 
-5.  **Ejecución**:
-    - Invoca `SecurityService.executeMethod()`.
-    - Registra éxito/fracaso en Auditoría.
+### `/login`
 
-## Manejo de Errores Global
+Delega al `SessionManager.createSession()`:
 
-El Dispatcher envuelve todo en un `try/catch` gigante.
+- Valida credenciales
+- Crea sesión en PostgreSQL
+- Establece cookie segura
 
-- Si un BO hace `throw new Error('Boom')`:
-    - El usuario recibe: `500 Server Error`.
-    - El log recibe: `Error: Boom at line 50...` (Stack Trace completo).
-- Esto evita la "fuga de información" (Information Leakage) hacia el atacante.
+### `/logout`
+
+- Destruye sesión
+- Registra auditoría
+- Responde con mensaje de éxito
+
+## Manejo de Errores
+
+El método `handleError()` centraliza el manejo:
+
+1. **Marca** `res.locals.__errorLogged = true` para evitar logs duplicados
+2. **Registra auditoría** (solo para `/toProccess`)
+3. **Logea** error redactando secretos
+4. **Responde** con error genérico (sin filtrar información sensible)
+
+```typescript
+// El usuario recibe
+{ "code": 500, "msg": "Server error" }
+
+// El log recibe (server-side)
+"Server error, /toProccess: Cannot read property 'x' of undefined"
+// + stack trace completo + contexto (userId, profileId, tx, etc.)
+```
+
+## Ver También
+
+- [Bootstrap](./BOOTSTRAP.es.md) - Inicialización del sistema
+- [Sistema de Seguridad](./SECURITY_SYSTEM.es.md) - Permisos y transacciones
+- [Flujo de Transacciones](./TRANSACTION_FLOW.es.md) - Ejecución de métodos de negocio
