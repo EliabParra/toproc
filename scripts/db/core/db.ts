@@ -16,12 +16,23 @@ export interface DbConfig {
  * Implements IDatabase interface for compatibility with Executor.
  */
 export class Database implements IDatabase {
-    private pool: pg.Pool | null = null
+    private _pool: pg.Pool | null = null
 
     constructor(private config: DbConfig) {}
 
+    /**
+     * Pool de conexiones PostgreSQL.
+     * Se inicializa de forma lazy en el primer acceso.
+     */
+    get pool(): pg.Pool {
+        if (!this._pool) {
+            this.connect()
+        }
+        return this._pool!
+    }
+
     private connect() {
-        if (this.pool) return
+        if (this._pool) return
 
         const cfg: any = {
             host: this.config.host,
@@ -38,7 +49,7 @@ export class Database implements IDatabase {
             if (cfg[key] === undefined) delete cfg[key]
         })
 
-        this.pool = new pg.Pool(cfg)
+        this._pool = new pg.Pool(cfg)
     }
 
     async exeRaw(sql: string, params?: unknown): Promise<{ rows: any[]; rowCount: number | null }> {
@@ -57,9 +68,9 @@ export class Database implements IDatabase {
     }
 
     async close() {
-        if (this.pool) {
-            await this.pool.end()
-            this.pool = null
+        if (this._pool) {
+            await this._pool.end()
+            this._pool = null
         }
     }
 

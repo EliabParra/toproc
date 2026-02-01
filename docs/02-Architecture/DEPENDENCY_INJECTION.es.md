@@ -1,65 +1,126 @@
 # Inyección de Dependencias y Lazy Loading
 
-Explicación técnica de cómo el framework gestiona la memoria y las dependencias de los objetos de negocio.
+Explicación técnica de cómo el framework gestiona las dependencias de los Business Objects.
 
-## Gestión de Dependencias (`BOService`)
+## Arquitectura de Dependencias
 
-En versiones anteriores usábamos un contenedor global. Ahora, utilizamos **Inyección de Dependencias Explícita** a través de la clase base `BOService`.
+### Interfaz `BODependencies`
+
+Todos los Business Objects reciben sus dependencias a través de una interfaz tipada:
 
 ```typescript
-// src/core/business-objects/BOService.ts
-export class BOService {
-    constructor(
-        protected readonly log: ILogger,
-        protected readonly config: IConfig,
-        protected readonly db: IDatabase
-    ) {}
+// src/types/core.ts
+export interface BODependencies {
+    db: IDatabase
+    log: ILogger
+    config: IConfig
+    audit: IAuditService
+    security: ISecurityService
+    session: ISessionService
+    v: IValidator
+    i18n: II18nService
 }
 ```
 
-### Cómo fluye
+### Clase Base `BaseBO`
 
-1. **Dispatcher**: Crea instancias de `db`, `log` y `config`.
-2. **Business Object (BO)**: Recibe estas dependencias en su constructor (`BODependencies`).
-3. **Capa de Servicio**: El BO las pasa al `Service`, que extiende `BOService`.
+Los Business Objects extienden `BaseBO`, que provee acceso tipado a todas las dependencias:
 
-**Beneficio**:
+```typescript
+// src/core/business-objects/BaseBO.ts
+export class BaseBO {
+    protected readonly db: IDatabase
+    protected readonly log: ILogger
+    protected readonly config: IConfig
+    protected readonly v: IValidator
+    protected readonly i18n: II18nService
+    // ... otras dependencias
 
-- **Seguridad de Tipos**: Sin contenedores "any" mágicos. Sabes exactamente de qué depende un Servicio.
-- **Testabilidad**: Puedes mockear fácilmente `db` o `log` al hacer unit testing de un Servicio.
-- **Claridad**: Las dependencias son explícitas en el constructor.
+    constructor(deps: BODependencies) {
+        this.db = deps.db
+        this.log = deps.log
+        // ... asignación de dependencias
+    }
+}
+```
+
+## Flujo de Inyección
+
+```
+┌──────────────┐     ┌─────────────────┐     ┌────────────┐
+│  foundation  │────▶│ SecurityService │────▶│ Dispatcher │
+│   (crear)    │     │  (orquestar)    │     │  (HTTP)    │
+└──────────────┘     └─────────────────┘     └────────────┘
+                              │
+                              ▼
+                    ┌─────────────────────┐
+                    │ TransactionExecutor │
+                    │  (import dinámico)  │
+                    └─────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────────┐
+                    │   Business Object   │
+                    │  (BODependencies)   │
+                    └─────────────────────┘
+```
+
+1. **foundation.ts**: Crea e inyecta todas las dependencias core.
+2. **SecurityService**: Orquesta la ejecución de transacciones.
+3. **TransactionExecutor**: Importa dinámicamente el BO y lo instancia con `BODependencies`.
+4. **Business Object**: Recibe dependencias tipadas en su constructor.
 
 ## Lazy Loading (Carga Perezosa)
 
-Node.js es rápido, pero cargar miles de archivos al inicio haría que el servidor tardara en arrancar. Para evitar esto, implementamos Lazy Loading.
+Los Business Objects se cargan bajo demanda para optimizar el tiempo de arranque.
 
-### Cómo funciona (`TransactionExecutor.ts`)
+### Implementación (`TransactionExecutor.ts`)
 
 ```typescript
-// Concepto Simplificado
-async execute(objectName, method, params) {
-    // 1. Construir ruta del archivo dinámicamente
-    const path = `../../BO/${objectName}/${objectName}BO.js`
+async execute(objectName: string, methodName: string, params: unknown) {
+    // 1. Construir ruta del módulo
+    const modulePath = `../../BO/${objectName}/${objectName}BO.js`
 
-    // 2. Importar DINÁMICAMENTE (solo se importa cuando se solicita)
-    const module = await import(path)
+    // 2. Import dinámico (solo cuando se necesita)
+    const module = await import(modulePath)
     const BOClass = module[`${objectName}BO`]
 
-    // 3. Instanciar e Inyectar Dependencias Core
-    const instance = new BOClass({
-        db: this.db,
-        log: this.log,
-        config: this.config,
-        v: this.validator
-    })
+    // 3. Instanciar con dependencias completas
+    const instance = new BOClass(this.deps)
 
-    // 4. Ejecutar
-    return instance[method](params)
+    // 4. Ejecutar método
+    return instance[methodName](params)
 }
 ```
 
-### Ventajas
+### Caché de Instancias
 
-1.  **Inicio Instantáneo**: El servidor arranca en milisegundos, sin importar el tamaño del código.
-2.  **Aislamiento de Errores**: Un error de sintaxis en un BO específico no rompe todo el servidor hasta que ese BO es realmente invocado.
-3.  **Eficiencia**: La memoria se asigna solo para contextos activos.
+El `TransactionExecutor` cachea instancias de BOs por sesión para evitar reimportaciones:
+
+```typescript
+private boCache = new Map<string, BaseBO>()
+
+async getBO(objectName: string): Promise<BaseBO> {
+    if (!this.boCache.has(objectName)) {
+        const instance = await this.importBO(objectName)
+        this.boCache.set(objectName, instance)
+    }
+    return this.boCache.get(objectName)!
+}
+```
+
+## Ventajas
+
+| Característica      | Beneficio                                             |
+| ------------------- | ----------------------------------------------------- |
+| **Tipado Estricto** | Sin contenedores `any`. Dependencias explícitas.      |
+| **Testabilidad**    | Fácil mockeo de `db`, `log`, etc. en tests unitarios. |
+| **Inicio Rápido**   | Servidor arranca en milisegundos.                     |
+| **Aislamiento**     | Error en un BO no afecta otros hasta ser invocado.    |
+| **Eficiencia**      | Memoria asignada solo para contextos activos.         |
+
+## Ver También
+
+- [Bootstrap](./BOOTSTRAP.es.md) - Proceso de inicialización
+- [Dispatcher Core](./DISPATCHER_CORE.es.md) - Funcionamiento del servidor HTTP
+- [Sistema de Seguridad](./SECURITY_SYSTEM.es.md) - Permisos y transacciones

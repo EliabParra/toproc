@@ -1,65 +1,126 @@
 # Dependency Injection & Lazy Loading
 
-Technical explanation of how the framework manages memory and business object dependencies.
+Technical explanation of how the framework manages Business Object dependencies.
 
-## Dependency Management (`BOService`)
+## Dependency Architecture
 
-In previous versions, we used a global container. Now, we use **Explicit Dependency Injection** via the `BOService` base class.
+### `BODependencies` Interface
+
+All Business Objects receive their dependencies through a typed interface:
 
 ```typescript
-// src/core/business-objects/BOService.ts
-export class BOService {
-    constructor(
-        protected readonly log: ILogger,
-        protected readonly config: IConfig,
-        protected readonly db: IDatabase
-    ) {}
+// src/types/core.ts
+export interface BODependencies {
+    db: IDatabase
+    log: ILogger
+    config: IConfig
+    audit: IAuditService
+    security: ISecurityService
+    session: ISessionService
+    v: IValidator
+    i18n: II18nService
 }
 ```
 
-### How it flows
+### `BaseBO` Base Class
 
-1. **Dispatcher**: Creates instances of `db`, `log`, and `config`.
-2. **Business Object (BO)**: Receives these dependencies in its constructor (`BODependencies`).
-3. **Service Layer**: The BO passes them to the `Service`, which extends `BOService`.
+Business Objects extend `BaseBO`, which provides typed access to all dependencies:
 
-**Benefit**:
+```typescript
+// src/core/business-objects/BaseBO.ts
+export class BaseBO {
+    protected readonly db: IDatabase
+    protected readonly log: ILogger
+    protected readonly config: IConfig
+    protected readonly v: IValidator
+    protected readonly i18n: II18nService
+    // ... other dependencies
 
-- **Type Safety**: No magic "any" container. You know exactly what a Service depends on.
-- **Testability**: You can easily mock `db` or `log` when unit testing a Service.
-- **Clarity**: Dependencies are explicit in the constructor.
+    constructor(deps: BODependencies) {
+        this.db = deps.db
+        this.log = deps.log
+        // ... dependency assignment
+    }
+}
+```
+
+## Injection Flow
+
+```
+┌──────────────┐     ┌─────────────────┐     ┌────────────┐
+│  foundation  │────▶│ SecurityService │────▶│ Dispatcher │
+│   (create)   │     │  (orchestrate)  │     │   (HTTP)   │
+└──────────────┘     └─────────────────┘     └────────────┘
+                              │
+                              ▼
+                    ┌─────────────────────┐
+                    │ TransactionExecutor │
+                    │  (dynamic import)   │
+                    └─────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────────┐
+                    │   Business Object   │
+                    │  (BODependencies)   │
+                    └─────────────────────┘
+```
+
+1. **foundation.ts**: Creates and injects all core dependencies.
+2. **SecurityService**: Orchestrates transaction execution.
+3. **TransactionExecutor**: Dynamically imports the BO and instantiates it with `BODependencies`.
+4. **Business Object**: Receives typed dependencies in its constructor.
 
 ## Lazy Loading
 
-Node.js is fast, but loading thousands of files at startup would slow down boot time. To avoid this, we implement Lazy Loading for Business Objects.
+Business Objects are loaded on-demand to optimize startup time.
 
-### How it works (`TransactionExecutor.ts`)
+### Implementation (`TransactionExecutor.ts`)
 
 ```typescript
-// Simplified Concept
-async execute(objectName, method, params) {
-    // 1. Build file path dynamically
-    const path = `../../BO/${objectName}/${objectName}BO.js`
+async execute(objectName: string, methodName: string, params: unknown) {
+    // 1. Build module path
+    const modulePath = `../../BO/${objectName}/${objectName}BO.js`
 
-    // 2. DYNAMIC Import (only imports when requested)
-    const module = await import(path)
+    // 2. Dynamic import (only when needed)
+    const module = await import(modulePath)
     const BOClass = module[`${objectName}BO`]
 
-    // 3. Instantiate & Inject Core Dependencies
-    const instance = new BOClass({
-        db: this.db,
-        log: this.log,
-        config: this.config,
-        v: this.validator
-    })
+    // 3. Instantiate with full dependencies
+    const instance = new BOClass(this.deps)
 
-    // 4. Execute
-    return instance[method](params)
+    // 4. Execute method
+    return instance[methodName](params)
 }
 ```
 
-### Advantages
+### Instance Caching
 
-1.  **Instant Boot**: Server starts in milliseconds, regardless of codebase size.
-2.  **Error Isolation**: A specific syntax error in one BO won't crash the entire server until that BO is actually called.
-3.  **Efficiency**: Memory is allocated only for active contexts.
+The `TransactionExecutor` caches BO instances per session to avoid reimporting:
+
+```typescript
+private boCache = new Map<string, BaseBO>()
+
+async getBO(objectName: string): Promise<BaseBO> {
+    if (!this.boCache.has(objectName)) {
+        const instance = await this.importBO(objectName)
+        this.boCache.set(objectName, instance)
+    }
+    return this.boCache.get(objectName)!
+}
+```
+
+## Advantages
+
+| Feature           | Benefit                                              |
+| ----------------- | ---------------------------------------------------- |
+| **Strict Typing** | No `any` containers. Explicit dependencies.          |
+| **Testability**   | Easy mocking of `db`, `log`, etc. in unit tests.     |
+| **Fast Startup**  | Server boots in milliseconds.                        |
+| **Isolation**     | Error in one BO doesn't affect others until invoked. |
+| **Efficiency**    | Memory allocated only for active contexts.           |
+
+## See Also
+
+- [Bootstrap](./BOOTSTRAP.en.md) - Initialization process
+- [Dispatcher Core](./DISPATCHER_CORE.en.md) - HTTP server functionality
+- [Security System](./SECURITY_SYSTEM.en.md) - Permissions and transactions

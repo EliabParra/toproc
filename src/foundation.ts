@@ -14,85 +14,59 @@ import { SessionManager } from './services/SessionService.js'
 import { EmailService } from './services/EmailService.js'
 import { Dispatcher } from './api/Dispatcher.js'
 import { AuditService } from './services/AuditService.js'
+import { es } from './locales/es.js'
+import { en } from './locales/en.js'
 
-import { readFile } from 'node:fs/promises'
-
-// Helper: Load JSON
-async function loadJson(relativePath: string) {
-    const p = new URL(relativePath, import.meta.url)
-    return JSON.parse(await readFile(p, 'utf-8'))
-}
-
-async function loadJsonAbsolute(absPath: string) {
-    return JSON.parse(await readFile(absPath, 'utf-8'))
-}
-
-function mergeQueries(base: any, extra: any) {
-    if (!extra || typeof extra !== 'object') return base
-    const out = { ...(base ?? {}) }
-    for (const [schema, schemaQueries] of Object.entries(extra)) {
-        if (!schemaQueries || typeof schemaQueries !== 'object') continue
-        ;(out as any)[schema] = { ...((out as any)[schema] ?? {}), ...(schemaQueries as any) }
-    }
-    return out
-}
-
-function repoPath(...parts: string[]) {
+/**
+ * Resuelve rutas relativas al directorio raíz del repositorio.
+ *
+ * @param parts - Segmentos de ruta a resolver
+ * @returns Ruta absoluta resuelta desde la raíz del proyecto
+ */
+function repoPath(...parts: string[]): string {
     const srcDir = path.dirname(fileURLToPath(import.meta.url))
     const repoRoot = path.resolve(srcDir, '..')
     return path.resolve(repoRoot, ...parts)
 }
 
-function resolveRepoRelative(p: unknown) {
-    const raw = String(p ?? '').trim()
-    if (!raw) return null
-    return path.isAbsolute(raw) ? raw : repoPath(raw)
-}
-
-// 1. Load Config
+// 1. Cargar configuración
 const config = ConfigLoader.load(repoPath('.'))
 container.register('config', config)
 
-// 2. Initialize QueryService (Legacy removed)
-// 3. Initialize I18n (replaces legacy msgs)
-// 3. Initialize I18n (replaces legacy msgs)
+// 2. Inicializar I18n
 const i18n = new I18nService(config.app.lang)
-import { es } from './locales/es.js'
-import { en } from './locales/en.js'
-
 i18n.register('es', es)
 i18n.register('en', en)
-
 container.register('i18n', i18n)
 
-// 4. Feature Flags
+// 3. Feature Flags
 const features = new FeatureFlags(config)
 container.register('features', features)
 
-// 5. Validator (Pure Zod)
+// 4. Validador (Zod)
 const validator = new AppValidator(i18n)
 container.register('validator', validator)
 
-// 6. Logger
+// 5. Logger
 const appLogger = new AppLogger({ config })
 container.register('log', appLogger)
 
-// 7. Database
+// 6. Base de Datos
 const { default: DBComponent } = await import('./services/DatabaseService.js')
 const db = new DBComponent({ config, i18n, log: appLogger })
 container.register('db', db)
 
-// 8. Service Layer Initialization
+// 7. Capa de Servicios
 
-// Initialize Audit
+// Auditoría
 const audit = new AuditService({ db, logger: appLogger })
 container.register('audit', audit)
 
-// Initialize Email Service
+// Servicio de Email
 const email = new EmailService({ config, log: appLogger })
 container.register('email', email)
 
-// Initialize Session Manager
+// Gestor de Sesiones
 const session = new SessionManager({
     db,
     log: appLogger,
@@ -103,7 +77,7 @@ const session = new SessionManager({
 })
 container.register('session', session)
 
-// Initialize SecurityService
+// Servicio de Seguridad
 const security = new SecurityService({
     db,
     log: appLogger,
@@ -115,7 +89,7 @@ const security = new SecurityService({
 })
 container.register('security', security)
 
-// Initialize Dispatcher
+// Dispatcher (Punto de entrada HTTP)
 const dispatcher = new Dispatcher({
     config,
     log: appLogger,
@@ -126,5 +100,5 @@ const dispatcher = new Dispatcher({
     db,
 })
 
-// Export services
+// Exportar servicios
 export { container, dispatcher, appLogger as log, db, config, validator, session, security, i18n }
