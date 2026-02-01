@@ -35,10 +35,10 @@ export class PermissionGuard {
                 type: this.log.TYPE_INFO,
                 msg: `PermissionGuard loaded ${this.permissions.size} permissions.`,
             })
-        } catch (err: any) {
+        } catch (err: unknown) {
             this.log.show({
                 type: this.log.TYPE_ERROR,
-                msg: `PermissionGuard load failed: ${err.message}`,
+                msg: `PermissionGuard load failed: ${err instanceof Error ? err.message : String(err)}`,
             })
             throw err
         }

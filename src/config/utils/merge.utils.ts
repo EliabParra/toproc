@@ -1,14 +1,16 @@
-export function deepMerge(target: any, ...sources: any[]): any {
+export function deepMerge<T = unknown>(target: T, ...sources: unknown[]): T {
     if (!sources.length) return target
     const source = sources.shift()
 
     if (isObject(target) && isObject(source)) {
-        for (const key in source) {
-            if (isObject(source[key])) {
-                if (!target[key]) Object.assign(target, { [key]: {} })
-                deepMerge(target[key], source[key])
-            } else if (source[key] !== undefined) {
-                Object.assign(target, { [key]: source[key] })
+        const t = target as Record<string, unknown>
+        const s = source as Record<string, unknown>
+        for (const key in s) {
+            if (isObject(s[key])) {
+                if (!t[key]) Object.assign(t, { [key]: {} })
+                deepMerge(t[key], s[key])
+            } else if (s[key] !== undefined) {
+                Object.assign(t, { [key]: s[key] })
             }
         }
     }
@@ -16,6 +18,6 @@ export function deepMerge(target: any, ...sources: any[]): any {
     return deepMerge(target, ...sources)
 }
 
-function isObject(item: any) {
-    return item && typeof item === 'object' && !Array.isArray(item)
+function isObject(item: unknown): boolean {
+    return !!item && typeof item === 'object' && !Array.isArray(item)
 }

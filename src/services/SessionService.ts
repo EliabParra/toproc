@@ -1,14 +1,16 @@
 import bcrypt from 'bcryptjs'
-import {
+import type {
     IDatabase,
     ILogger,
     ISessionService,
     IConfig,
     IAuditService,
     II18nService,
-} from '../types/core.js'
-import type { AppRequest, AppResponse } from '../types/http.js'
-import type { LocalizedMessages, ValidationError } from '../types/api.js'
+    AppRequest,
+    AppResponse,
+    LocalizedMessages,
+    ValidationError,
+} from '../types/index.js'
 import { LoginSchema, LoginInput, SessionUserRow } from './schemas/session.js'
 import { AppValidator } from './ValidatorService.js'
 import { SessionQueries } from './queries/session.js'
@@ -189,7 +191,7 @@ export class SessionManager implements ISessionService {
         return res.status(error.code).send(error)
     }
 
-    private handleSystemError(req: AppRequest, res: AppResponse, error: any) {
+    private handleSystemError(req: AppRequest, res: AppResponse, error: unknown) {
         try {
             res.locals.__errorLogged = true
         } catch {}
@@ -199,7 +201,7 @@ export class SessionManager implements ISessionService {
 
         this.log.show({
             type: this.log.TYPE_ERROR,
-            msg: `${msg}, SessionManager.createSession: ${error?.message || error}`,
+            msg: `${msg}, SessionManager.createSession: ${error instanceof Error ? error.message : String(error)}`,
             ctx: {
                 requestId: req.requestId,
                 method: req.method,

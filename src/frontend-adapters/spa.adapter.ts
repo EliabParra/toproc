@@ -1,7 +1,8 @@
-import express from 'express'
+import express, { type Application, type Request, type Response, type NextFunction } from 'express'
 import path from 'node:path'
+import type { IConfig } from '../types/index.js'
 
-async function ensureSpaDistPathIfNeeded(config: any) {
+async function ensureSpaDistPathIfNeeded(config: IConfig) {
     const hasPath =
         (typeof process.env.SPA_DIST_PATH === 'string' &&
             process.env.SPA_DIST_PATH.trim().length > 0) ||
@@ -36,7 +37,7 @@ async function ensureSpaDistPathIfNeeded(config: any) {
     process.env.SPA_DIST_PATH = entered
 }
 
-function resolveSpaDistPath(config: any) {
+function resolveSpaDistPath(config: IConfig) {
     const fromEnv = process.env.SPA_DIST_PATH
     if (fromEnv && String(fromEnv).trim().length > 0) return path.resolve(String(fromEnv))
 
@@ -55,7 +56,7 @@ function resolveSpaDistPath(config: any) {
  *
  * @param app - Instancia de Express
  */
-export async function registerSpaHosting(app: any, { config }: { config: any }) {
+export async function registerSpaHosting(app: Application, { config }: { config: IConfig }) {
     await ensureSpaDistPathIfNeeded(config)
 
     const distPath = resolveSpaDistPath(config)
@@ -69,14 +70,16 @@ export async function registerSpaHosting(app: any, { config }: { config: any }) 
 
     // SPA fallback: any unmatched GET that accepts HTML returns index.html
     // (Express 5 uses path-to-regexp v6; '*' is not a valid string pattern)
-    app.get(/.*/, (req: any, res: any, next: any) => {
+    app.get(/.*/, (req: Request, res: Response, next: NextFunction) => {
         if (req.method !== 'GET') return next()
 
         const accept = String(req.headers?.accept ?? '')
         if (!accept.includes('text/html')) return next()
 
-        return res.status(200).sendFile(path.join(distPath, 'index.html'), (err: any) => {
-            if (err) return next(err)
+        return res.status(200).sendFile(path.join(distPath, 'index.html'), (err: unknown) => {
+            if (err && !res.headersSent) {
+                return next(err)
+            }
         })
     })
 }

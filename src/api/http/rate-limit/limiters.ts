@@ -1,8 +1,18 @@
 import rateLimit from 'express-rate-limit'
-import type { AppRequest, AppResponse } from '../../../types/http.js'
+import type { AppRequest, AppResponse, ISecurityService } from '../../../types/index.js'
+
+/** Tipos para rate limiters */
+interface TxData {
+    objectName?: string
+    methodName?: string
+}
+
+export interface ClientErrors {
+    tooManyRequests: { code: number; msg: string }
+}
 
 /** @param {{ objectName?: string, methodName?: string } | null | undefined} txData */
-function isAuthPublicSensitiveMethod(txData: any) {
+function isAuthPublicSensitiveMethod(txData: TxData | null | undefined): boolean {
     const objectName = txData?.objectName
     const methodName = txData?.methodName
     if (objectName !== 'Auth') return false
@@ -16,15 +26,16 @@ function isAuthPublicSensitiveMethod(txData: any) {
     )
 }
 
-function safeLowerTrim(v: any) {
+function safeLowerTrim(v: unknown): string | null {
     return typeof v === 'string' ? v.trim().toLowerCase() : null
 }
 
-function getTxDataFromReq(req: any, security: any) {
+function getTxDataFromReq(req: AppRequest, security: ISecurityService): TxData | null {
     const tx = req?.body?.tx
     if (tx == null) return null
     try {
-        return (security as any)?.getDataTx?.(tx) ?? null
+        const result = security?.getDataTx?.(tx)
+        return result ? result : null
     } catch {
         return null
     }
@@ -39,7 +50,7 @@ function getTxDataFromReq(req: any, security: any) {
  * @param clientErrors - Diccionario de errores
  * @returns {Function} Middleware rateLimit
  */
-export function createLoginRateLimiter(clientErrors: any) {
+export function createLoginRateLimiter(clientErrors: ClientErrors) {
     return rateLimit({
         windowMs: 60 * 1000,
         limit: 10,
@@ -61,10 +72,13 @@ export function createLoginRateLimiter(clientErrors: any) {
  * @param security - Servicio de seguridad para resolver TX
  * @returns {Function} Middleware rateLimit
  */
-export function createAuthPasswordResetRateLimiter(clientErrors: any, security: any) {
+export function createAuthPasswordResetRateLimiter(
+    clientErrors: ClientErrors,
+    security: ISecurityService
+) {
     return rateLimit({
         windowMs: 60 * 1000,
-        limit: (req: any) => {
+        limit: (req: AppRequest) => {
             const txData = getTxDataFromReq(req, security)
             const method = txData?.methodName
             if (method === 'register') return 5
@@ -77,11 +91,11 @@ export function createAuthPasswordResetRateLimiter(clientErrors: any, security: 
         },
         standardHeaders: true,
         legacyHeaders: false,
-        skip: (req: any) => {
+        skip: (req: AppRequest) => {
             const txData = getTxDataFromReq(req, security)
             return !isAuthPublicSensitiveMethod(txData)
         },
-        keyGenerator: (req: any) => {
+        keyGenerator: (req: AppRequest) => {
             const txData = getTxDataFromReq(req, security)
             const method = txData?.methodName
             const ip = req.ip
@@ -143,15 +157,15 @@ export function createAuthPasswordResetRateLimiter(clientErrors: any, security: 
  * @param clientErrors - Diccionario de errores
  * @returns {Function} Middleware rateLimit
  */
-export function createToProccessRateLimiter(clientErrors: any) {
+export function createToProccessRateLimiter(clientErrors: ClientErrors) {
     return rateLimit({
         windowMs: 60 * 1000,
         limit: 120,
         standardHeaders: true,
         legacyHeaders: false,
-        keyGenerator: (req: any) => {
-            const userId = (req as any)?.session?.userId
-            return userId ? `user:${userId}` : `ip:${(req as any).ip}`
+        keyGenerator: (req: AppRequest) => {
+            const userId = req?.session?.userId
+            return userId ? `user:${userId}` : `ip:${req.ip}`
         },
         handler: (req: AppRequest, res: AppResponse) =>
             res.status(clientErrors.tooManyRequests.code).send(clientErrors.tooManyRequests),

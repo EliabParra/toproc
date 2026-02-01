@@ -85,7 +85,11 @@ export class TransactionExecutor {
      * @returns {Promise<any>} Resultado de la ejecución del método
      * @throws {Error} Si no encuentra el módulo, clase o método
      */
-    async execute(objectName: string, methodName: string, params: any): Promise<any> {
+    async execute(
+        objectName: string,
+        methodName: string,
+        params: Record<string, unknown> | null | undefined
+    ): Promise<unknown> {
         const key = this.instanceKey(objectName, methodName)
 
         if (this.instances.has(key)) {

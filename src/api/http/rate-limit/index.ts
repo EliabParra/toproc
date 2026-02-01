@@ -5,8 +5,4 @@
  *
  * @module http/rate-limit
  */
-export {
-    createLoginRateLimiter,
-    createToProccessRateLimiter,
-    createAuthPasswordResetRateLimiter,
-} from './limiters.js'
+export * from './limiters.js'

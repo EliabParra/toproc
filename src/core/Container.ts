@@ -47,8 +47,8 @@ export class Container {
     get i18n(): II18nService {
         return this.resolve<II18nService>('i18n')
     }
-    get queries(): any {
-        return this.resolve<any>('queries')
+    get queries(): unknown {
+        return this.resolve<unknown>('queries')
     }
 }
 

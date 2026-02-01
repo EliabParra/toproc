@@ -19,7 +19,7 @@ export class AppLogger implements ILogger {
     TYPE_DEBUG = 2
     TYPE_WARNING = 3
 
-    private activation: any
+    private activation: Record<number, boolean>
     private format: unknown
 
     constructor(deps: { config: IConfig }) {
@@ -113,27 +113,19 @@ export class AppLogger implements ILogger {
                 switch (e.type) {
                     case this.TYPE_ERROR:
                         if (this.activation[0])
-                            console.log(
-                                '[' + level + ']: ' + `${String(e.msg)}${ctxText}`.red
-                            )
+                            console.log('[' + level + ']: ' + `${String(e.msg)}${ctxText}`.red)
                         break
                     case this.TYPE_WARNING:
                         if (this.activation[3])
-                            console.log(
-                                '[' + level + ']: ' + `${String(e.msg)}${ctxText}`.yellow
-                            )
+                            console.log('[' + level + ']: ' + `${String(e.msg)}${ctxText}`.yellow)
                         break
                     case this.TYPE_INFO:
                         if (this.activation[1])
-                            console.log(
-                                '[' + level + ']: ' + `${String(e.msg)}${ctxText}`.blue
-                            )
+                            console.log('[' + level + ']: ' + `${String(e.msg)}${ctxText}`.blue)
                         break
                     case this.TYPE_DEBUG:
                         if (this.activation[2])
-                            console.log(
-                                '[' + level + ']: ' + `${String(e.msg)}${ctxText}`.magenta
-                            )
+                            console.log('[' + level + ']: ' + `${String(e.msg)}${ctxText}`.magenta)
                         break
                 }
                 break

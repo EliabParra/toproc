@@ -1,4 +1,4 @@
-import {
+import type {
     BODependencies,
     IAuditService,
     IConfig,
@@ -8,7 +8,7 @@ import {
     ISecurityService,
     ISessionService,
     IValidator,
-} from '../types/core.js'
+} from '../types/index.js'
 import { TransactionMapper } from '../core/transaction/TransactionMapper.js'
 import { PermissionGuard } from './PermissionGuard.js'
 import { TransactionExecutor } from '../core/transaction/TransactionExecutor.js'
@@ -151,19 +151,19 @@ export class SecurityService implements ISecurityService {
      * @param jsonData.objectName - Nombre del Business Object
      * @param jsonData.methodName - Nombre del método
      * @param jsonData.params - Parámetros para la función
-     * @returns {Promise<{ code: number; msg: string; [key: string]: any }>} Resultado de la ejecución
+     * @returns Resultado de la ejecución
      */
     async executeMethod(jsonData: {
         objectName: string
         methodName: string
         params: Record<string, unknown> | null | undefined
-    }): Promise<{ code: number; msg: string; [key: string]: any }> {
+    }): Promise<{ code: number; msg: string; [key: string]: unknown }> {
         try {
-            return await this.executor.execute(
+            return (await this.executor.execute(
                 jsonData.objectName,
                 jsonData.methodName,
                 jsonData.params
-            )
+            )) as { code: number; msg: string; [key: string]: unknown }
         } catch (err: unknown) {
             this.log.show({
                 type: this.log.TYPE_ERROR,

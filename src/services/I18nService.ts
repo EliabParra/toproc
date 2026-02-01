@@ -34,9 +34,7 @@ export class I18nService {
      * Obtiene los mensajes globales para el idioma actual.
      */
     get messages(): AppMessages {
-        return (this.locales[this.currentLocale] ||
-            this.locales[this.defaultLocale] ||
-            {})
+        return this.locales[this.currentLocale] || this.locales[this.defaultLocale] || {}
     }
 
     /**
@@ -71,7 +69,9 @@ export class I18nService {
         const value = this.resolveKey(data, key)
         if (!value) return key
 
-        if (typeof value === 'object' && value.msg) return this.interpolate(value.msg, params)
+        if (typeof value === 'object' && value !== null && 'msg' in value) {
+            return this.interpolate((value as { msg: string }).msg, params)
+        }
         if (typeof value === 'string') return this.interpolate(value, params)
 
         return key
@@ -97,10 +97,12 @@ export class I18nService {
     }
 
     // Legacy string-key error accessor (to avoid breaking everything at once)
-    errorKey(key: string, params?: Record<string, any>): { msg: string; code: number } {
+    errorKey(key: string, params?: Record<string, unknown>): { msg: string; code: number } {
         // Re-implement simplified legacy lookup if needed, or map to keys
         // For now, let's keep basic lookup for legacy compatibility
-        const val = this.resolveKey(this.messages, key)
+        const val = this.resolveKey(this.messages, key) as
+            | { msg?: string; code?: number }
+            | undefined
         if (!val) return { msg: key, code: 500 }
         return {
             msg: this.interpolate(val.msg || key, params),
@@ -109,14 +111,16 @@ export class I18nService {
     }
 
     get(key: string): string {
-        return this.resolveKey(this.messages, key)
+        return this.resolveKey(this.messages, key) as string
     }
 
-    private resolveKey(obj: any, key: string) {
-        return key.split('.').reduce((o, i) => (o ? o[i] : undefined), obj)
+    private resolveKey(obj: Record<string, unknown>, key: string): unknown {
+        return key
+            .split('.')
+            .reduce((o, i) => (o ? (o as Record<string, unknown>)[i] : undefined), obj as unknown)
     }
 
-    private interpolate(template: string, params?: Record<string, any>) {
+    private interpolate(template: string, params?: Record<string, unknown>) {
         if (!params) return template
         return template.replace(/\{(\w+)\}/g, (_, k) =>
             params[k] !== undefined ? String(params[k]) : `{${k}}`

@@ -1,14 +1,28 @@
-import express from 'express'
+import express, { NextFunction } from 'express'
 import path from 'path'
 import { routes, pagesPath } from './routes.js'
-import { IConfig, ILogger, II18nService } from '../../../types/core.js'
+import type {
+    IConfig,
+    ILogger,
+    II18nService,
+    ISessionService,
+    AppRequest,
+    AppResponse,
+} from '../../../types/index.js'
+
+/** Route definition type */
+interface PageRoute {
+    path: string
+    view: string
+    validateIsAuth?: boolean
+}
 
 type PagesRouterArgs = {
-    session?: { sessionExists?: (req: any) => boolean }
+    session?: Pick<ISessionService, 'sessionExists'>
     config: IConfig
     i18n: II18nService
     log: ILogger
-    routes?: any[]
+    routes?: PageRoute[]
 }
 
 /**
@@ -29,7 +43,7 @@ export function buildPagesRouter({
     const clientErrors = i18n.get('errors.client') as Record<string, { msg: string; code: number }>
     const router = express.Router()
 
-    const requireAuth = (req: any, res: any, next: any) => {
+    const requireAuth = (req: AppRequest, res: AppResponse, next: NextFunction) => {
         if (!session?.sessionExists?.(req)) {
             const returnTo = encodeURIComponent(req.originalUrl || '/')
             return res.redirect(302, `/?returnTo=${returnTo}`)
@@ -37,15 +51,16 @@ export function buildPagesRouter({
         next()
     }
 
-    activeRoutes.forEach((r: any) => {
-        const handler = (req: any, res: any) => {
+    activeRoutes.forEach((r: PageRoute) => {
+        const handler = (req: AppRequest, res: AppResponse) => {
             try {
                 const viewPath = path.join(pagesPath, 'pages', `${r.view}.html`)
                 res.status(200).sendFile(viewPath)
-            } catch (err: any) {
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : String(err)
                 log.show({
-                    type: (log as any).TYPE_ERROR,
-                    msg: `Exception in ${r.path}: ${err.message}`,
+                    type: log.TYPE_ERROR,
+                    msg: `Exception in ${r.path}: ${message}`,
                 })
                 res.status(clientErrors.unknown.code).send(clientErrors.unknown)
             }

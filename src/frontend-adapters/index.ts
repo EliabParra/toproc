@@ -1,6 +1,7 @@
-import { II18nService } from '../types/core.js'
+import type { Application } from 'express'
+import type { IConfig, ILogger, II18nService, ISessionService } from '../types/index.js'
 
-function getFrontendMode(config: any) {
+function getFrontendMode(config: IConfig) {
     const raw = String((config as any)?.app?.frontendMode ?? 'pages')
         .trim()
         .toLowerCase()
@@ -9,11 +10,11 @@ function getFrontendMode(config: any) {
 }
 
 type RegisterFrontendHostingArgs = {
-    session: any
+    session: Pick<ISessionService, 'sessionExists'>
     stage: 'preApi' | 'postApi'
-    config: any
+    config: IConfig
     i18n: II18nService
-    log: any
+    log: ILogger
 }
 
 /**
@@ -24,7 +25,7 @@ type RegisterFrontendHostingArgs = {
  * - spa mode debe ser registrado en el "postApi" stage (para que las rutas de API no sean sombreadas por el fallback SPA)
  */
 export async function registerFrontendHosting(
-    app: any,
+    app: Application,
     { session, stage, config, i18n, log }: RegisterFrontendHostingArgs
 ) {
     const mode = getFrontendMode(config)

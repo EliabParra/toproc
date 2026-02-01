@@ -1,4 +1,4 @@
-import { IAuditService, IDatabase, ILogger } from '../types/core.js'
+import type { IAuditService, IDatabase, ILogger, AppRequest } from '../types/index.js'
 import { redactSecrets } from '../utils/sanitize.js'
 
 export type AuditArgs = {
@@ -29,19 +29,19 @@ export class AuditService implements IAuditService {
     private db: IDatabase
     private logger: ILogger
 
-    constructor(deps: { db: IDatabase, logger: ILogger }) {
+    constructor(deps: { db: IDatabase; logger: ILogger }) {
         this.db = deps.db
         this.logger = deps.logger
     }
 
-    async log(req: any, args: AuditArgs): Promise<void> {
+    async log(req: AppRequest, args: AuditArgs): Promise<void> {
         const {
             action,
             objectName = null,
             methodName = null,
             tx = null,
-            user_id = req?.session?.user_id ?? null,
-            profile_id = req?.session?.profile_id ?? null,
+            user_id = req?.session?.userId ?? null,
+            profile_id = req?.session?.profileId ?? null,
             details = {},
         } = args ?? ({} as AuditArgs)
 

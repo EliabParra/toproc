@@ -62,7 +62,7 @@ export class EmailService implements IEmailService {
     mode: string
     from: string
     logIncludeSecrets: boolean
-    _transport: any
+    _transport: unknown
 
     constructor(deps: { log: ILogger; config: IConfig }) {
         this.log = deps.log
@@ -157,17 +157,17 @@ export class EmailService implements IEmailService {
         }
 
         try {
-            await this._transport.sendMail({
+            await (this._transport as { sendMail: (opts: unknown) => Promise<unknown> }).sendMail({
                 from: this.from,
                 to,
                 subject,
                 text,
             })
             return { ok: true, mode: 'smtp' }
-        } catch (err: any) {
+        } catch (err: unknown) {
             this.log.show({
                 type: this.log.TYPE_ERROR,
-                msg: `EmailService SMTP error: ${err?.message || err}`,
+                msg: `EmailService SMTP error: ${err instanceof Error ? err.message : String(err)}`,
             })
             return { ok: false, mode: 'smtp' }
         }

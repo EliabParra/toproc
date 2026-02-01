@@ -1,5 +1,5 @@
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg'
-import { IDatabase, ILogger, IConfig, II18nService } from '../types/core.js'
+import type { IDatabase, ILogger, IConfig, II18nService } from '../types/index.js'
 
 export type NamedParamsOptions = {
     strict?: boolean
@@ -137,9 +137,9 @@ export default class DBComponent implements IDatabase {
      * Executes a query from the QueryService.
      * Preferred new method for accessing queries.
      */
-    async query<T extends QueryResultRow = any>(
+    async query<T extends QueryResultRow = QueryResultRow>(
         queryDef: string | { sql: string },
-        params?: any[]
+        params?: unknown[]
     ): Promise<QueryResult<T>> {
         let sql: string
         if (typeof queryDef === 'string') {
@@ -157,7 +157,7 @@ export default class DBComponent implements IDatabase {
      * @param params - Parámetros opcionales
      * @returns {Promise<QueryResult>} Resultado de la consulta
      */
-    async exeRaw(sql: unknown, params?: unknown): Promise<QueryResult<any>> {
+    async exeRaw(sql: unknown, params?: unknown): Promise<QueryResult<Record<string, unknown>>> {
         let client: PoolClient | undefined
         try {
             if (typeof sql !== 'string' || sql.trim().length === 0) {
@@ -166,10 +166,10 @@ export default class DBComponent implements IDatabase {
             const paramsArray = buildParamsArray(params)
 
             client = await this.pool.connect()
-            return await client.query(sql, paramsArray as any[])
-        } catch (e: any) {
-            const msg = `${this.serverErrors.dbError.msg}, DBComponent.exeRaw: ${e?.message || e}`
-            this.log.show({ type: (this.log as any).TYPE_ERROR, msg })
+            return await client.query(sql, paramsArray as unknown[])
+        } catch (e: unknown) {
+            const msg = `${this.serverErrors.dbError.msg}, DBComponent.exeRaw: ${e instanceof Error ? e.message : String(e)}`
+            this.log.show({ type: this.log.TYPE_ERROR, msg })
             const err = new Error(this.serverErrors.dbError.msg) as Error & {
                 code?: unknown
                 cause?: unknown

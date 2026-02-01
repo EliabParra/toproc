@@ -16,8 +16,10 @@ import {
     IAuditService,
     IDatabase,
     II18nService,
-} from '../types/core.js'
-import type { AppRequest, AppResponse, LocalizedMessages } from '../types/index.js'
+    AppRequest,
+    AppResponse,
+    LocalizedMessages,
+} from '../types/index.js'
 import { registerFrontendHosting } from '../frontend-adapters/index.js'
 
 // Middlewares consolidados
@@ -38,6 +40,7 @@ import {
     createLoginRateLimiter,
     createToProccessRateLimiter,
     createAuthPasswordResetRateLimiter,
+    ClientErrors,
 } from './http/rate-limit/index.js'
 
 // Handlers
@@ -146,9 +149,9 @@ export class Dispatcher {
         } as any)
 
         // Inicializar rate limiters
-        this.loginRateLimiter = createLoginRateLimiter(this.clientErrors)
+        this.loginRateLimiter = createLoginRateLimiter(this.clientErrors as unknown as ClientErrors)
         this.authPasswordResetRateLimiter = createAuthPasswordResetRateLimiter(
-            this.clientErrors,
+            this.clientErrors as unknown as ClientErrors,
             this.security
         )
     }
@@ -158,7 +161,9 @@ export class Dispatcher {
      */
     public get toProccessRateLimiter(): RequestHandler {
         if (!this._toProccessRateLimiter) {
-            this._toProccessRateLimiter = createToProccessRateLimiter(this.clientErrors)
+            this._toProccessRateLimiter = createToProccessRateLimiter(
+                this.clientErrors as unknown as ClientErrors
+            )
         }
         return this._toProccessRateLimiter
     }

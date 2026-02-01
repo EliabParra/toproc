@@ -1,6 +1,5 @@
 import { ZodType, ZodError, ZodIssue } from 'zod'
-import { IValidator, II18nService } from '../types/core.js'
-import type { ValidationResult, ValidationError } from '../types/api.js'
+import type { IValidator, II18nService, ValidationResult, ValidationError } from '../types/index.js'
 
 // Interface compatible with ZodIssue to avoid strict type mismatch issues
 interface ZodIssueCompatible {
@@ -104,7 +103,12 @@ export class AppValidator implements IValidator {
     /**
      * Legacy method for compatibility if needed
      */
-    format(msg: string, ...args: any[]): string {
-        return this.i18n.format(msg, ...args)
+    format(msg: string, ...args: unknown[]): string {
+        // Compatibility: validation errors usually don't have params, or use object
+        const params =
+            args.length > 0 && typeof args[0] === 'object'
+                ? (args[0] as Record<string, unknown>)
+                : undefined
+        return this.i18n.format(msg, params)
     }
 }

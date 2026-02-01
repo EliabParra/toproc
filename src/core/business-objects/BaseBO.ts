@@ -1,7 +1,13 @@
 import { ZodType } from 'zod'
-import { IDatabase, ILogger, IConfig, IValidator, II18nService } from '../../types/core.js'
-import type { BODependencies } from '../../types/core.js'
-import type { ApiResponse } from '../../types/api.js'
+import type {
+    IDatabase,
+    ILogger,
+    IConfig,
+    IValidator,
+    II18nService,
+    BODependencies,
+    ApiResponse,
+} from '../../types/index.js'
 
 export type { BODependencies }
 
@@ -175,7 +181,7 @@ export abstract class BaseBO {
      */
     protected validate<T>(
         data: unknown,
-        schema: any
+        schema: unknown
     ): { ok: true; data: T } | { ok: false; alerts: string[] } {
         const result = this.v.validate<T>(data, schema)
         if (result.valid && result.data) {
