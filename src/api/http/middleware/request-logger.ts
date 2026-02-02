@@ -11,10 +11,13 @@ import { redactSecrets } from '../../../utils/sanitize.js'
  * - Duración en ms
  * - Request ID para trazabilidad
  * - Usuario y perfil (si hay sesión)
+ * - **Body**: Sanitizado automáticamente (oculta passwords y tokens).
  *
  * Evita duplicar logs de errores si ya fueron registrados por otros capturadores
  * (usando `res.locals.__errorLogged`).
  *
+ * @param app - Instancia de la aplicación Express.
+ * @param log - Instancia del logger para registrar los eventos.
  */
 export function applyRequestLogger(app: Express, log: ILogger) {
     // Log completed responses with duration and requestId.

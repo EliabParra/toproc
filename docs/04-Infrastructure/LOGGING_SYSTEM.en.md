@@ -5,35 +5,56 @@ Our system distinguishes between **Technical Logs** (for devs) and **Audit Logs*
 
 ## 1. Technical Logs (`AppLogger`)
 
-`AppLogger` writes to `stdout` (Standard Output). Designed for containerized environments (Docker/K8s).
+The `AppLogger` writes to `stdout` (Standard Output). It is designed for containerized environments (Docker/K8s) and follows the 12-Factor App methodology.
 
 ### Stream Architecture
 
-We don't write files (`server.log`).
-**Reason**: Log rotation, compression, and shipping is infrastructure responsibility (AWS CloudWatch, Datadog, ELK), not Node.js.
+We do not write local files (like `server.log`).
+**Reason**: Log rotation, compression, and shipping is the responsibility of the infrastructure (AWS CloudWatch, Datadog, ELK), not Node.js.
 
-### Log Levels
+### Log Levels (Standard Hierarchy)
 
-Configurable in `.env` via `LOG_ACTIVATION=[error, info, debug, warn]`.
+Configurable in `config.json` or via environment variables. We support 6 hierarchical levels (simplified RFC 5424):
 
-- **ERROR (0)**: Critical failures. Always active.
-- **INFO (1)**: Lifecycle events (Server start).
-- **DEBUG (2)**: Raw data for dev. **Turn off in Production**.
-- **WARN (3)**: Non-critical anomalies.
+| Level        | Value | Description                                                              |
+| ------------ | ----- | ------------------------------------------------------------------------ |
+| **CRITICAL** | 60    | Fatal errors. System cannot continue or requires immediate intervention. |
+| **ERROR**    | 50    | Operation failures (request level) that do not crash the entire service. |
+| **WARN**     | 40    | Anomalies (retries, missing non-critical data).                          |
+| **INFO**     | 30    | Normal events (Server start, Request completed). (Default PROD)          |
+| **DEBUG**    | 20    | Diagnostics for developers.                                              |
+| **TRACE**    | 10    | Extreme granularity (loops, internal variables).                         |
 
-### Context (`ctx`)
+### Configuration (`config.json`)
 
-A log without context is noise. Framework automatically injects metadata.
+The system supports granular configuration by categories (modules) and formatting:
+
+```json
+"log": {
+  "minLevel": "info",
+  "format": "json", // 'text' (colors) or 'json' (structured)
+  "categories": {
+    "Database": "warn",
+    "Security": "debug"
+  }
+}
+```
+
+### Automatic Context (`AsyncLocalStorage`)
+
+Thanks to `AsyncLocalStorage`, there is no need to manually pass `requestId` through all layers. The logger injects it automatically.
+
+**Example Output (JSON):**
 
 ```json
 {
-    "level": "error",
-    "msg": "DB Connection Timeout",
+    "time": "2023-10-27T10:00:00Z",
+    "level": "info",
+    "msg": "Transaction completed",
     "ctx": {
         "requestId": "req-12345",
-        "tx": 1001,
-        "user": "admin",
-        "path": "/toProccess"
+        "durationMs": 45,
+        "category": "Transaction"
     }
 }
 ```

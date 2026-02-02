@@ -3,11 +3,15 @@ import { Express, NextFunction } from 'express'
 import { AppRequest, AppResponse } from '../../../types/index.js'
 
 /**
- * Middleware para asignar un ID único a cada petición (Request ID).
+ * Middleware para asignar y trazar un ID único por petición (Request ID).
  *
- * Utiliza `X-Request-Id` si viene en el header, o genera uno nuevo (UUID v4).
- * Adjunta el ID al objeto `req` y al header de respuesta.
+ * Responsabilidades:
+ * 1. Genera un UUID v4 o respeta el header `X-Request-Id` entrante.
+ * 2. Asigna el ID al objeto `req` y al header de respuesta.
+ * 3. **Inicia el contexto global de logging** (`AsyncLocalStorage`) para que todos los logs
+ *    subsiguientes incluyan este ID automáticamente.
  *
+ * @param app - Instancia de la aplicación Express.
  */
 import { loggerContext } from '../../../services/LoggerService.js'
 
