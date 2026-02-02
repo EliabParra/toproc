@@ -1,15 +1,20 @@
 import { ZodType } from 'zod'
+import { BOError, isBOError } from './BOError.js'
 import type {
     IDatabase,
     ILogger,
     IConfig,
     IValidator,
     II18nService,
+    ISessionService,
+    ISecurityService,
+    IAuditService,
     BODependencies,
     ApiResponse,
     TxKey,
     ValidationError,
     AppMessages,
+    AppRequest,
 } from '../../types/index.js'
 
 export type { BODependencies }
@@ -61,6 +66,15 @@ export abstract class BaseBO {
     /** Servicio i18n */
     protected readonly i18n: II18nService
 
+    /** Servicio de seguridad (opcional) */
+    protected readonly security?: ISecurityService
+
+    /** Servicio de sesiones (opcional) */
+    protected readonly session?: ISessionService
+
+    /** Servicio de auditoría (opcional) */
+    protected readonly audit?: IAuditService
+
     /** Acceso tipado a mensajes de aplicación */
     protected get appMessages(): AppMessages {
         return this.i18n.messages
@@ -81,6 +95,9 @@ export abstract class BaseBO {
         this.config = deps.config
         this.validator = deps.validator
         this.i18n = deps.i18n
+        this.security = deps.security
+        this.session = deps.session
+        this.audit = deps.audit
     }
 
     /**
@@ -90,7 +107,7 @@ export abstract class BaseBO {
      * @param key - Clave de traducción
      * @param params - Parámetros de interpolación
      */
-    protected translate(key: TxKey | (string & {}), params?: Record<string, any>): string {
+    protected translate(key: TxKey | (string & {}), params?: Record<string, unknown>): string {
         return this.i18n.translate(key, params)
     }
 
@@ -144,8 +161,50 @@ export abstract class BaseBO {
      * return this.error('Conexión a BD fallida', 503, ['Verificar estado de BD'])
      * ```
      */
-    protected error(msg: string, code = 500, alerts: string[] = []): ApiResponse {
-        return { code, msg, alerts }
+    protected error(msg: TxKey | (string & {}), code = 500, alerts: string[] = []): ApiResponse {
+        return { code, msg: this.translate(msg), alerts }
+    }
+
+    /**
+     * Alias explícito para respuestas exitosas (HTTP 200).
+     */
+    protected ok<T>(data: T, msg: TxKey | (string & {}) = 'OK'): ApiResponse<T> {
+        return this.success(data, msg)
+    }
+
+    /**
+     * Respuesta sin contenido (HTTP 204).
+     */
+    protected noContent(msg: TxKey | (string & {}) = 'OK'): ApiResponse<null> {
+        return { code: 204, msg: this.translate(msg), data: null }
+    }
+
+    /**
+     * Respuestas de error estándar.
+     */
+    protected badRequest(
+        msg: TxKey | (string & {}) = 'errors.server.badRequest',
+        alerts: string[] = []
+    ): ApiResponse {
+        return this.error(msg, 400, alerts)
+    }
+
+    protected unauthorized(msg: TxKey | (string & {}) = 'errors.server.unauthorized'): ApiResponse {
+        return this.error(msg, 401)
+    }
+
+    protected forbidden(msg: TxKey | (string & {}) = 'errors.server.forbidden'): ApiResponse {
+        return this.error(msg, 403)
+    }
+
+    protected notFound(msg: TxKey | (string & {}) = 'errors.server.notFound'): ApiResponse {
+        return this.error(msg, 404)
+    }
+
+    protected conflict(
+        msg: TxKey | (string & {}) = 'errors.client.invalidParameters'
+    ): ApiResponse {
+        return this.error(msg, 409)
     }
 
     /**
@@ -189,7 +248,7 @@ export abstract class BaseBO {
      */
     protected validate<T>(
         data: unknown,
-        schema: unknown
+        schema: ZodType<T>
     ): { ok: true; data: T } | { ok: false; alerts: string[]; errors: ValidationError[] } {
         const result = this.validator.validate<T>(data, schema)
         if (result.valid && result.data) {
@@ -198,9 +257,7 @@ export abstract class BaseBO {
 
         const errors = result.errors || []
         // ValidatorService already translates messages, no need to re-translate here
-        const alerts = result.errors?.map((e: { message: string }) => e.message) || [
-            'Error de validación desconocido',
-        ]
+        const alerts = result.errors?.map((e) => e.message) || ['Error de validación desconocido']
         return { ok: false, alerts, errors }
     }
     /**
@@ -232,27 +289,148 @@ export abstract class BaseBO {
 
             return await fn(params)
         } catch (error) {
-            return this.safeCatch(error) as any
+            return this.safeCatch(error) as ApiResponse<TOut>
         }
+    }
+
+    /**
+     * Ejecuta una operación de negocio sin esquema de validación.
+     */
+    protected async execRaw<TIn, TOut>(
+        params: TIn,
+        fn: (data: TIn) => Promise<ApiResponse<TOut>>
+    ): Promise<ApiResponse<TOut>> {
+        return this.exec(params, null, fn)
     }
 
     /**
      * Maneja errores de forma segura, detectando si son BOErrors conocidos.
      */
     protected safeCatch(error: unknown): ApiResponse {
-        // Importación dinámica suave para evitar ciclos si BOError llega a depender de BaseBO (aunque no debería)
-        // Pero para simplificar, asumimos que el usuario comprobará 'code' y 'tag' si existen
-        const anyErr = error as any
+        const anyErr = error as { code?: number; msg?: string; tag?: string; message?: string }
 
         // Si ya tiene estructura de respuesta (e.g. lanzado como objeto), úsalo
-        if (anyErr.code && anyErr.msg && !anyErr.tag) return anyErr
+        if (typeof anyErr?.code === 'number' && typeof anyErr?.msg === 'string' && !anyErr.tag) {
+            return anyErr as ApiResponse
+        }
 
-        // Si es un BOError (tiene tag y code)
-        if (anyErr.tag && anyErr.code) {
-            return this.error(this.translate(anyErr.message), anyErr.code)
+        if (isBOError(error)) {
+            return this.error(error.key, error.code)
         }
 
         this.log.error('BaseBO Exception', error as Error)
-        return this.error('Error interno del servidor', 500)
+        return this.error('errors.server.serverError', 500)
+    }
+
+    /**
+     * Sanitiza identificadores SQL básicos (tabla/columna).
+     */
+    protected safeIdentifier(name: string, kind: 'table' | 'column'): string {
+        if (!/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(name)) {
+            throw new BOError('errors.client.invalidParameters', `db.invalid.${kind}`, 400, {
+                name,
+            })
+        }
+
+        return name
+    }
+
+    /**
+     * Valida sesión activa usando SessionService si está disponible.
+     */
+    protected requireSession(
+        req: AppRequest,
+        msg: TxKey | (string & {}) = 'errors.client.login'
+    ): void {
+        if (!this.session) {
+            throw new BOError('errors.server.serverError', 'auth.session.missing', 500)
+        }
+
+        if (!this.session.sessionExists(req)) {
+            throw new BOError(msg, 'auth.session.required', 401)
+        }
+    }
+
+    /**
+     * Valida permisos de acceso usando SecurityService si está disponible.
+     */
+    protected requirePermission(data: {
+        profileId: number
+        objectName: string
+        methodName: string
+    }): void {
+        if (!this.security) {
+            throw new BOError('errors.server.serverError', 'security.missing', 500)
+        }
+
+        const allowed = this.security.getPermissions(data)
+        if (!allowed) {
+            throw new BOError('errors.client.permissionDenied', 'security.permission.denied', 403)
+        }
+    }
+
+    /**
+     * Valida roles básicos con una lista blanca de perfiles.
+     */
+    protected requireRole(profileId: number, allowed: number[]): void {
+        if (!allowed.includes(profileId)) {
+            throw new BOError('errors.client.permissionDenied', 'security.role.denied', 403)
+        }
+    }
+
+    /**
+     * Normaliza parámetros de paginación.
+     */
+    protected parsePagination(
+        params: {
+            limit?: number
+            offset?: number
+            maxLimit?: number
+            defaultLimit?: number
+        } = {}
+    ): { limit: number; offset: number } {
+        const defaultLimit = params.defaultLimit ?? 20
+        const maxLimit = params.maxLimit ?? 100
+        const rawLimit = Number(params.limit ?? defaultLimit)
+        const rawOffset = Number(params.offset ?? 0)
+        const limit = Math.min(Math.max(rawLimit, 1), maxLimit)
+        const offset = Math.max(rawOffset, 0)
+        return { limit, offset }
+    }
+
+    /**
+     * Estructura estándar de paginación.
+     */
+    protected paginate<T>(
+        items: T[],
+        total: number,
+        limit: number,
+        offset: number
+    ): {
+        items: T[]
+        meta: {
+            total: number
+            limit: number
+            offset: number
+            page: number
+            pageCount: number
+            hasNext: boolean
+            hasPrev: boolean
+        }
+    } {
+        const page = Math.floor(offset / limit) + 1
+        const pageCount = Math.max(1, Math.ceil(total / limit))
+        return {
+            items,
+            meta: {
+                total,
+                limit,
+                offset,
+                page,
+                pageCount,
+                hasNext: offset + items.length < total,
+                hasPrev: offset > 0,
+            },
+        }
     }
 }

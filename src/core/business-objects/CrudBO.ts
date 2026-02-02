@@ -25,11 +25,12 @@ export abstract class CrudBO<T, TCreate = T, TUpdate = Partial<T>> extends BaseB
             id,
             null, // No validamos el ID simple aquí, asumimos que viene limpio o validar en ruta
             async (cleanId): Promise<ApiResponse<T>> => {
-                const res = await this.db.exeRaw(
-                    `SELECT * FROM ${this.tableName} WHERE ${this.idColumn} = $1`,
-                    [cleanId]
-                )
-                if (res.rows.length === 0) return this.error('No encontrado', 404) as ApiResponse<T>
+                const table = this.safeIdentifier(this.tableName, 'table')
+                const idColumn = this.safeIdentifier(this.idColumn, 'column')
+                const res = await this.db.exeRaw(`SELECT * FROM ${table} WHERE ${idColumn} = $1`, [
+                    cleanId,
+                ])
+                if (res.rows.length === 0) return this.notFound() as ApiResponse<T>
                 return this.success(res.rows[0] as T)
             }
         )
@@ -41,9 +42,14 @@ export abstract class CrudBO<T, TCreate = T, TUpdate = Partial<T>> extends BaseB
     async list(limit = 20, offset = 0): Promise<ApiResponse<T[]>> {
         // Podríamos usar exec aquí también, pero list suele requerir validación de query params
         try {
-            const res = await this.db.exeRaw(`SELECT * FROM ${this.tableName} LIMIT $1 OFFSET $2`, [
+            const table = this.safeIdentifier(this.tableName, 'table')
+            const { limit: safeLimit, offset: safeOffset } = this.parsePagination({
                 limit,
                 offset,
+            })
+            const res = await this.db.exeRaw(`SELECT * FROM ${table} LIMIT $1 OFFSET $2`, [
+                safeLimit,
+                safeOffset,
             ])
             return this.success(res.rows as T[])
         } catch (e) {
@@ -56,10 +62,10 @@ export abstract class CrudBO<T, TCreate = T, TUpdate = Partial<T>> extends BaseB
      */
     async delete(id: number | string): Promise<ApiResponse<void>> {
         return this.exec<number | string, void>(id, null, async (cleanId) => {
-            await this.db.exeRaw(`DELETE FROM ${this.tableName} WHERE ${this.idColumn} = $1`, [
-                cleanId,
-            ])
-            return this.success(undefined, 'Eliminado')
+            const table = this.safeIdentifier(this.tableName, 'table')
+            const idColumn = this.safeIdentifier(this.idColumn, 'column')
+            await this.db.exeRaw(`DELETE FROM ${table} WHERE ${idColumn} = $1`, [cleanId])
+            return this.noContent('success.delete')
         })
     }
 }
