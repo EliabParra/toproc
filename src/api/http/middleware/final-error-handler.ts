@@ -1,5 +1,11 @@
 import { redactSecretsInString } from '../../../utils/sanitize.js'
-import { ILogger, LocalizedMessage, AppRequest, AppResponse, LocalizedMessages } from '../../../types/index.js'
+import {
+    ILogger,
+    LocalizedMessage,
+    AppRequest,
+    AppResponse,
+    LocalizedMessages,
+} from '../../../types/index.js'
 import { NextFunction } from 'express'
 
 export type FinalErrorHandlerArgs = {
@@ -74,23 +80,19 @@ export function createFinalErrorHandler({
             res.locals.__errorLogged = true
         } catch {}
 
-        log.show({
-            type: log.TYPE_ERROR,
-            msg: `${serverErrors.serverError.msg}, unhandled: ${safeErrorMessage}`,
-            ctx: {
-                requestId: req.requestId,
-                method: req.method,
-                path: req.originalUrl,
-                status,
-                user_id: req.session?.userId,
-                profile_id: req.session?.profileId,
-                durationMs:
-                    typeof req.requestStartMs === 'number'
-                        ? Date.now() - req.requestStartMs
-                        : undefined,
-                errorName,
-                errorCode,
-            },
+        log.error(`${serverErrors.serverError.msg}, unhandled: ${safeErrorMessage}`, {
+            requestId: req.requestId,
+            method: req.method,
+            path: req.originalUrl,
+            status,
+            user_id: req.session?.userId,
+            profile_id: req.session?.profileId,
+            durationMs:
+                typeof req.requestStartMs === 'number'
+                    ? Date.now() - req.requestStartMs
+                    : undefined,
+            errorName,
+            errorCode,
         })
 
         return res.status(status).send({

@@ -222,7 +222,7 @@ export class ${pascalName}Service extends BOService {
      * Crea nuevo ${pascalName.toLowerCase()}
      */
     async create(data: Partial<${pascalName}>): Promise<${pascalName} | null> {
-        this.log.show({ type: this.log.TYPE_INFO, msg: \`Creando ${pascalName.toLowerCase()}\` })
+        this.log.info(\`Creando ${pascalName.toLowerCase()}\`)
         return this.repo.create(data)
     }
 
@@ -247,7 +247,7 @@ export class ${pascalName}Service extends BOService {
         if (!deleted) {
             throw new ${pascalName}NotFoundError(id)
         }
-        this.log.show({ type: this.log.TYPE_INFO, msg: \`Eliminado ${pascalName.toLowerCase()} \${id}\` })
+        this.log.info(\`Eliminado ${pascalName.toLowerCase()} \${id}\`)
     }
 }
 `

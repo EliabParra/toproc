@@ -63,10 +63,7 @@ export function applySessionMiddleware(app: Express, deps: Dependencies) {
     // 1. Normalizar configuración
     const rawSessionConfig = config.session as SessionConfig | undefined
     if (!rawSessionConfig) {
-        log.show({
-            type: log.TYPE_WARNING,
-            msg: 'Configuración de sesión no encontrada, se usarán valores por defecto inseguros.',
-        })
+        log.warn('Configuración de sesión no encontrada, se usarán valores por defecto inseguros.')
     }
 
     const sessionOptions = buildSessionOptions(
@@ -112,10 +109,9 @@ function buildSessionOptions(config: SessionConfig, log: ILogger): SessionOption
 
     // Validación de seguridad para cookies SameSite=None
     if (cookie.sameSite === 'none' && !cookie.secure) {
-        log.show({
-            type: log.TYPE_WARNING,
-            msg: 'Cookie de sesión tiene sameSite="none" sin secure=true. Los navegadores rechazarán esta cookie.',
-        })
+        log.warn(
+            'Cookie de sesión tiene sameSite="none" sin secure=true. Los navegadores rechazarán esta cookie.'
+        )
     }
 
     return {

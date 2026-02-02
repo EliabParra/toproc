@@ -23,7 +23,7 @@ export class AuthService extends BOService {
     }
 
     async register(data: RegisterData): Promise<User> {
-        this.log.show({ type: this.log.TYPE_INFO, msg: 'Creating new user: ' + data.email })
+        this.log.info('Creating new user: ' + data.email)
 
         const exists = await this.repo.getUserBaseByEmail(data.email)
         if (exists) {

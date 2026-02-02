@@ -43,11 +43,10 @@ export class AuthorizationService {
         const authorized = this.guard.check(profileId, objectName, methodName)
 
         if (!authorized) {
-            this.log.show({
-                type: this.log.TYPE_WARNING,
-                msg: `AUTHZ: Access Denied for Profile ${profileId} on ${objectName}.${methodName}`,
-                ctx: { profileId, objectName, methodName },
-            })
+            this.log.warn(
+                `AUTHZ: Access Denied for Profile ${profileId} on ${objectName}.${methodName}`,
+                { profileId, objectName, methodName }
+            )
         }
 
         return authorized

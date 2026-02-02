@@ -19,10 +19,7 @@ export class PageController {
                 res.status(200).sendFile(viewPath)
             } catch (err: unknown) {
                 const message = err instanceof Error ? err.message : String(err)
-                this.log.show({
-                    type: this.log.TYPE_ERROR,
-                    msg: `Exception serving ${view}: ${message}`,
-                })
+                this.log.error(`Exception serving ${view}: ${message}`)
 
                 const error = this.i18n.messages.errors.client.unknown || {
                     code: 500,

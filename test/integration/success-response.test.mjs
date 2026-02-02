@@ -5,7 +5,7 @@ import { BaseBO } from '../../src/core/business-objects/BaseBO.js'
 // Mock dependencies
 const mockDeps = {
     db: {},
-    log: { TYPE_ERROR: 1, show: () => {} },
+    log: { info: () => {}, error: () => {} },
     config: {},
     validator: { validate: (d) => ({ valid: true, data: d }) },
     i18n: {

@@ -20,8 +20,9 @@ const mockDb = {
     },
 }
 const mockLog = {
-    TYPE_ERROR: 0,
-    show: () => {},
+    info: () => {},
+    error: () => {},
+    warn: () => {},
 }
 const mockConfig = {
     bo: { path: '../../test/mocks/BO/' }, // Point to test BOs
@@ -31,6 +32,15 @@ const mockI18n = {
     translate: (key) => key,
     error: (key) => ({ msg: key, code: 500 }),
     get: (key) => undefined,
+    get messages() {
+        return {
+            errors: {
+                server: {
+                    serverError: { msg: 'Server Error', code: 500 },
+                },
+            },
+        }
+    },
 }
 
 describe('SecurityService Integration', async () => {

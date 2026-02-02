@@ -30,7 +30,7 @@ interface TransactionControllerDeps {
  * Maneja el endpoint principal `/toProccess` que orquesta la ejecución
  * de métodos de negocio (BOs) basada en códigos de transacción (TX).
  */
-export class TransactionController {
+export class  TransactionController {
     private orchestrator: TransactionOrchestrator
     private session: ISessionService
     private config: IConfig

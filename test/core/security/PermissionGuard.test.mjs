@@ -16,9 +16,13 @@ test('PermissionGuard Unit Tests', async (t) => {
             },
         }
         const mockLog = {
-            TYPE_INFO: 1,
-            TYPE_ERROR: 2,
-            show: () => {},
+            trace: () => {},
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            critical: () => {},
+            child: () => mockLog,
         }
 
         const guard = new PermissionGuard(mockDb, mockLog)
@@ -30,7 +34,16 @@ test('PermissionGuard Unit Tests', async (t) => {
     })
 
     await t.test('check() should return false for invalid inputs', async () => {
-        const guard = new PermissionGuard({}, { show: () => {} })
+        const mockLog = {
+            trace: () => {},
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            critical: () => {},
+            child: () => mockLog,
+        }
+        const guard = new PermissionGuard({}, mockLog)
         // Pre-load empty to avoid error if load called
         // In this case we test check directly knowing internal set is empty
         assert.equal(guard.check(null, 'Auth', 'login'), false)
@@ -46,10 +59,15 @@ test('PermissionGuard Unit Tests', async (t) => {
         }
         let loggedError = null
         const mockLog = {
-            TYPE_ERROR: 2,
-            show: (entry) => {
-                loggedError = entry
+            trace: () => {},
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: (entry) => {
+                loggedError = { msg: entry }
             },
+            critical: () => {},
+            child: () => mockLog,
         }
 
         const guard = new PermissionGuard(mockDb, mockLog)

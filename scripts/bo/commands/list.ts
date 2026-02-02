@@ -4,7 +4,7 @@ export class ListCommand {
     constructor(private ctx: Context) {}
 
     async run() {
-        this.ctx.log.show({ type: this.ctx.log.TYPE_INFO, msg: 'Listing BOs...' })
+        this.ctx.log.info('Listing BOs...')
         await this.ctx.ensureGlobals()
 
         const res = await this.ctx.db.exeRaw(

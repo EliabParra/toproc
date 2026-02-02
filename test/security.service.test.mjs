@@ -61,7 +61,13 @@ test('Security.init loads permissions + tx map and sets isReady', async () => {
             globalThis.log = {
                 TYPE_ERROR: 'error',
                 TYPE_INFO: 'info',
-                show: (e) => logs.push(e),
+                info: (e) => logs.push(e),
+                error: (e) => logs.push(e),
+                warn: (e) => logs.push(e),
+                trace: () => {},
+                debug: () => {},
+                critical: () => {},
+                child: () => ({}),
             }
 
             globalThis.db = {
@@ -133,9 +139,13 @@ test('Security.init captures initError and rejects ready when DB fails', async (
 
             const logs = []
             globalThis.log = {
-                TYPE_ERROR: 'error',
-                TYPE_INFO: 'info',
-                show: (e) => logs.push(e),
+                trace: () => {},
+                debug: () => {},
+                info: (msg) => logs.push({ msg }),
+                warn: (msg) => logs.push({ msg }),
+                error: (msg) => logs.push({ msg }),
+                critical: () => {},
+                child: () => ({}),
             }
 
             globalThis.db = {
@@ -199,7 +209,15 @@ test('Security.executeMethod dynamically imports BO and caches the instance', as
 
                 globalThis.config = { app: { lang: 'en' }, bo: { path: '../../BO/' } }
                 globalThis.i18n = createMockI18n()
-                globalThis.log = { TYPE_ERROR: 'error', TYPE_INFO: 'info', show: () => {} }
+                globalThis.log = {
+                    trace: () => {},
+                    debug: () => {},
+                    info: () => {},
+                    warn: () => {},
+                    error: () => {},
+                    critical: () => {},
+                    child: () => ({}),
+                }
                 globalThis.db = {
                     query: async (sql) => {
                         if (sql.includes('permission_methods')) return { rows: [] }
@@ -252,9 +270,13 @@ test('Security.executeMethod returns serverError and logs when BO import fails',
 
             const logs = []
             globalThis.log = {
-                TYPE_ERROR: 'error',
-                TYPE_INFO: 'info',
-                show: (e) => logs.push(e),
+                trace: () => {},
+                debug: () => {},
+                info: (e) => logs.push(e),
+                warn: (e) => logs.push(e),
+                error: (e) => logs.push(e),
+                critical: () => {},
+                child: () => ({}),
             }
 
             globalThis.db = {
@@ -284,7 +306,9 @@ test('Security.executeMethod returns serverError and logs when BO import fails',
             })
             assert.deepEqual(r, mockLocaleData.errors.server.serverError)
             assert.ok(
-                logs.some((l) => String(l?.msg ?? '').includes('SecurityService.executeMethod'))
+                logs.some((l) =>
+                    (typeof l === 'string' ? l : l.msg).includes('SecurityService.executeMethod')
+                )
             )
         }
     )

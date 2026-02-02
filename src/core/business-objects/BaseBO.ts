@@ -252,7 +252,7 @@ export abstract class BaseBO {
             return this.error(this.translate(anyErr.message), anyErr.code)
         }
 
-        this.log.show({ type: this.log.TYPE_ERROR, msg: 'BaseBO Exception', ctx: error })
+        this.log.error('BaseBO Exception', error as Error)
         return this.error('Error interno del servidor', 500)
     }
 }

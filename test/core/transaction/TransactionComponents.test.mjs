@@ -17,9 +17,13 @@ describe('Transaction Core Components', () => {
             }
             const logs = []
             const mockLog = {
-                TYPE_INFO: 1,
-                TYPE_ERROR: 2,
-                show: (l) => logs.push(l),
+                trace: () => {},
+                debug: () => {},
+                info: (l) => logs.push({ ...l, msg: l }), // Adapt msg to string
+                warn: () => {},
+                error: () => {},
+                critical: () => {},
+                child: () => mockLog,
             }
 
             const mapper = new TransactionMapper(mockDb, mockLog)
@@ -33,7 +37,15 @@ describe('Transaction Core Components', () => {
     })
 
     describe('TransactionExecutor', () => {
-        const mockLog = { TYPE_ERROR: 2, show: () => {} }
+        const mockLog = {
+            trace: () => {},
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            critical: () => {},
+            child: () => mockLog,
+        }
         const mockConfig = { bo: { path: 'BO/' } }
         // Base Path simulation
         const cwd = process.cwd()

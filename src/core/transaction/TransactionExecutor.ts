@@ -79,10 +79,9 @@ export class TransactionExecutor implements ITransactionExecutor {
         // 2. Verificar que la ruta resultante sigue estando dentro de boBasePath
         // Previene ataques tipo "param: ../../etc/passwd" aunque validación previa fallase
         if (!expectedPath.startsWith(this.boBasePath)) {
-            this.deps.log.show({
-                type: this.deps.log.TYPE_ERROR,
-                msg: `SECURITY: Path Traversal attempt detected. ObjectName: ${objectName}`,
-            })
+            this.deps.log.error(
+                `SECURITY: Path Traversal attempt detected. ObjectName: ${objectName}`
+            )
             throw new Error('Access Denied: Invalid Object Path')
         }
 
@@ -107,10 +106,9 @@ export class TransactionExecutor implements ITransactionExecutor {
             return { instance }
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err)
-            this.deps.log.show({
-                type: this.deps.log.TYPE_ERROR,
-                msg: `Fallo en carga de BO ${objectName}: ${msg}`,
-                ctx: { objectName, path: expectedPath },
+            this.deps.log.error(`Fallo en carga de BO ${objectName}: ${msg}`, {
+                objectName,
+                path: expectedPath,
             })
             throw err
         }

@@ -7,8 +7,8 @@ import { z } from 'zod'
 const mockDeps = {
     db: {},
     log: {
-        TYPE_ERROR: 1,
-        show: () => {},
+        info: () => {},
+        error: () => {},
     },
     config: {},
     validator: {

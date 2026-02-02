@@ -52,10 +52,7 @@ export class TransactionMapper implements ITransactionMapper {
             const result = await this.db.query<TxRow>(TxQueries.loadDataTx)
 
             if (!result || !result.rows) {
-                this.log.show({
-                    type: this.log.TYPE_ERROR,
-                    msg: 'TransactionMapper: loadDataTx no retornó filas',
-                })
+                this.log.error('TransactionMapper: loadDataTx no retornó filas')
                 return
             }
 
@@ -72,16 +69,10 @@ export class TransactionMapper implements ITransactionMapper {
                 }
             }
 
-            this.log.show({
-                type: this.log.TYPE_INFO,
-                msg: `TransactionMapper: Carga exitosa de ${this.txMap.size} transacciones`,
-            })
+            this.log.info(`TransactionMapper: Carga exitosa de ${this.txMap.size} transacciones`)
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err)
-            this.log.show({
-                type: this.log.TYPE_ERROR,
-                msg: `TransactionMapper.load error: ${msg}`,
-            })
+            this.log.error(`TransactionMapper.load error: ${msg}`)
             throw err
         }
     }

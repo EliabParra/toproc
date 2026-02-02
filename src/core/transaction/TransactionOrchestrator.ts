@@ -87,11 +87,7 @@ export class TransactionOrchestrator {
             return result
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err)
-            this.log.show({
-                type: this.log.TYPE_ERROR,
-                msg: `Transaction execution failed: ${msg}`,
-                ctx: { tx, objectName, methodName },
-            })
+            this.log.error(`Transaction execution failed: ${msg}`, { tx, objectName, methodName })
             await this.auditLog(context, 'EXECUTE_ERROR', route, { error: msg })
             return this.errorResponse('server.serverError', 500)
         }
@@ -102,7 +98,7 @@ export class TransactionOrchestrator {
         code: number,
         logMsg?: string
     ) {
-        if (logMsg) this.log.show({ type: this.log.TYPE_ERROR, msg: logMsg })
+        if (logMsg) this.log.error(logMsg)
 
         // Uso simplificado de i18n error para mantener compatibilidad con respuesta API
         // Asumimos que i18n.error puede resolver keys
@@ -127,7 +123,7 @@ export class TransactionOrchestrator {
                 details,
             })
         } catch (e) {
-            this.log.show({ type: this.log.TYPE_ERROR, msg: 'Failed to audit log', ctx: e })
+            this.log.error('Failed to audit log', e as Error)
         }
     }
 }

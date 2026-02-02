@@ -101,10 +101,10 @@ export class SecurityService implements ISecurityService {
                 this.isReady = true
                 return true
             } catch (err: unknown) {
-                this.log.show({
-                    type: this.log.TYPE_ERROR,
-                    msg: `${this.i18n.messages.errors.server.serverError.msg}, SecurityService.init: ${err instanceof Error ? err.message : String(err)}`,
-                })
+                this.log.error(
+                    `${this.i18n.messages.errors.server.serverError.msg}, SecurityService.init: ${err instanceof Error ? err.message : String(err)}`,
+                    err as Error
+                )
                 throw err
             }
         })()
@@ -161,14 +161,13 @@ export class SecurityService implements ISecurityService {
                 jsonData.params
             )) as { code: number; msg: string; [key: string]: unknown }
         } catch (err: unknown) {
-            this.log.show({
-                type: this.log.TYPE_ERROR,
-                msg: `${this.i18n.messages.errors.server.serverError.msg}, SecurityService.executeMethod: ${err instanceof Error ? err.message : String(err)}`,
-                ctx: {
+            this.log.error(
+                `${this.i18n.messages.errors.server.serverError.msg}, SecurityService.executeMethod: ${err instanceof Error ? err.message : String(err)}`,
+                {
                     objectName: jsonData.objectName,
                     methodName: jsonData.methodName,
-                },
-            })
+                }
+            )
             return this.i18n.messages.errors.server.serverError
         }
     }

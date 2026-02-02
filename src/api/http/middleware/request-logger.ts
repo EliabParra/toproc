@@ -40,19 +40,11 @@ export function applyRequestLogger(app: Express, log: ILogger) {
 
                 if (status >= 400) {
                     if (res.locals?.__errorLogged) return
-                    log.show({
-                        type: log.TYPE_WARNING,
-                        msg: `${req.method} ${req.originalUrl} ${status}`,
-                        ctx,
-                    })
+                    log.warn(`${req.method} ${req.originalUrl} ${status}`, ctx)
                     return
                 }
 
-                log.show({
-                    type: log.TYPE_INFO,
-                    msg: `${req.method} ${req.originalUrl} ${status}`,
-                    ctx,
-                })
+                log.info(`${req.method} ${req.originalUrl} ${status}`, ctx)
             } catch {}
         })
         next()

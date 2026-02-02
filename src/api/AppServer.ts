@@ -1,4 +1,4 @@
-import express, { Express, RequestHandler, NextFunction, Request, Response } from 'express'
+import express, { Express, RequestHandler } from 'express'
 import { Server } from 'http'
 import {
     IConfig,
@@ -10,8 +10,7 @@ import {
     II18nService,
     AppRequest,
     AppResponse,
-    LocalizedMessages,
-    IValidator, // [NEW] Import IValidator
+    IValidator,
 } from '../types/index.js'
 import { registerFrontendHosting } from '../frontend-adapters/index.js'
 
@@ -32,8 +31,7 @@ import {
 import {
     createLoginRateLimiter,
     createToProccessRateLimiter,
-    createAuthPasswordResetRateLimiter,
-    ClientErrors,
+    createAuthPasswordResetRateLimiter
 } from './http/rate-limit/index.js'
 
 import { PermissionGuard } from '../core/security/PermissionGuard.js'
@@ -297,10 +295,9 @@ export class AppServer {
     serverOn(): Server {
         if (!this.initialized) throw new Error('AppServer not initialized')
         this.server = this.app.listen(this.config.app.port, () =>
-            this.log.show({
-                type: this.log.TYPE_INFO,
-                msg: `Servidor ejecutándose en http://${this.config.app.host}:${this.config.app.port}`,
-            })
+            this.log.info(
+                `Servidor ejecutándose en http://${this.config.app.host}:${this.config.app.port}`
+            )
         )
         return this.server
     }

@@ -148,11 +148,10 @@ export class EmailService implements IEmailService {
         code?: string
     }) {
         if (this.mode !== 'smtp' || !this._transport) {
-            this.log.show({
-                type: this.log.TYPE_INFO,
-                msg: `[Email:${this.mode}] Would send email to=${to} subject="${subject}"`,
-                ctx: this.logIncludeSecrets ? { to, subject, token, code } : { to, subject },
-            })
+            this.log.info(
+                `[Email:${this.mode}] Would send email to=${to} subject="${subject}"`,
+                this.logIncludeSecrets ? { to, subject, token, code } : { to, subject }
+            )
             return { ok: true, mode: this.mode }
         }
 
@@ -165,10 +164,9 @@ export class EmailService implements IEmailService {
             })
             return { ok: true, mode: 'smtp' }
         } catch (err: unknown) {
-            this.log.show({
-                type: this.log.TYPE_ERROR,
-                msg: `EmailService SMTP error: ${err instanceof Error ? err.message : String(err)}`,
-            })
+            this.log.error(
+                `EmailService SMTP error: ${err instanceof Error ? err.message : String(err)}`
+            )
             return { ok: false, mode: 'smtp' }
         }
     }

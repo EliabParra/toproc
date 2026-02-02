@@ -17,7 +17,9 @@ test('applyRequestLogger adds middleware to app', () => {
     const mockLog = {
         TYPE_INFO: 'info',
         TYPE_WARNING: 'warn',
-        show: () => {},
+        info: () => {},
+        warn: () => {},
+        error: () => {},
     }
 
     applyRequestLogger(mockApp, mockLog)
@@ -31,7 +33,11 @@ test('applyRequestLogger middleware calls next', () => {
             capturedMiddleware = fn
         },
     }
-    const mockLog = { show: () => {} }
+    const mockLog = {
+        info: () => {},
+        error: () => {},
+        warn: () => {},
+    }
 
     applyRequestLogger(mockApp, mockLog)
 
@@ -58,9 +64,13 @@ test('applyRequestLogger logs on finish event for 2xx', () => {
     const mockLog = {
         TYPE_INFO: 'info',
         TYPE_WARNING: 'warn',
-        show: ({ type }) => {
+        info: () => {
             logCalled = true
-            loggedType = type
+            loggedType = 'info'
+        },
+        warn: () => {
+            logCalled = true
+            loggedType = 'warn'
         },
     }
 
@@ -94,8 +104,11 @@ test('applyRequestLogger logs warning for 4xx status', () => {
     const mockLog = {
         TYPE_INFO: 'info',
         TYPE_WARNING: 'warn',
-        show: ({ type }) => {
-            loggedType = type
+        info: () => {
+            loggedType = 'info'
+        },
+        warn: () => {
+            loggedType = 'warn'
         },
     }
 
@@ -121,7 +134,7 @@ test('applyRequestLogger skips logging if already logged', () => {
     let logCalled = false
     const mockLog = {
         TYPE_WARNING: 'warn',
-        show: () => {
+        warn: () => {
             logCalled = true
         },
     }

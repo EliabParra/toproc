@@ -35,7 +35,11 @@ function createMockI18n() {
     }
 }
 
-const mockLog = { TYPE_ERROR: 'error', show: () => {} }
+const mockLog = {
+    info: () => {},
+    error: () => {},
+    warn: () => {},
+}
 const mockConfig = { app: { lang: 'en' } }
 const mockI18n = createMockI18n()
 

@@ -23,13 +23,13 @@ async function shutdown(signal: string): Promise<void> {
     if (shuttingDown) return
     shuttingDown = true
     try {
-        log.show({ type: log.TYPE_INFO, msg: `Cerrando aplicación (${signal})...` })
+        log.info(`Cerrando aplicación (${signal})...`)
         await appServer.shutdown()
         process.exit(0)
     } catch (err: unknown) {
         try {
             const message = err instanceof Error ? err.message : String(err)
-            log.show({ type: log.TYPE_ERROR, msg: `Error en cierre: ${message}` })
+            log.error(`Error en cierre: ${message}`)
         } catch {
             // Silenciar errores en el logger durante cierre
         }

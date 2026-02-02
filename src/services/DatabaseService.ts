@@ -81,7 +81,7 @@ export class DatabaseService implements IDatabase {
      * @returns Promesa con el resultado crudo de `pg`
      * @throws {Error} Error decorado con código de error de base de datos si la ejecución falla
      */
-    async exeRaw(sql: unknown, params?: unknown): Promise<QueryResult<Record<string, unknown>>> {
+    async exeRaw(sql: string, params?: unknown): Promise<QueryResult<Record<string, unknown>>> {
         let client: PoolClient | undefined
         try {
             if (typeof sql !== 'string' || sql.trim().length === 0) {
@@ -97,7 +97,7 @@ export class DatabaseService implements IDatabase {
             // Manejo de errores centralizado
             const msg = `${this.i18n.messages.errors.server.dbError.msg}, DatabaseService.exeRaw: ${e instanceof Error ? e.message : String(e)}`
 
-            this.log.show({ type: this.log.TYPE_ERROR, msg })
+            this.log.error(msg)
 
             // Re-empaquetar error para mantener consistencia
             const err = new Error(this.i18n.messages.errors.server.dbError.msg) as Error & {

@@ -67,10 +67,13 @@ function createMockDeps(overrides = {}) {
     return {
         db: { query: async () => ({ rows: [] }), exe: async () => ({ rows: [] }) },
         log: {
-            TYPE_INFO: 'info',
-            TYPE_WARNING: 'warn',
-            TYPE_ERROR: 'error',
-            show: () => {},
+            trace: () => {},
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            critical: () => {},
+            child: () => ({}),
         },
         config: {
             app: { lang: 'es' },
@@ -214,10 +217,15 @@ test('createSession handles error gracefully and logs', async () => {
             },
         },
         log: {
-            TYPE_ERROR: 'error',
-            show: () => {
+            trace: () => {},
+            debug: () => {},
+            info: () => {},
+            warn: () => {},
+            error: () => {
                 logCalled = true
             },
+            critical: () => {},
+            child: () => ({}),
         },
     })
     const sm = new SessionManager(deps)

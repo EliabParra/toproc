@@ -24,13 +24,14 @@ export class Context {
 
     private createMockLogger(): ILogger {
         return {
-            show: (opts: any) => console.log(`[${opts.type || 'INFO'}] ${opts.msg}`),
-            error: (e: any) => console.error(e),
-            TYPE_INFO: 'INFO',
-            TYPE_ERROR: 'ERROR',
-            TYPE_WARNING: 'WARN',
-            TYPE_SUCCESS: 'SUCCESS',
-        } as any
+            trace: (msg: string) => console.log(`[TRACE] ${msg}`),
+            debug: (msg: string) => console.log(`[DEBUG] ${msg}`),
+            info: (msg: string) => console.log(`[INFO] ${msg}`),
+            warn: (msg: string) => console.warn(`[WARN] ${msg}`),
+            error: (msg: string) => console.error(`[ERROR] ${msg}`),
+            critical: (msg: string) => console.error(`[CRITICAL] ${msg}`),
+            child: () => this.createMockLogger(),
+        } as unknown as ILogger
     }
 
     // Lazy load globals if not present (simulating legacy script start)

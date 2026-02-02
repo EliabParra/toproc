@@ -37,7 +37,9 @@ function createTestBO() {
         TYPE_INFO: 'info',
         TYPE_WARNING: 'warn',
         TYPE_ERROR: 'error',
-        show: () => {},
+        info: () => {},
+        error: () => {},
+        warn: () => {},
     }
     const configStub = { app: { lang: 'en' } }
 

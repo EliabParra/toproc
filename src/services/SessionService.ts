@@ -200,16 +200,15 @@ export class SessionManager implements ISessionService {
         const msg = this.i18n.messages.errors.server.serverError.msg || 'Server Error'
         const status = this.i18n.messages.errors.server.serverError.code || 500
 
-        this.log.show({
-            type: this.log.TYPE_ERROR,
-            msg: `${msg}, SessionManager.createSession: ${error instanceof Error ? error.message : String(error)}`,
-            ctx: {
+        this.log.error(
+            `${msg}, SessionManager.createSession: ${error instanceof Error ? error.message : String(error)}`,
+            {
                 requestId: req.requestId,
                 method: req.method,
                 path: req.originalUrl,
                 status,
                 userId: req.session?.userId,
-            },
-        })
+            }
+        )
     }
 }

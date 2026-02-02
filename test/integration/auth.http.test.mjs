@@ -44,11 +44,13 @@ const MOCK_PROFILE_PERMISSIONS = {
 function createDeps() {
     const logs = []
     const log = {
-        TYPE_ERROR: 1,
-        TYPE_INFO: 2,
-        TYPE_WARNING: 3,
-        TYPE_DEBUG: 4,
-        show: (msg) => logs.push(msg),
+        trace: () => {},
+        debug: () => {},
+        info: (msg) => logs.push({ type: 2, msg }),
+        warn: (msg) => logs.push({ type: 3, msg }),
+        error: (msg) => logs.push({ type: 1, msg }),
+        critical: () => logs.push({ type: 1, msg }),
+        child: () => log,
     }
 
     const config = {

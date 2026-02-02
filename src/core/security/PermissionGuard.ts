@@ -62,16 +62,10 @@ export class PermissionGuard implements IPermissionProvider {
                 }
             }
 
-            this.log.show({
-                type: this.log.TYPE_INFO,
-                msg: `PermissionGuard: Cargados ${this.permissions.size} permisos en memoria`,
-            })
+            this.log.info(`PermissionGuard: Cargados ${this.permissions.size} permisos en memoria`)
         } catch (err: unknown) {
             const errorMsg = err instanceof Error ? err.message : String(err)
-            this.log.show({
-                type: this.log.TYPE_ERROR,
-                msg: `PermissionGuard: Fallo al cargar permisos: ${errorMsg}`,
-            })
+            this.log.error(`PermissionGuard: Fallo al cargar permisos: ${errorMsg}`)
             throw err
         }
     }

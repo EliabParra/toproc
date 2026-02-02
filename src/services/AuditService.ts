@@ -52,11 +52,7 @@ export class AuditService implements IAuditService {
                 JSON.stringify(safeDetails),
             ])
         } catch (err) {
-            this.logger.show({
-                type: this.logger.TYPE_ERROR,
-                msg: 'Error al registrar auditoría',
-                ctx: err,
-            })
+            this.logger.error('Error al registrar auditoría', err as Error)
         }
     }
 }
