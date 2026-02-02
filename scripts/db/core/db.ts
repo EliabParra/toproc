@@ -74,6 +74,10 @@ export class Database implements IDatabase {
         }
     }
 
+    async shutdown(): Promise<void> {
+        return this.close()
+    }
+
     async testConnection(): Promise<boolean> {
         try {
             await this.exeRaw('SELECT 1')

@@ -115,4 +115,7 @@ export class DatabaseService implements IDatabase {
             } catch {}
         }
     }
+    async shutdown(): Promise<void> {
+        await this.pool.end()
+    }
 }

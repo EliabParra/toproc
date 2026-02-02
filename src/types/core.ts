@@ -155,6 +155,11 @@ export interface IDatabase {
         queryDef: string | { sql: string },
         params?: unknown[]
     ): Promise<{ rows: T[]; rowCount: number | null }>
+
+    /**
+     * Cierra el pool de conexiones.
+     */
+    shutdown(): Promise<void>
 }
 
 /**

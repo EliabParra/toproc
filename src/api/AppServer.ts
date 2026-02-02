@@ -304,8 +304,20 @@ export class AppServer {
 
     async shutdown(): Promise<void> {
         return new Promise((resolve, reject) => {
-            if (!this.server) return resolve()
-            this.server.close((err) => (err ? reject(err) : resolve()))
+            const closeServer = () => {
+                if (!this.server) return Promise.resolve()
+                return new Promise<void>((subResolve, subReject) => {
+                    this.server?.close((err) => (err ? subReject(err) : subResolve()))
+                })
+            }
+
+            closeServer()
+                .then(async () => {
+                    this.log.info('Cerrando conexiones de base de datos...')
+                    await this.db.shutdown()
+                    resolve()
+                })
+                .catch(reject)
         })
     }
 }
