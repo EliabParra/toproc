@@ -14,7 +14,13 @@ async function main() {
     await import(new URL('../dist/src/utils/sanitize.js', import.meta.url) as any)
     await import(new URL('../dist/src/utils/http-responses.js', import.meta.url) as any)
 
-    await import(new URL('../dist/src/api/Dispatcher.js', import.meta.url) as any)
+    await import(new URL('../dist/src/api/AppServer.js', import.meta.url) as any)
+    await import(
+        new URL('../dist/src/api/http/controllers/AuthController.js', import.meta.url) as any
+    )
+    await import(
+        new URL('../dist/src/api/http/controllers/TransactionController.js', import.meta.url) as any
+    )
     await import(new URL('../dist/src/services/SecurityService.js', import.meta.url) as any)
     await import(new URL('../dist/src/services/SessionService.js', import.meta.url) as any)
 

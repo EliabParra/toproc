@@ -1,0 +1,241 @@
+
+> toproc@0.0.1 test C:\Users\Eliab Parra\Dev\nodejs-backend-architecture
+> node --import tsx --import ./test/setup.mjs --test
+
+Ô£ö test\_helpers\global-state.mjs (865.0545ms)
+file:///C:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/test/_helpers/service-factory.mjs:18
+export function createTestAppServer(globals) {
+       ^
+
+SyntaxError: Identifier 'createTestAppServer' has already been declared
+    at compileSourceTextModule (node:internal/modules/esm/utils:305:16)
+    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:111:18)
+    at #translate (node:internal/modules/esm/loader:467:20)
+    at afterLoad (node:internal/modules/esm/loader:523:29)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:528:12)
+    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:565:36)
+    at afterResolve (node:internal/modules/esm/loader:618:52)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:624:12)
+    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:643:32)
+    at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+
+Node.js v25.3.0
+Ô£û test\_helpers\service-factory.mjs (773.2934ms)
+Ô£ö test\_helpers\test-validator-adapter.mjs (874.0624ms)
+Ô£ö AppValidator.validate returns valid=true for correct data (14.2894ms)
+Ô£ö AppValidator.validate returns valid=false for invalid data (2.67ms)
+Ô£ö AppValidator.validate handles nested objects (12.6641ms)
+Ô£ö AppValidator.validate handles arrays (3.3529ms)
+Ô£ö AppValidator.validate returns error paths correctly (1.9922ms)
+Ô£ö AppValidator.validate handles optional fields (2.2223ms)
+Ô£ö AppValidator.validate handles default values (5.043ms)
+Ô£ö AppValidator.validate handles refinements (10.7685ms)
+Ô£ö AppValidator.validate handles transform (1.8719ms)
+Ô£ö AppValidator.validate handles union types (2.8025ms)
+Ô£ö AppValidator works with complex auth schema (3.3556ms)
+Ô£ö AuditService.log redacts secrets in details before insert (3.0152ms)
+Ô£ö BaseBO.validate returns ok=true for valid data (12.1728ms)
+Ô£ö BaseBO.validate returns ok=false with alerts for invalid data (3.0529ms)
+Ô£ö BaseBO.success returns code 200 (2.5769ms)
+Ô£ö BaseBO.created returns code 201 (1.5272ms)
+Ô£ö BaseBO.error returns code 500 (0.5646ms)
+Ô£ö BaseBO.validationError returns code 400 (3.6844ms)
+Ô£ö BaseBO exposes db, log, config dependencies (0.5529ms)
+Ô£ö AnalyzeCommand analiza estructura de BO (112.6185ms)
+Ô£ö Analyze detecta archivos esperados con nomenclatura Name.Type.ts (60.8919ms)
+Ô£ö bo CLI auth --dry does not write files (1008.7615ms)
+Ô£ö bo CLI new --dry does not write files (1045.2489ms)
+Ô£ö bo CLI sync --dry --txStart does not touch DB (1244.5201ms)
+Ô£ö bo CLI --help muestra ayuda con todos los comandos (1145.9164ms)
+Ô£ö bo CLI help no conecta a la DB (1278.4407ms)
+Ô£ö bo CLI perms --dry allow is DB-safe (1160.1749ms)
+Ô£ö bo CLI perms --dry deny is DB-safe (1333.0088ms)
+Ô£ö bo CLI perms rejects invalid method format (1563.2128ms)
+Ô£ö bo CLI perms rejects invalid profile (1435.802ms)
+Ô£ö bo.parseMethodsFromBO extracts async method names (21.265ms)
+Ô£ö bo.parseArgs parses flags and values (1.9827ms)
+Ô£ö templateBO genera arquitectura 7 archivos con nomenclatura Name.Type.ts (5.6157ms)
+Ô£ö templateSchemas genera schemas con mensajes (nuevos imports) (0.828ms)
+Ô£ö templateRepository genera repo con tipos (nuevos imports) (0.6792ms)
+Ô£ö templateService genera service con errores (nuevos imports) (0.7228ms)
+Ô£ö templateTypes genera interfaces (0.5854ms)
+Ô£ö templateLocales genera TS object (1.008ms)
+Ô£ö templateErrors genera clases de error (nuevos imports) (0.9186ms)
+Ô£ö parseMethodsFromBO extrae m├®todos async (2.7941ms)
+Ô£ö ensureCsrfToken returns null if no session (2.3141ms)
+Ô£ö ensureCsrfToken returns existing token if present (0.4197ms)
+Ô£ö ensureCsrfToken generates new token if not present (0.9541ms)
+Ô£ö ensureCsrfToken generates new token if empty string (0.3407ms)
+Ô£ö createCsrfTokenHandler returns 200 with token (0.8597ms)
+Ô£ö createCsrfTokenHandler returns error if no session (0.8103ms)
+Ô£ö createCsrfProtection allows request without session for /toProccess (0.7827ms)
+Ô£ö createCsrfProtection allows request without session for /logout (0.5854ms)
+Ô£ö createCsrfProtection rejects when no expected token (0.7678ms)
+Ô£ö createCsrfProtection rejects when token mismatch (1.5032ms)
+Ô£ö createCsrfProtection allows when token matches (0.6317ms)
+Ô£ö createHealthHandler returns handler function (0.3568ms)
+Ô£ö createHealthHandler returns 200 with health info (0.8876ms)
+Ô£ö sqlMaxParamIndex detects highest $n placeholder (2.4226ms)
+Ô£ö buildParamsArray supports array/object/single value (1.8835ms)
+Ô£ö prepareNamedParams builds stable ordered array from object (0.8083ms)
+Ô£ö prepareNamedParams fails on missing keys (1.1793ms)
+Ô£ö prepareNamedParams fails on extra keys (strict) (0.4857ms)
+Ô£ö prepareNamedParams fails when SQL placeholder count does not match (0.6799ms)
+Ô£ö applyRequestLogger adds middleware to app (2.2064ms)
+Ô£ö applyRequestLogger middleware calls next (0.514ms)
+Ô£ö applyRequestLogger logs on finish event for 2xx (0.6188ms)
+Ô£ö applyRequestLogger logs warning for 4xx status (0.3988ms)
+Ô£ö applyRequestLogger skips logging if already logged (0.3922ms)
+Ô£ö buildPagesRouter redirects when validateIsAuth=true and session missing (195.1386ms)
+Ô£ö buildPagesRouter serves page when authenticated (45.4386ms)
+Ô£ö registerFrontendHosting does nothing when stage does not match (0.9495ms)
+Ô£ö registerPagesHosting mounts static + pages router (73.6358ms)
+Ô£ö registerFrontendHosting spa mode serves index.html fallback for html requests (95.0816ms)
+Ô£ö registerFrontendHosting spa mode throws when SPA_DIST_PATH is missing (non-interactive) (6.8247ms)
+Ô£ö redactSecretsInString redacts password in query string (2.9886ms)
+Ô£ö redactSecretsInString redacts password in JSON (0.383ms)
+Ô£ö redactSecretsInString handles string without secrets (0.3221ms)
+Ô£ö redactSecretsInString handles empty string (0.2944ms)
+Ô£ö redactSecrets redacts password field (0.5978ms)
+Ô£ö redactSecrets redacts token field (0.4921ms)
+Ô£ö redactSecrets redacts secret field (0.427ms)
+Ô£ö redactSecrets redacts code field (0.3079ms)
+Ô£ö redactSecrets handles nested objects (0.4143ms)
+Ô£ö redactSecrets handles null input (0.4184ms)
+Ô£ö redactSecrets handles non-object input (0.2977ms)
+Ô£ö redactSecrets does not mutate original object (0.3044ms)
+Ô£ö errorMessage extracts message from Error instance (0.3525ms)
+Ô£ö errorMessage extracts message from object with message property (0.2459ms)
+Ô£ö errorMessage converts unknown value to string (0.1886ms)
+Ô£ö errorMessage handles object without message (0.3666ms)
+Ô£ö errorMessage handles array (0.2157ms)
+ÔûÂ Auth Module Integration (HTTP)
+  Ô£ö 1. Should obtain CSRF token (92.0438ms)
+  Ô£ö 2. Should reject Login without CSRF token (112.0127ms)
+  Ô£ö 3. Should Login with valid credentials and CSRF (88.313ms)
+  Ô£ö 4. Should Register (BO Execution) via /toProccess (820.1936ms)
+  Ô£ö 5. Should Logout (31.8743ms)
+Ô£ö Auth Module Integration (HTTP) (1444.1063ms)
+ÔûÂ SecurityService Integration
+  Ô£ö should load permissions and tx maps (1.5703ms)
+  Ô£ö should fail permission check for unknown profile (0.7912ms)
+Ô£ö SecurityService Integration (7.7767ms)
+Ô£ö applyRequestId adds middleware to app (5.837ms)
+Ô£ö applyRequestId middleware sets requestId on req (1.4453ms)
+Ô£ö applyRequestId middleware sets requestStartMs (0.4165ms)
+Ô£ö applyRequestId middleware sets X-Request-Id header (0.3707ms)
+Ô£ö applyCorsIfEnabled does nothing when cors is disabled (0.3789ms)
+Ô£ö applyCorsIfEnabled does nothing when cors config is missing (0.2609ms)
+Ô£ö applyCorsIfEnabled adds middleware when cors is enabled (0.4297ms)
+Ô£ö applyCorsIfEnabled handles empty origins array (0.3392ms)
+Ô£ö applyCorsIfEnabled handles missing origins (0.366ms)
+Ô£ö test\mocks\BO\TestObject\TestObjectBO.js (966.9396ms)
+ÔûÂ Introspector
+  Ô£ö should list tables from information_schema (2.2143ms)
+  Ô£ö should generate valid CREATE TABLE SQL (1.125ms)
+  Ô£ö should detect new tables not in known list (0.5821ms)
+Ô£ö Introspector (6.3907ms)
+ÔûÂ SchemaLoader (Auto-Discovery)
+  Ô£ö should load .ts schema files in alphanumeric order (45.8634ms)
+  Ô£ö should extract exported arrays from files (Simulation) (0.7545ms)
+  Ô£ö should handle empty directory gracefully (9.1203ms)
+Ô£ö SchemaLoader (Auto-Discovery) (107.9042ms)
+undefined
+undefined
+ÔûÂ AdminSeeder
+  Ô£ö should seed admin user with hashed password (157.5853ms)
+  Ô£ö should generate random password of specified length (0.7461ms)
+Ô£ö AdminSeeder (160.6248ms)
+undefined
+undefined
+undefined
+undefined
+ÔûÂ BORegistrar syncMethods
+  Ô£ö should return empty result when no BOs found (dryRun) (16.1301ms)
+undefined
+undefined
+undefined
+undefined
+undefined
+  Ô£ö should detect orphaned methods in DB (7.3345ms)
+undefined
+undefined
+undefined
+undefined
+undefined
+undefined
+  Ô£ö should not delete when prune=false (11.4039ms)
+undefined
+undefined
+undefined
+undefined
+undefined
+undefined
+undefined
+  Ô£ö should delete orphans when prune=true (3.5239ms)
+undefined
+undefined
+undefined
+undefined
+  Ô£ö should not delete when dryRun=true even if prune=true (2.2722ms)
+Ô£ö BORegistrar syncMethods (43.9047ms)
+ÔûÂ CLI Parser
+  Ô£ö should parse sync action from positional arg (6.8277ms)
+  Ô£ö should parse introspect action from flag (0.649ms)
+  Ô£ö should parse pull as alias for introspect (0.6023ms)
+  Ô£ö should parse --yes flag as non-interactive (0.3281ms)
+  Ô£ö should parse database host (0.3373ms)
+  Ô£ö should parse database port (1.3231ms)
+  Ô£ö should parse --auth flag (0.4092ms)
+  Ô£ö should parse --authLoginId (1.4084ms)
+  Ô£ö should parse --seedAdmin flag (0.6157ms)
+  Ô£ö should parse --adminUser (0.7483ms)
+  Ô£ö should parse --profileId (0.3704ms)
+  Ô£ö should parse --registerBo flag (0.2898ms)
+  Ô£ö should parse --help flag (0.3919ms)
+  Ô£ö should parse complex command with multiple flags (0.5669ms)
+Ô£ö CLI Parser (18.5819ms)
+undefined
+undefined
+undefined
+undefined
+undefined
+undefined
+undefined
+undefined
+undefined
+ÔûÂ ProfileSeeder
+  Ô£ö should seed public and session profiles (4.2367ms)
+  Ô£ö should seed admin profile when provided (1.1919ms)
+  Ô£ö should grant permissions to profile (0.5756ms)
+Ô£ö ProfileSeeder (8.2744ms)
+Ô£ö Security.init loads permissions + tx map and sets isReady (6.6501ms)
+Ô£ö Security.init captures initError and rejects ready when DB fails (1.5393ms)
+Ô£ö Security.executeMethod dynamically imports BO and caches the instance (114.4472ms)
+Ô£ö Security.executeMethod returns serverError and logs when BO import fails (25.8831ms)
+Ô£ö SessionManager constructor initializes correctly (2.6983ms)
+Ô£ö SessionManager constructor handles missing auth config (0.4423ms)
+Ô£ö sessionExists returns true when session has user_id (0.4363ms)
+Ô£ö sessionExists returns false when session is empty (0.3313ms)
+Ô£ö sessionExists returns false when no session (0.3457ms)
+Ô£ö createSession returns error if session already exists (2.7061ms)
+Ô£ö createSession returns error for non-existent user (0.6197ms)
+Ô£ö createSession uses getUserByUsername for non-email identifier (0.5552ms)
+Ô£ö createSession uses getUserByEmail for email identifier (0.6522ms)
+Ô£ö createSession handles error gracefully and logs (1.0947ms)
+Ô£ö test\setup.mjs (1128.5383ms)
+Ôä╣ tests 152
+Ôä╣ suites 8
+Ôä╣ pass 151
+Ôä╣ fail 1
+Ôä╣ cancelled 0
+Ôä╣ skipped 0
+Ôä╣ todo 0
+Ôä╣ duration_ms 8174.9582
+
+Ô£û failing tests:
+
+test at test\_helpers\service-factory.mjs:1:1
+Ô£û test\_helpers\service-factory.mjs (773.2934ms)
+  'test failed'
+ÔÇëELIFECYCLEÔÇë Test failed. See above for more details.
