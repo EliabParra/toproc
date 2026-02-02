@@ -52,8 +52,8 @@ const appLogger = new AppLogger({ config })
 container.register('log', appLogger)
 
 // 6. Base de Datos
-const { default: DBComponent } = await import('./services/DatabaseService.js')
-const db = new DBComponent({ config, i18n, log: appLogger })
+import { DatabaseService } from './services/DatabaseService.js'
+const db = new DatabaseService({ config, i18n, log: appLogger })
 container.register('db', db)
 
 // 7. Capa de Servicios

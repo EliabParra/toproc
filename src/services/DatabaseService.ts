@@ -1,130 +1,37 @@
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg'
-import type { IDatabase, ILogger, IConfig, II18nService } from '../types/index.js'
-
-export type NamedParamsOptions = {
-    strict?: boolean
-    enforceSqlArity?: boolean
-}
-
-type LocalizedMessages = Record<string, { code: number; msg: string }>
-
-/**
- * Calcula el índice máximo de parámetro ($N) en una consulta SQL.
- *
- * @param sql - Consulta SQL
- * @returns {number} El índice más alto encontrado (e.g. 3 para $3)
- */
-export function sqlMaxParamIndex(sql: unknown) {
-    if (typeof sql !== 'string') return 0
-    let max = 0
-    const re = /\$(\d+)/g
-    let m: RegExpExecArray | null
-    while ((m = re.exec(sql)) != null) {
-        const n = Number(m[1])
-        if (Number.isInteger(n) && n > max) max = n
-    }
-    return max
-}
-
-function isPlainObject(val: unknown): val is Record<string, unknown> {
-    return val !== null && typeof val === 'object' && !Array.isArray(val)
-}
+import type {
+    IDatabase,
+    ILogger,
+    IConfig,
+    II18nService,
+    LocalizedMessages,
+} from '../types/index.js'
+import { buildParamsArray } from '../utils/sql.js'
 
 /**
- * Convierte diferentes formatos de parámetros a un array plano para pg.
+ * Servicio de Base de Datos (PostgreSQL).
  *
- * @param params - Parámetros (array, objeto, o valor simple)
- * @returns {unknown[]} Array de parámetros
+ * Encapsula la gestión del pool de conexiones `pg`, la ejecución de consultas
+ * y el manejo centralizado de errores de base de datos.
+ * Implementa la interfaz `IDatabase` para su uso en el contenedor de inyección de dependencias.
+ *
+ * @class DatabaseService
+ * @implements {IDatabase}
  */
-export function buildParamsArray(params: unknown): unknown[] {
-    if (params == null) return []
-    const paramsArray: unknown[] = []
-    if (Array.isArray(params)) paramsArray.push(...params)
-    else if (isPlainObject(params)) for (const attr in params) paramsArray.push(params[attr])
-    else paramsArray.push(params)
-    return paramsArray
-}
+export class DatabaseService implements IDatabase {
+    /** Pool de conexiones de PostgreSQL */
+    public pool: Pool
 
-/**
- * Prepara parámetros nombrados para una consulta SQL.
- * Valida que todos los keys requeridos estén presentes y en orden.
- *
- * @param sql - Consulta SQL
- * @param paramsObj - Objeto con valores de parámetros
- * @param orderKeys - Claves en el orden esperado por la query
- * @param opts - Opciones de validación
- * @returns {unknown[]} Array de valores en orden
- * @throws {Error} Si faltan parámetros o hay parámetros extra (en modo estricto)
- */
-export function prepareNamedParams(
-    sql: unknown,
-    paramsObj: unknown,
-    orderKeys: unknown,
-    opts: NamedParamsOptions = {}
-) {
-    const options: Required<NamedParamsOptions> = {
-        strict: true,
-        enforceSqlArity: true,
-        ...opts,
-    }
+    /** Cache de mensajes de error del servidor para acceso rápido */
+    public serverErrors: LocalizedMessages
 
-    if (!isPlainObject(paramsObj)) {
-        throw new Error('exeNamed params must be an object')
-    }
-    if (!Array.isArray(orderKeys) || orderKeys.length === 0) {
-        throw new Error('exeNamed orderKeys must be a non-empty array')
-    }
-
-    const keys = orderKeys.map((k) => String(k))
-
-    const missing = keys.filter((k) => !(k in paramsObj))
-    if (missing.length > 0) {
-        throw new Error(`Missing params: ${missing.join(', ')}`)
-    }
-
-    if (options.strict) {
-        const allowed = new Set(keys)
-        const extras = Object.keys(paramsObj).filter((k) => !allowed.has(k))
-        if (extras.length > 0) {
-            throw new Error(`Unexpected params: ${extras.join(', ')}`)
-        }
-    }
-
-    const paramsArray = keys.map((k) => paramsObj[k])
-
-    if (options.enforceSqlArity) {
-        const expected = sqlMaxParamIndex(sql)
-        if (expected !== paramsArray.length) {
-            throw new Error(
-                `Params/orderKeys length (${paramsArray.length}) does not match SQL placeholder count (${expected})`
-            )
-        }
-    }
-
-    return paramsArray
-}
-
-/**
- * Componente de acceso a base de datos (PostgreSQL).
- *
- * Encapsula la gestión de conexiones (Pool), ejecución de consultas
- * y manejo de errores. Soporta queries parametrizadas por posición.
- *
- * @example
- * ```typescript
- * const db = new DBComponent(deps)
- * const rows = await db.query('SELECT * FROM users WHERE id = $1', [1])
- * ```
- */
-export default class DBComponent implements IDatabase {
-    pool: Pool
-    serverErrors: LocalizedMessages
     private log: ILogger
 
     /**
-     * Crea una instancia de DBComponent.
+     * Crea una instancia de DatabaseService.
+     * Inicializa el pool de conexiones con la configuración proporcionada.
      *
-     * @param deps - Dependencias (config, i18n, log)
+     * @param deps - Dependencias requeridas (config, i18n, log)
      */
     constructor(deps: { config: IConfig; i18n: II18nService; log: ILogger }) {
         const { config, i18n, log } = deps
@@ -134,8 +41,22 @@ export default class DBComponent implements IDatabase {
     }
 
     /**
-     * Executes a query from the QueryService.
-     * Preferred new method for accessing queries.
+     * Ejecuta una definición de consulta (Query Definition) o SQL crudo.
+     * Este es el método preferido para ejecutar consultas en la capa de servicios.
+     *
+     * @template T - Tipo de las filas retornadas (por defecto `QueryResultRow`)
+     * @param queryDef - String SQL directo o objeto `{ sql: string }` (común en definiciones de queries)
+     * @param params - Parámetros para la consulta parametrizada ($1, $2...)
+     * @returns Promesa con el resultado de la consulta (filas y metadatos)
+     *
+     * @example
+     * ```typescript
+     * // Uso con string simple
+     * await db.query('SELECT * FROM users WHERE id = $1', [userId])
+     *
+     * // Uso con objeto de definición (Query Object)
+     * await db.query(UserQueries.getById, [userId])
+     * ```
      */
     async query<T extends QueryResultRow = QueryResultRow>(
         queryDef: string | { sql: string },
@@ -151,11 +72,15 @@ export default class DBComponent implements IDatabase {
     }
 
     /**
-     * Ejecuta una consulta SQL cruda directamente.
+     * Ejecuta una consulta SQL cruda directamente contra el pool.
+     * Maneja la obtención y liberación de clientes del pool automáticamente.
      *
-     * @param sql - String SQL
-     * @param params - Parámetros opcionales
-     * @returns {Promise<QueryResult>} Resultado de la consulta
+     * Convierte y captura errores de base de datos para logging centralizado antes de relanzarlos.
+     *
+     * @param sql - Sentencia SQL a ejecutar
+     * @param params - Parámetros opcionales (array, objeto o valor único)
+     * @returns Promesa con el resultado crudo de `pg`
+     * @throws {Error} Error decorado con código de error de base de datos si la ejecución falla
      */
     async exeRaw(sql: unknown, params?: unknown): Promise<QueryResult<Record<string, unknown>>> {
         let client: PoolClient | undefined
@@ -163,21 +88,29 @@ export default class DBComponent implements IDatabase {
             if (typeof sql !== 'string' || sql.trim().length === 0) {
                 throw new Error('exeRaw sql must be a non-empty string')
             }
+
+            // Normalizar parámetros usando utilidad externa
             const paramsArray = buildParamsArray(params)
 
             client = await this.pool.connect()
             return await client.query(sql, paramsArray as unknown[])
         } catch (e: unknown) {
-            const msg = `${this.serverErrors.dbError.msg}, DBComponent.exeRaw: ${e instanceof Error ? e.message : String(e)}`
+            // Manejo de errores centralizado
+            const msg = `${this.serverErrors.dbError.msg}, DatabaseService.exeRaw: ${e instanceof Error ? e.message : String(e)}`
+
             this.log.show({ type: this.log.TYPE_ERROR, msg })
+
+            // Re-empaquetar error para mantener consistencia
             const err = new Error(this.serverErrors.dbError.msg) as Error & {
                 code?: unknown
                 cause?: unknown
             }
             err.code = this.serverErrors.dbError.code
             ;(err as any).cause = e
+
             throw err
         } finally {
+            // Asegurar liberación del cliente al pool
             try {
                 client?.release?.()
             } catch {}

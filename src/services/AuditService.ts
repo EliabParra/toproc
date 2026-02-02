@@ -1,5 +1,6 @@
 import type { IAuditService, IDatabase, ILogger, AppRequest } from '../types/index.js'
 import { redactSecrets } from '../utils/sanitize.js'
+import { AuditQueries } from './queries/audit.js'
 
 export type AuditArgs = {
     action: string
@@ -9,14 +10,6 @@ export type AuditArgs = {
     user_id?: number | null
     profile_id?: number | null
     details?: Record<string, unknown>
-}
-
-const AuditQueries = {
-    insertAuditLog: `
-        INSERT INTO security.audit_logs 
-        (request_id, user_id, profile_id, action, object_name, method_name, tx, details)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
-    `,
 }
 
 /**
