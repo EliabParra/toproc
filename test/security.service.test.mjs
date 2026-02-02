@@ -22,7 +22,7 @@ const mockLocaleData = {
 
 function createMockI18n() {
     return {
-        t: (key, params) => {
+        translate: (key, params) => {
             const parts = key.split('.')
             let val = mockLocaleData
             for (const p of parts) val = val?.[p]

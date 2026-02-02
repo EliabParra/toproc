@@ -19,7 +19,7 @@ function createMockI18n() {
         },
     }
     return {
-        t: (key) => key,
+        translate: (key) => key,
         error: (key) => {
             const parts = key.split('.')
             let val = data

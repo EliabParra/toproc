@@ -82,12 +82,12 @@ export class TransactionController {
             const alerts: string[] = []
 
             if (!body || typeof body !== 'object' || Array.isArray(body)) {
-                alerts.push(this.i18n.t('alerts.invalidBody') || 'Invalid body')
+                alerts.push(this.i18n.translate('alerts.invalidBody') || 'Invalid body')
             }
 
             const tx = body?.tx
             if (!Number.isInteger(tx) || tx <= 0) {
-                alerts.push(this.i18n.t('alerts.invalidTx') || 'Invalid tx')
+                alerts.push(this.i18n.translate('alerts.invalidTx') || 'Invalid tx')
             }
 
             const params = body?.params
@@ -99,7 +99,8 @@ export class TransactionController {
 
                 if (!isValidParams) {
                     alerts.push(
-                        this.i18n.t('alerts.paramsType', { value: 'params' }) || 'Invalid params'
+                        this.i18n.translate('alerts.paramsType', { value: 'params' }) ||
+                            'Invalid params'
                     )
                 }
             }

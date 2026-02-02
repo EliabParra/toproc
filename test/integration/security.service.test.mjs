@@ -28,7 +28,7 @@ const mockConfig = {
     app: { lang: 'en' },
 }
 const mockI18n = {
-    t: (key) => key,
+    translate: (key) => key,
     error: (key) => ({ msg: key, code: 500 }),
     get: (key) => undefined,
 }

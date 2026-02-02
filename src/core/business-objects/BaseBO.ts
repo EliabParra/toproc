@@ -7,6 +7,7 @@ import type {
     II18nService,
     BODependencies,
     ApiResponse,
+    TxKey,
 } from '../../types/index.js'
 
 export type { BODependencies }
@@ -82,8 +83,8 @@ export abstract class BaseBO {
      * @param key - Clave de traducción
      * @param params - Parámetros de interpolación
      */
-    protected t(key: string, params?: Record<string, any>): string {
-        return this.i18n.t(key, params)
+    protected translate(key: TxKey | (string & {}), params?: Record<string, any>): string {
+        return this.i18n.translate(key, params)
     }
 
     /**
@@ -188,9 +189,9 @@ export abstract class BaseBO {
             return { ok: true, data: result.data }
         }
 
-        const alerts = result.errors?.map((e: { message: string }) => this.t(e.message)) || [
-            'Error de validación desconocido',
-        ]
+        const alerts = result.errors?.map((e: { message: string }) =>
+            this.translate(e.message)
+        ) || ['Error de validación desconocido']
         return { ok: false, alerts }
     }
     /**
@@ -239,7 +240,7 @@ export abstract class BaseBO {
 
         // Si es un BOError (tiene tag y code)
         if (anyErr.tag && anyErr.code) {
-            return this.error(this.t(anyErr.message), anyErr.code)
+            return this.error(this.translate(anyErr.message), anyErr.code)
         }
 
         this.log.show({ type: this.log.TYPE_ERROR, msg: 'BaseBO Exception', ctx: error })

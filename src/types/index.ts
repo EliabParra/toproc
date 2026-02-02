@@ -55,4 +55,5 @@ export type {
     IAuditService,
     BODependencies,
     SessionResult,
+    TxKey,
 } from './core.js'

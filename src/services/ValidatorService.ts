@@ -91,7 +91,7 @@ export class ValidatorService implements IValidator {
             message = localized
         } else {
             // Fallback: traducir el mensaje por defecto si es posible
-            message = this.i18n.t(message)
+            message = this.i18n.translate(message)
         }
 
         return {
@@ -167,7 +167,7 @@ export class ValidatorService implements IValidator {
                 }
 
                 // Fallback genérico para tipos inválidos
-                return this.i18n.t('errors.client.invalidParameters.msg')
+                return this.i18n.translate('errors.client.invalidParameters.msg')
             }
 
             if (issue.code === 'too_small') {

@@ -4,6 +4,8 @@ export const es = {
         real: '{value} debe ser un número real',
         string: '{value} debe ser una cadena',
         invalidJson: '{value} debe ser un JSON válido',
+        invalidBody: 'Cuerpo de la solicitud inválido',
+        invalidTx: 'Transacción inválida',
         paramsType: '{value} debe ser un string, número u objeto',
         lengthRange: '{value} debe tener entre {min} y {max} caracteres',
         lengthMin: '{value} debe tener mínimo {min} caracteres',

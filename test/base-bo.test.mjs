@@ -28,7 +28,7 @@ class TestBO extends BaseBO {
 
 function createTestBO() {
     const i18nStub = {
-        t: (k) => k,
+        translate: (k) => k,
         error: (k) => ({ msg: k, code: 500 }),
         get: (k) => undefined,
     }

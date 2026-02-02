@@ -6,7 +6,7 @@ import { ValidatorService } from '../src/services/ValidatorService.js'
 
 function createValidator() {
     const i18nStub = {
-        t: (k, params) => `${k}:${JSON.stringify(params)}`,
+        translate: (k, params) => `${k}:${JSON.stringify(params)}`,
         format: (k, params) => `${k}:${JSON.stringify(params)}`,
         messages: {
             alerts: {

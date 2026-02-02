@@ -27,7 +27,7 @@ export function createJsonSyntaxErrorHandler(deps: { config: IConfig; i18n: II18
 
         if (!looksLikeJsonParseError) return next(err)
 
-        const alert = i18n.t('alerts.invalidJson', { value: 'body' })
+        const alert = i18n.translate('alerts.invalidJson', { value: 'body' })
         const errorDef = i18n.error('errors.client.invalidParameters')
 
         return res.status(errorDef.code).send({

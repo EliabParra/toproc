@@ -84,7 +84,7 @@ function createDeps() {
             if (k === 'success') return { logout: { code: 200, msg: 'Logged out' } }
             return {}
         },
-        t: (k) => k,
+        translate: (k) => k,
         error: (k) => {
             const map = {
                 'errors.client.csrfInvalid': { code: 403, msg: 'CSRF Invalid' },

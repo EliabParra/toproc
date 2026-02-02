@@ -1,4 +1,5 @@
 import { Pool } from 'pg'
+import type { AppMessages } from '../locales/es.js'
 import type { AppRequest, AppResponse } from './http.js'
 
 /**
@@ -38,17 +39,47 @@ export interface IValidator {
 /**
  * Servicio de internacionalización.
  */
+// Helper para obtener claves anidadas de AppMessages
+type HelperKeys<T> = T extends object
+    ? {
+          [K in keyof T]: K extends string
+              ? T[K] extends string
+                  ? K
+                  : `${K}.${HelperKeys<T[K]>}`
+              : never
+      }[keyof T]
+    : never
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type TxKey = HelperKeys<AppMessages>
+
 export interface II18nService {
     currentLocale: string
-    messages: Record<string, unknown>
+    messages: AppMessages
 
     /**
-     * Obtiene una traducción por su clave (Legacy).
-     * @param key Clave del mensaje (e.g. 'auth.login.success')
-     * @param params Variables para interpolar
-     * @param locale Idioma opcional
+     * Traduce una clave a texto.
+     * Soporta claves anidadas (e.g. 'auth.login.success') e interpolación.
+     *
+     * @param key Clave del mensaje.
+     * @param params Variables para interpolar.
+     * @param locale Idioma opcional.
      */
-    t(key: string, params?: Record<string, unknown>, locale?: string): string
+    translate(key: TxKey | (string & {}), params?: Record<string, unknown>, locale?: string): string
+
+    /**
+     * Formatea una fecha según el locale actual.
+     * @param date Fecha a formatear
+     * @param options Opciones de Intl.DateTimeFormat
+     */
+    formatDate(date: Date | number, options?: Intl.DateTimeFormatOptions): string
+
+    /**
+     * Formatea una moneda según el locale actual.
+     * @param amount Cantidad monetaria
+     * @param currency Código de moneda (e.g. 'USD', 'EUR')
+     */
+    formatCurrency(amount: number, currency: string): string
 
     /**
      * Interpola parámetros en un template string.
@@ -66,7 +97,7 @@ export interface II18nService {
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     error(
-        selectorOrKey: string | ((msgs: any) => { msg: string; code: number }),
+        selectorOrKey: string | ((msgs: AppMessages['errors']) => { msg: string; code: number }),
         params?: Record<string, unknown>
     ): { msg: string; code: number }
 
