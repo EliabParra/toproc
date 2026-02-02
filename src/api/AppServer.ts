@@ -36,9 +36,9 @@ import {
 } from './http/rate-limit/index.js'
 
 // Handlers
-import { createHealthHandler, createReadyHandler } from './http/handlers/index.js'
 import { AuthController } from './http/controllers/AuthController.js'
 import { TransactionController } from './http/controllers/TransactionController.js'
+import { ProbeController } from './http/controllers/ProbeController.js'
 
 /**
  * Dependencias requeridas para instanciar el AppServer.
@@ -86,6 +86,7 @@ export class AppServer {
     // Controladores
     private authController!: AuthController
     private txController!: TransactionController
+    private probeController!: ProbeController
 
     // Cache de mensajes localizados (para rate limiters y error handler)
     private serverErrors: LocalizedMessages
@@ -177,6 +178,8 @@ export class AppServer {
             log: this.log,
         })
 
+        this.probeController = new ProbeController(this.security, this.config.app.name)
+
         // 2. Session Middleware
         const { applySessionMiddleware } =
             await import('./http/session/apply-session-middleware.js')
@@ -223,8 +226,12 @@ export class AppServer {
         const router = express.Router()
 
         // Probes
-        router.get('/health', createHealthHandler({ name: this.config.app.name }))
-        router.get('/ready', createReadyHandler(this.security))
+        router.get('/health', (req, res, next) =>
+            this.probeController.health(req as AppRequest, res as AppResponse)
+        )
+        router.get('/ready', (req, res, next) =>
+            this.probeController.ready(req as AppRequest, res as AppResponse)
+        )
 
         // Security
         router.get('/csrf', this.csrfTokenHandler)

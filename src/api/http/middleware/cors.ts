@@ -1,5 +1,6 @@
 import cors from 'cors'
-import { IConfig } from '../../../types/core.js'
+import { IConfig } from '../../../types/index.js'
+import { Express } from 'express'
 
 /**
  * Aplica configuración de CORS si está habilitada en la configuración.
@@ -8,7 +9,7 @@ import { IConfig } from '../../../types/core.js'
  * Configura métodos permitidos, credenciales y headers expuestos seguramenete.
  *
  */
-export function applyCorsIfEnabled(app: any, deps: { config: IConfig }) {
+export function applyCorsIfEnabled(app: Express, deps: { config: IConfig }) {
     const { config } = deps
     if (!config.cors?.enabled) return
 
@@ -16,7 +17,10 @@ export function applyCorsIfEnabled(app: any, deps: { config: IConfig }) {
 
     app.use(
         cors({
-            origin: (origin: any, callback: any) => {
+            origin: (
+                origin: string | undefined,
+                callback: (err: Error | null, allow?: boolean) => void
+            ) => {
                 if (!origin) return callback(null, true)
                 if (allowedOrigins.includes(origin)) return callback(null, true)
                 return callback(new Error(`CORS origin not allowed: ${origin}`))

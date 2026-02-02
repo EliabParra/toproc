@@ -6,7 +6,6 @@ import {
     createCsrfTokenHandler,
     createCsrfProtection,
 } from '../src/api/http/middleware/csrf.js'
-import { createHealthHandler } from '../src/api/http/handlers/health.js'
 
 // Mock i18n helper
 function createMockI18n(overrides = {}) {
@@ -165,7 +164,7 @@ test('createCsrfProtection rejects when no expected token', () => {
 
     const req = {
         path: '/api/action',
-        session: { user_id: 1 }, // Has user but no CSRF token
+        session: { userId: 1 }, // Has user but no CSRF token
         get: () => 'some-token',
     }
     let statusCode = null
@@ -191,7 +190,7 @@ test('createCsrfProtection rejects when token mismatch', () => {
 
     const req = {
         path: '/api/action',
-        session: { user_id: 1, csrfToken: 'expected-token' },
+        session: { userId: 1, csrfToken: 'expected-token' },
         get: () => 'wrong-token',
     }
     let statusCode = null
@@ -217,7 +216,7 @@ test('createCsrfProtection allows when token matches', () => {
 
     const req = {
         path: '/api/action',
-        session: { user_id: 1, csrfToken: 'valid-token' },
+        session: { userId: 1, csrfToken: 'valid-token' },
         get: () => 'valid-token',
     }
     let nextCalled = false
@@ -229,37 +228,4 @@ test('createCsrfProtection allows when token matches', () => {
     middleware(req, res, next)
 
     assert.equal(nextCalled, true)
-})
-
-// --- createHealthHandler tests ---
-test('createHealthHandler returns handler function', () => {
-    const handler = createHealthHandler({ name: 'test-app' })
-    assert.equal(typeof handler, 'function')
-})
-
-test('createHealthHandler returns 200 with health info', () => {
-    const handler = createHealthHandler({ name: 'my-service' })
-
-    const req = { requestId: 'req-123' }
-    let statusCode = null
-    let sentData = null
-    const res = {
-        status: (code) => {
-            statusCode = code
-            return res
-        },
-        send: (data) => {
-            sentData = data
-            return res
-        },
-    }
-
-    handler(req, res)
-
-    assert.equal(statusCode, 200)
-    assert.equal(sentData.ok, true)
-    assert.equal(sentData.name, 'my-service')
-    assert.equal(sentData.requestId, 'req-123')
-    assert.ok(typeof sentData.uptimeSec === 'number')
-    assert.ok(typeof sentData.time === 'string')
 })

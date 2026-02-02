@@ -41,7 +41,7 @@ graph TD
     end
 
     subgraph "Capa Core (Framework)"
-        Dispatcher[Dispatcher]
+        AppServer[AppServer]
         Security[SecurityService]
         Container[DI Container]
     end
@@ -53,16 +53,16 @@ graph TD
     end
 
     Handler --> Middlewares
-    Middlewares --> Dispatcher
-    Dispatcher -->|1. Resuelve TX| Security
+    Middlewares --> AppServer
+    AppServer -->|1. Resuelve TX| Security
     Security -->|2. Instancia| Container
     Container -->|3. Inyecta Deps| AuthBO
 ```
 
 ### Explicación de Componentes
 
-1.  **Capa Web**: Es tonta. Solo sabe de HTTP (req, res, headers). Su único trabajo es entregar el paquete JSON al Dispatcher.
-2.  **Dispatcher**: Es el director de tráfico. No sabe de negocios, solo sabe direccionar transacciones (`tx`).
+1.  **Capa Web**: Es tonta. Solo sabe de HTTP (req, res, headers). Su único trabajo es entregar el paquete JSON al AppServer.
+2.  **AppServer**: El director de tráfico. Configura Express y enruta transacciones (`tx`) vía Controladores.
 3.  **SecurityService**: El guardia armado. NADIE ejecuta nada si este servicio no da luz verde. Carga permisos desde la DB al inicio.
 4.  **Container**: La caja de herramientas. Contiene la conexión viva a la DB, el logger configurado, y el servicio de auditoría. Se pasa de mano en mano.
 5.  **Business Objects**: Módulos aislados. Reciben el `Container` y ejecutan la lógica.

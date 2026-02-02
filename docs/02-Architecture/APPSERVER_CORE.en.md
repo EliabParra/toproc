@@ -8,10 +8,11 @@ The `AppServer` (formerly Dispatcher) is the core entry point to the system. It 
 graph TD
     Request[HTTP Request] --> Middleware[Middlewares]
     Middleware --> Router{Route}
-    Router -->|/health, /ready| Handlers[Simple Handlers]
+    Router -->|/health, /ready| ProbeCtrl[ProbeController]
     Router -->|/csrf| CSRF[CSRF Token]
     Router -->|/login, /logout| AuthCtrl[AuthController]
     Router -->|/toProccess| TxCtrl[TransactionController]
+    Router -->|/*| PageCtrl[PageController]
     TxCtrl --> Security[SecurityService]
     AuthCtrl --> Session[SessionService]
     Security --> BO[Business Object]
@@ -35,6 +36,16 @@ graph TD
 
 - **Authentication**: Handles `/login` and `/logout`.
 - **Logic**: Delegates to `SessionService` and manages HTTP responses.
+
+### 4. ProbeController (`ProbeController.ts`)
+
+- **Observability**: Handles `/health` and `/ready`.
+- **Logic**: Checks system uptime and security service readiness.
+
+### 5. PageController (`PageController.ts`)
+
+- **Static Content**: Serves views from `public/pages`.
+- **Routing**: Fallback for all non-API routes.
 
 ## The Master Route: `/toProccess`
 

@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto'
-import { IConfig, II18nService } from '../../../types/core.js'
+import { IConfig, II18nService, AppRequest, AppResponse } from '../../../types/index.js'
+import { NextFunction } from 'express'
 
 /**
  * Genera o recupera el token CSRF de la sesión actual.
@@ -8,7 +9,7 @@ import { IConfig, II18nService } from '../../../types/core.js'
  * @param req - Request Express con soporte de sesión
  * @returns {string|null} Token CSRF o null si no hay sesión disponible
  */
-export function ensureCsrfToken(req: any) {
+export function ensureCsrfToken(req: AppRequest) {
     if (req.session == null) return null
     if (typeof req.session.csrfToken === 'string' && req.session.csrfToken.length > 0) {
         return req.session.csrfToken
@@ -27,7 +28,7 @@ export function ensureCsrfToken(req: any) {
  */
 export function createCsrfTokenHandler(deps: { config: IConfig; i18n: II18nService }) {
     const { i18n } = deps
-    return function csrfTokenHandler(req: any, res: any) {
+    return function csrfTokenHandler(req: AppRequest, res: AppResponse) {
         const token = ensureCsrfToken(req)
         if (!token) {
             const errDef = i18n.error('errors.client.unknown')
@@ -50,18 +51,15 @@ export function createCsrfTokenHandler(deps: { config: IConfig; i18n: II18nServi
  */
 export function createCsrfProtection(deps: { config: IConfig; i18n: II18nService }) {
     const { i18n } = deps
-    return function csrfProtection(req: any, res: any, next: any) {
+    return function csrfProtection(req: AppRequest, res: AppResponse, next: NextFunction) {
         // Preserve previous semantics: if there's no authenticated session yet,
         // keep returning the existing 401 behavior for endpoints that already check auth.
-        if (
-            ((req as any).path === '/toProccess' || (req as any).path === '/logout') &&
-            !req.session?.user_id
-        ) {
+        if ((req.path === '/toProccess' || req.path === '/logout') && !req.session?.userId) {
             return next()
         }
 
         const expected = req.session?.csrfToken
-        const provided = req.get?.('X-CSRF-Token')
+        const provided = req.get('X-CSRF-Token')
         if (typeof expected !== 'string' || expected.length === 0) {
             const errDef = i18n.error('errors.client.csrfInvalid')
             return res.status(errDef.code).send(errDef)

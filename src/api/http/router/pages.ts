@@ -2,6 +2,7 @@ import express, { NextFunction } from 'express'
 import path from 'path'
 import { routes, pagesPath } from './routes.js'
 import { createAuthCheckMiddleware } from '../middleware/auth-check.js'
+import { PageController } from '../controllers/PageController.js'
 import type {
     IConfig,
     ILogger,
@@ -41,27 +42,15 @@ export function buildPagesRouter({
     routes: providedRoutes,
 }: PagesRouterArgs) {
     const activeRoutes = providedRoutes || routes
-    const clientErrors = i18n.get('errors.client') as Record<string, { msg: string; code: number }>
     const router = express.Router()
+    const pageController = new PageController(log, i18n)
 
     const requireAuth = session
         ? createAuthCheckMiddleware(session)
         : (_req: AppRequest, res: AppResponse, _next: NextFunction) => res.redirect('/')
 
     activeRoutes.forEach((r: PageRoute) => {
-        const handler = (req: AppRequest, res: AppResponse) => {
-            try {
-                const viewPath = path.join(pagesPath, 'pages', `${r.view}.html`)
-                res.status(200).sendFile(viewPath)
-            } catch (err: unknown) {
-                const message = err instanceof Error ? err.message : String(err)
-                log.show({
-                    type: log.TYPE_ERROR,
-                    msg: `Exception in ${r.path}: ${message}`,
-                })
-                res.status(clientErrors.unknown.code).send(clientErrors.unknown)
-            }
-        }
+        const handler = pageController.serve(r.view)
         if (r.validateIsAuth) router.get(r.path, requireAuth, handler)
         else router.get(r.path, handler)
     })

@@ -46,7 +46,7 @@ The framework engine. Divided into very specific areas:
 
 #### `src/api/`
 
-- **Dispatcher**: The brain deciding which BO to execute.
+- **AppServer**: The brain connecting Controllers.
 - **HTTP**: Express server, middlewares, and routes (`src/api/http`).
 
 #### `src/config/`

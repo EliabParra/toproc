@@ -1,6 +1,5 @@
 import { redactSecretsInString } from '../../../utils/sanitize.js'
-import { ILogger, LocalizedMessage } from '../../../types/index.js'
-import { AppRequest, AppResponse } from '../../../types/http.js'
+import { ILogger, LocalizedMessage, AppRequest, AppResponse } from '../../../types/index.js'
 import { NextFunction } from 'express'
 
 export type FinalErrorHandlerArgs = {

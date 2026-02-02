@@ -46,7 +46,7 @@ El motor del framework. Se divide en áreas muy específicas:
 
 #### `src/api/`
 
-- **Dispatcher**: El cerebro que decide qué BO ejecutar.
+- **AppServer**: El cerebro que conecta Controladores.
 - **HTTP**: Servidor Express, middlewares y rutas (`src/api/http`).
 
 #### `src/config/`

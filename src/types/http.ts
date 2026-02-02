@@ -15,6 +15,7 @@ declare module 'express-session' {
         username?: string
         profileId?: number
         email?: string
+        csrfToken?: string
     }
 }
 

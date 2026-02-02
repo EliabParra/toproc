@@ -1,4 +1,5 @@
-import { IConfig, II18nService } from '../../../types/core.js'
+import { IConfig, II18nService, AppRequest, AppResponse } from '../../../types/index.js'
+import { NextFunction } from 'express'
 
 /**
  * Crea un middleware para capturar errores de sintaxis JSON en el body.
@@ -12,9 +13,15 @@ import { IConfig, II18nService } from '../../../types/core.js'
  */
 export function createJsonSyntaxErrorHandler(deps: { config: IConfig; i18n: II18nService }) {
     const { i18n } = deps
-    return function jsonBodySyntaxErrorHandler(err: any, req: any, res: any, next: any) {
-        const status = err?.status ?? err?.statusCode
-        const isEntityParseFailed = err?.type === 'entity.parse.failed'
+    return function jsonBodySyntaxErrorHandler(
+        err: any,
+        req: AppRequest,
+        res: AppResponse,
+        next: NextFunction
+    ) {
+        const errorObj = err as Record<string, unknown>
+        const status = Number(errorObj?.status ?? errorObj?.statusCode)
+        const isEntityParseFailed = errorObj?.type === 'entity.parse.failed'
         const isSyntaxError = err instanceof SyntaxError
         const looksLikeJsonParseError = status === 400 && (isEntityParseFailed || isSyntaxError)
 

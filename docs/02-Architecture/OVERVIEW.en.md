@@ -41,7 +41,7 @@ graph TD
     end
 
     subgraph "Core Layer (Framework)"
-        Dispatcher[Dispatcher]
+        AppServer[AppServer]
         Security[SecurityService]
         Container[DI Container]
     end
@@ -53,16 +53,16 @@ graph TD
     end
 
     Handler --> Middlewares
-    Middlewares --> Dispatcher
-    Dispatcher -->|1. Resolve TX| Security
+    Middlewares --> AppServer
+    AppServer -->|1. Resolve TX| Security
     Security -->|2. Instantiate| Container
     Container -->|3. Inject Deps| AuthBO
 ```
 
 ### Component Explanation
 
-1.  **Web Layer**: It's dumb. It only knows HTTP (req, res, headers). Its only job is to deliver the JSON package to the Dispatcher.
-2.  **Dispatcher**: The traffic director. Knows nothing about business, only knows how to route transactions (`tx`).
+1.  **Web Layer**: It's dumb. It only knows HTTP (req, res, headers). Its only job is to deliver the JSON package to the AppServer.
+2.  **AppServer**: The traffic director. Configures Express and routes transactions (`tx`) via Controllers.
 3.  **SecurityService**: The armed guard. NO ONE executes anything unless this service gives the green light. Loads permissions from DB at startup.
 4.  **Container**: The toolbox. Contains the live DB connection, configured logger, and audit service. Passed from hand to hand.
 5.  **Business Objects**: Isolated modules. Receive the `Container` and execute logic.

@@ -1,4 +1,5 @@
-import { ILogger } from '../../../types/core.js'
+import { ILogger, AppRequest, AppResponse } from '../../../types/index.js'
+import { Express, NextFunction } from 'express'
 
 /**
  * Middleware para logging de peticiones HTTP.
@@ -14,15 +15,14 @@ import { ILogger } from '../../../types/core.js'
  * (usando `res.locals.__errorLogged`).
  *
  */
-export function applyRequestLogger(app: any, deps: { log: ILogger }) {
+export function applyRequestLogger(app: Express, deps: { log: ILogger }) {
     const { log } = deps
     // Log completed responses with duration and requestId.
     // For status >= 400 we log only if it wasn't already logged (to avoid duplication).
-    app.use((req: any, res: any, next: any) => {
-        const resAny = res as any
-        resAny.once('finish', () => {
+    app.use((req: AppRequest, res: AppResponse, next: NextFunction) => {
+        res.once('finish', () => {
             try {
-                const status = resAny.statusCode
+                const status = res.statusCode
 
                 const durationMs =
                     typeof req.requestStartMs === 'number'
@@ -35,12 +35,12 @@ export function applyRequestLogger(app: any, deps: { log: ILogger }) {
                     path: req.originalUrl,
                     status,
                     durationMs,
-                    user_id: req.session?.user_id,
-                    profile_id: req.session?.profile_id,
+                    user_id: req.session?.userId,
+                    profile_id: req.session?.profileId,
                 }
 
                 if (status >= 400) {
-                    if (resAny?.locals?.__errorLogged) return
+                    if (res.locals?.__errorLogged) return
                     log.show({
                         type: log.TYPE_WARNING,
                         msg: `${req.method} ${req.originalUrl} ${status}`,

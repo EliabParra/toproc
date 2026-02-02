@@ -1,0 +1,39 @@
+import path from 'path'
+import { pagesPath } from '../router/routes.js'
+import type { AppRequest, AppResponse, ILogger, II18nService } from '../../../types/index.js'
+
+export class PageController {
+    constructor(
+        private log: ILogger,
+        private i18n: II18nService
+    ) {}
+
+    /**
+     * Sirve una vista estática HTML.
+     * @param view - Nombre del archivo de vista (sin extensión)
+     */
+    public serve(view: string) {
+        return (req: AppRequest, res: AppResponse) => {
+            try {
+                const viewPath = path.join(pagesPath, 'pages', `${view}.html`)
+                res.status(200).sendFile(viewPath)
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : String(err)
+                this.log.show({
+                    type: this.log.TYPE_ERROR,
+                    msg: `Exception serving ${view}: ${message}`,
+                })
+
+                const clientErrors = this.i18n.get('errors.client') as Record<
+                    string,
+                    { msg: string; code: number }
+                >
+                const error = clientErrors?.unknown || { code: 500, msg: 'Internal Server Error' }
+
+                if (!res.headersSent) {
+                    res.status(error.code).send(error)
+                }
+            }
+        }
+    }
+}
