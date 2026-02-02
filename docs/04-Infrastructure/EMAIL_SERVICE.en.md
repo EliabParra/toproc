@@ -40,27 +40,46 @@ EMAIL_SMTP_SECURE=true
 
 ## Usage in Code
 
-The service standardizes vital "transactional" email types.
+The service is now **generic** and supports HTML templates.
 
 ```typescript
 // Inject it (usually instantiated inside BOs or Services)
-
 const email = new EmailService({ log, config })
 
-// Send verification code
-await email.sendEmailVerification({
+// Send using HTML template
+await email.sendTemplate({
     to: 'user@email.com',
-    code: '123456',
-    token: 'abcdef...',
+    subject: 'Welcome to App',
+    templatePath: 'auth/welcome.html', // relative to src/templates/emails/
+    data: {
+        name: 'John Doe',
+        code: '123456',
+    },
+})
+
+// Send simple message (raw text/html)
+await email.send({
+    to: 'admin@email.com',
+    subject: 'System Alert',
+    text: 'Something happened...',
 })
 ```
 
-## Predefined Methods
+## Template System
 
-To maintain consistency, we don't use `sendMail` directly from BOs. We use semantic methods:
+Templates are located in `src/templates/emails/`.
+The system supports simple variable interpolation using `{{variable}}`.
 
-- `sendLoginChallenge`: Code for 2FA or Passwordless Login.
-- `sendEmailVerification`: New account verification.
-- `sendPasswordReset`: Password recovery.
+Example `src/templates/emails/auth/code.html`:
 
-If you need to send a generic email, you can extend the class or add a new method in `EmailService.ts`.
+```html
+<p>Hello {{name}}, your code is <b>{{code}}</b>.</p>
+```
+
+## Available Methods
+
+- `send(options)`: Basic sending.
+- `sendTemplate(options)`: Loads template, interpolates data, and sends.
+- `maskEmail(email)`: Utility for safe logs.
+
+> Note: Specific methods like `sendLoginChallenge` have been deprecated in favor of `sendTemplate` for greater flexibility.

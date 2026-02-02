@@ -89,7 +89,11 @@ function createMockDeps(overrides = {}) {
             auth: { loginId: 'email', requireEmailVerification: false },
         },
         i18n,
-        email: { send: async () => {} },
+        email: {
+            send: async () => ({ ok: true, mode: 'log' }),
+            sendTemplate: async () => ({ ok: true, mode: 'log' }),
+            maskEmail: (e) => e.replace(/(?<=^.).+(?=@)/, '***'),
+        },
         audit: { log: async () => {} },
         validator, // Inject real AppValidator with mock i18n
         ...overrides,

@@ -214,24 +214,27 @@ export interface ISessionService {
  * Servicio de envío de correos electrónicos.
  */
 export interface IEmailService {
-    sendLoginChallenge(params: {
+    /**
+     * Envía un correo electrónico simple (texto plano o HTML raw).
+     */
+    send(params: {
         to: string
-        token: string
-        code: string
-        appName?: unknown
+        subject: string
+        text?: string
+        html?: string
     }): Promise<{ ok: boolean; mode: string }>
-    sendPasswordReset(params: {
+
+    /**
+     * Envía un correo usando una plantilla HTML.
+     */
+    sendTemplate(params: {
         to: string
-        token: string
-        code: string
-        appName?: unknown
+        subject: string
+        templatePath: string
+        data: Record<string, unknown>
     }): Promise<{ ok: boolean; mode: string }>
-    sendEmailVerification(params: {
-        to: string
-        token: string
-        code: string
-        appName?: unknown
-    }): Promise<{ ok: boolean; mode: string }>
+
+    /** Enmascara un email para logs */
     maskEmail(email: string): string
 }
 

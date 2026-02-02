@@ -217,11 +217,15 @@ export class AuthService extends BOService {
             expiresSeconds,
         })
 
-        await this.emailService.sendPasswordReset({
+        await this.emailService.sendTemplate({
             to: user.user_em,
-            token,
-            code: '000000',
-            appName: (this.config as any)?.app?.name,
+            subject: (this.config.app.name ?? 'App') + ': Password Reset',
+            templatePath: 'auth/password-reset.html',
+            data: {
+                appName: this.config.app.name,
+                code: '000000',
+                token,
+            }
         })
     }
 
@@ -259,11 +263,15 @@ export class AuthService extends BOService {
             meta: { tokenHash },
         })
 
-        await this.emailService.sendEmailVerification({
+        await this.emailService.sendTemplate({
             to: emailAddr,
-            token,
-            code: '000000',
-            appName: (this.config as any)?.app?.name,
+            subject: ((this.config as any)?.app?.name ?? 'App') + ': Verify your email',
+            templatePath: 'auth/email-verification.html',
+            data: {
+                appName: (this.config as any)?.app?.name,
+                code: '000000',
+                token,
+            }
         })
     }
 

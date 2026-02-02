@@ -20,9 +20,8 @@ export function createTestAppServer(globals) {
 
     // Simple email stub
     const emailStub = {
-        sendLoginChallenge: async () => ({ ok: true, mode: 'log' }),
-        sendPasswordReset: async () => ({ ok: true, mode: 'log' }),
-        sendEmailVerification: async () => ({ ok: true, mode: 'log' }),
+        send: async () => ({ ok: true, mode: 'log' }),
+        sendTemplate: async () => ({ ok: true, mode: 'log' }),
         maskEmail: (s) => {
             if (!s) return ''
             const [local, domain] = s.split('@')

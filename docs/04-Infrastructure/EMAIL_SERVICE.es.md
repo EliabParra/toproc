@@ -40,28 +40,46 @@ EMAIL_SMTP_SECURE=true
 
 ## Uso en Código
 
-El servicio estandariza los tipos de correos "transaccionales" vitales.
+El servicio ahora es **genérico** y soporta plantillas HTML.
 
 ```typescript
-// Inyectarlo (normalmente ya viene en BaseBO como this.email si lo extendieras,
-// pero en realidad se instancia dentro de los BOs o servicios que lo necesitan)
-
+// Inyectarlo (normalmente ya viene en BaseBO como this.email si lo extendieras)
 const email = new EmailService({ log, config })
 
-// Enviar código de verificación
-await email.sendEmailVerification({
+// Enviar usando plantilla HTML
+await email.sendTemplate({
     to: 'usuario@email.com',
-    code: '123456',
-    token: 'abcdef...',
+    subject: 'Bienvenido a la App',
+    templatePath: 'auth/welcome.html', // relativo a src/templates/emails/
+    data: {
+        name: 'Juan Perez',
+        code: '123456',
+    },
+})
+
+// Enviar mensaje simple (texto/html raw)
+await email.send({
+    to: 'admin@email.com',
+    subject: 'Alerta del Sistema',
+    text: 'Algo sucedió...',
 })
 ```
 
-## Métodos Predefinidos
+## Sistema de Plantillas
 
-Para mantener consistencia, no usamos `sendMail` directamente desde los BOs. Usamos métodos semánticos:
+Las plantillas se encuentran en `src/templates/emails/`.
+El sistema soporta interpolación simple de variables usando `{{variable}}`.
 
-- `sendLoginChallenge`: Código para 2FA o Login sin password.
-- `sendEmailVerification`: Verificación de cuenta nueva.
-- `sendPasswordReset`: Recuperación de contraseña.
+Ejemplo `src/templates/emails/auth/code.html`:
 
-Si necesitas enviar un correo genérico, puedes extender la clase o añadir un método nuevo en `EmailService.ts`.
+```html
+<p>Hola {{name}}, tu código es <b>{{code}}</b>.</p>
+```
+
+## Métodos Disponibles
+
+- `send(options)`: Envío básico.
+- `sendTemplate(options)`: Carga plantilla, interpola datos y envía.
+- `maskEmail(email)`: Utilidad para logs seguros.
+
+> Nota: Los métodos específicos como `sendLoginChallenge` han sido deprecados a favor de `sendTemplate` para mayor flexibilidad.

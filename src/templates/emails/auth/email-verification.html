@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .code {
+            font-size: 24px;
+            font-weight: bold;
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 4px;
+            border: 1px solid #c3e6cb;
+        }
+
+        .footer {
+            font-size: 12px;
+            color: #777;
+            margin-top: 30px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>{{appName}}: Verify your email address</h2>
+        <p>Hello,</p>
+        <p>Thank you for registering. Please verify your email address using the code below:</p>
+
+        <div class="code">{{code}}</div>
+
+        <p>If you did not create an account, no further action is required.</p>
+
+        <div class="footer">
+            &copy; {{year}} {{appName}}. All rights reserved.
+        </div>
+    </div>
+</body>
+
+</html>

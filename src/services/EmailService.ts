@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer'
+import fs from 'node:fs/promises'
+import path from 'node:path'
 import { IEmailService, IConfig, ILogger } from '../types/core.js'
 
 function maskEmail(email: string) {
@@ -49,7 +51,7 @@ function buildTransport(cfg: EmailConfig) {
  * Servicio de envío de correos electrónicos.
  *
  * Soporta modo 'smtp' (producción) y modo 'log' (desarrollo).
- * Enmascara direcciones de correo para logs seguros.
+ * Permite envío de texto plano y plantillas HTML con interpolación simple.
  *
  * @since 1.0.0
  * @author Team ToProccess
@@ -89,68 +91,87 @@ export class EmailService implements IEmailService {
         return maskEmail(email)
     }
 
-    async sendLoginChallenge(params: {
-        to: string
-        token: string
-        code: string
-        appName?: unknown
-    }) {
-        return this._send({
-            to: params.to,
-            subject: `${params.appName || 'App'}: Verify your login`,
-            text: `Your login verification code is: ${params.code}`,
-            token: params.token,
-            code: params.code,
-        })
+    /**
+     * Envía un correo electrónico simple.
+     *
+     * @param params - Opciones de envío
+     * @returns Resultado del envío
+     */
+    async send(params: { to: string; subject: string; text?: string; html?: string }) {
+        return this._sendRaw(params)
     }
 
-    async sendPasswordReset(params: {
+    /**
+     * Envía un correo utilizando una plantilla HTML.
+     * Lee el archivo desde `src/templates/emails/` e interpola variables {{key}}.
+     *
+     * @param params - Opciones con ruta de plantilla y datos
+     * @returns Resultado del envío
+     */
+    async sendTemplate(params: {
         to: string
-        token: string
-        code: string
-        appName?: unknown
+        subject: string
+        templatePath: string
+        data: Record<string, unknown>
     }) {
-        return this._send({
-            to: params.to,
-            subject: `${params.appName || 'App'}: Password Reset`,
-            text: `Use this code to reset your password: ${params.code}`,
-            token: params.token,
-            code: params.code,
-        })
+        try {
+            // Resolver ruta absoluta (asumiendo ejecución desde root o dist)
+            // Esto es simplificado y debería robustecerse para prod/dev
+            const isDist = __dirname.includes('dist')
+            // Ajustar ruta base según entorno (src vs dist)
+            const baseDir = isDist
+                ? path.resolve(__dirname, '../../templates/emails') // dist/src/services/../../templates -> dist/src/templates
+                : path.resolve(process.cwd(), 'src/templates/emails')
+
+            const fullPath = path.join(baseDir, params.templatePath)
+
+            let template = await fs.readFile(fullPath, 'utf-8')
+
+            // Interpolación simple {{key}}
+            for (const [key, value] of Object.entries(params.data)) {
+                if (value !== undefined && value !== null) {
+                    template = template.replaceAll(`{{${key}}}`, String(value))
+                }
+            }
+
+            // Inyectar año actual por defecto si no existe
+            const year = new Date().getFullYear()
+            template = template.replaceAll('{{year}}', String(year))
+
+            return this._sendRaw({
+                to: params.to,
+                subject: params.subject,
+                html: template,
+                text: `Please view this email in an HTML compatible viewer. content: ${JSON.stringify(params.data)}`, // Fallback básico
+            })
+        } catch (error) {
+            this.log.error(`Error loading template ${params.templatePath}`, error as Error)
+            // Fallback a texto plano si falla el template
+            return this._sendRaw({
+                to: params.to,
+                subject: params.subject,
+                text: `Error rendering template. Data: ${JSON.stringify(params.data)}`,
+            })
+        }
     }
 
-    async sendEmailVerification(params: {
-        to: string
-        token: string
-        code: string
-        appName?: unknown
-    }) {
-        return this._send({
-            to: params.to,
-            subject: `${params.appName || 'App'}: Verify your email`,
-            text: `Your email verification code is: ${params.code}`,
-            token: params.token,
-            code: params.code,
-        })
-    }
-
-    async _send({
+    private async _sendRaw({
         to,
         subject,
         text,
-        token,
-        code,
+        html,
     }: {
         to: string
         subject: string
-        text: string
-        token?: string
-        code?: string
+        text?: string
+        html?: string
     }) {
         if (this.mode !== 'smtp' || !this._transport) {
             this.log.info(
                 `[Email:${this.mode}] Would send email to=${to} subject="${subject}"`,
-                this.logIncludeSecrets ? { to, subject, token, code } : { to, subject }
+                this.logIncludeSecrets
+                    ? { to, subject, body: text ?? 'HTML Content' }
+                    : { to, subject }
             )
             return { ok: true, mode: this.mode }
         }
@@ -161,6 +182,7 @@ export class EmailService implements IEmailService {
                 to,
                 subject,
                 text,
+                html,
             })
             return { ok: true, mode: 'smtp' }
         } catch (err: unknown) {
