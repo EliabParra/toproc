@@ -20,7 +20,7 @@ test('applyRequestLogger adds middleware to app', () => {
         show: () => {},
     }
 
-    applyRequestLogger(mockApp, { log: mockLog })
+    applyRequestLogger(mockApp, mockLog)
     assert.equal(middlewareAdded, true)
 })
 
@@ -33,7 +33,7 @@ test('applyRequestLogger middleware calls next', () => {
     }
     const mockLog = { show: () => {} }
 
-    applyRequestLogger(mockApp, { log: mockLog })
+    applyRequestLogger(mockApp, mockLog)
 
     const mockRes = new EventEmitter()
     mockRes.statusCode = 200
@@ -64,7 +64,7 @@ test('applyRequestLogger logs on finish event for 2xx', () => {
         },
     }
 
-    applyRequestLogger(mockApp, { log: mockLog })
+    applyRequestLogger(mockApp, mockLog)
 
     const mockRes = new EventEmitter()
     mockRes.statusCode = 200
@@ -99,7 +99,7 @@ test('applyRequestLogger logs warning for 4xx status', () => {
         },
     }
 
-    applyRequestLogger(mockApp, { log: mockLog })
+    applyRequestLogger(mockApp, mockLog)
 
     const mockRes = new EventEmitter()
     mockRes.statusCode = 400
@@ -126,7 +126,7 @@ test('applyRequestLogger skips logging if already logged', () => {
         },
     }
 
-    applyRequestLogger(mockApp, { log: mockLog })
+    applyRequestLogger(mockApp, mockLog)
 
     const mockRes = new EventEmitter()
     mockRes.statusCode = 500

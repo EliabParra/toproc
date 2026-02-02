@@ -32,6 +32,9 @@ function createMockI18n(overrides = {}) {
             for (const p of parts) val = val?.[p]
             return val
         },
+        get messages() {
+            return data
+        },
     }
 }
 

@@ -1,0 +1,355 @@
+
+> toproc@0.0.1 test C:\Users\Eliab Parra\Dev\nodejs-backend-architecture
+> node --import tsx --import ./test/setup.mjs --test test/**/*.test.mjs
+
+Ô£ö ValidatorService.validate returns valid=true for correct data (14.797ms)
+Ô£ö ValidatorService.validate returns valid=false for invalid data (2.7564ms)
+Ô£ö ValidatorService.validate handles nested objects (8.3847ms)
+Ô£ö ValidatorService.validate handles arrays (6.4082ms)
+Ô£ö ValidatorService.validate returns error paths correctly (1.9945ms)
+Ô£ö ValidatorService.validate handles optional fields (1.523ms)
+Ô£ö ValidatorService.validate handles default values (1.7235ms)
+Ô£ö ValidatorService.validate handles refinements (3.3033ms)
+Ô£ö ValidatorService.validate handles transform (1.7618ms)
+Ô£ö ValidatorService.validate handles union types (2.6149ms)
+Ô£ö ValidatorService works with complex auth schema (4.0324ms)
+Ô£ö AuditService.log redacts secrets in details before insert (16.5465ms)
+Ô£ö BaseBO.validate returns ok=true for valid data (10.1846ms)
+Ô£ö BaseBO.validate returns ok=false with alerts for invalid data (15.0134ms)
+Ô£ö BaseBO.success returns code 200 (1.171ms)
+Ô£ö BaseBO.created returns code 201 (2.8998ms)
+Ô£ö BaseBO.error returns code 500 (0.6685ms)
+Ô£ö BaseBO.validationError returns code 400 (1.7741ms)
+Ô£ö BaseBO exposes db, log, config dependencies (0.5072ms)
+Ô£ö AnalyzeCommand analiza estructura de BO (158.9456ms)
+Ô£ö Analyze detecta archivos esperados con nomenclatura Name.Type.ts (60.5168ms)
+Ô£ö bo CLI auth --dry does not write files (1321.4556ms)
+Ô£ö bo CLI new --dry does not write files (1383.3448ms)
+Ô£ö bo CLI sync --dry --txStart does not touch DB (1263.0808ms)
+Ô£ö bo CLI --help muestra ayuda con todos los comandos (1351.5104ms)
+Ô£ö bo CLI help no conecta a la DB (1230.2802ms)
+Ô£ö bo CLI perms --dry allow is DB-safe (1328.7788ms)
+Ô£ö bo CLI perms --dry deny is DB-safe (1088.1738ms)
+Ô£ö bo CLI perms rejects invalid method format (909.429ms)
+Ô£ö bo CLI perms rejects invalid profile (708.7659ms)
+Ô£ö bo.parseMethodsFromBO extracts async method names (5.9449ms)
+Ô£ö bo.parseArgs parses flags and values (1.9825ms)
+Ô£û templateBO genera arquitectura 7 archivos con nomenclatura Name.Type.ts (4.9345ms)
+Ô£ö templateSchemas genera schemas con mensajes (nuevos imports) (0.8709ms)
+Ô£ö templateRepository genera repo con tipos (nuevos imports) (0.7349ms)
+Ô£ö templateService genera service con errores (nuevos imports) (0.5886ms)
+Ô£ö templateTypes genera interfaces (0.5744ms)
+Ô£ö templateLocales genera TS object (0.7326ms)
+Ô£ö templateErrors genera clases de error (nuevos imports) (0.7981ms)
+Ô£ö parseMethodsFromBO extrae m├®todos async (2.0622ms)
+Ô£ö ensureCsrfToken returns null if no session (3.6574ms)
+Ô£ö ensureCsrfToken returns existing token if present (0.3979ms)
+Ô£ö ensureCsrfToken generates new token if not present (1.0496ms)
+Ô£ö ensureCsrfToken generates new token if empty string (0.4619ms)
+Ô£ö createCsrfTokenHandler returns 200 with token (0.9382ms)
+Ô£û createCsrfTokenHandler returns error if no session (0.5768ms)
+Ô£ö createCsrfProtection allows request without session for /toProccess (0.6435ms)
+Ô£ö createCsrfProtection allows request without session for /logout (0.5008ms)
+Ô£û createCsrfProtection rejects when no expected token (0.5675ms)
+Ô£û createCsrfProtection rejects when token mismatch (0.6646ms)
+Ô£ö createCsrfProtection allows when token matches (0.4907ms)
+Ô£ö sqlMaxParamIndex detects highest $n placeholder (2.3404ms)
+Ô£ö buildParamsArray supports array/object/single value (2.6387ms)
+Ô£ö prepareNamedParams builds stable ordered array from object (1.4759ms)
+Ô£ö prepareNamedParams fails on missing keys (1.1117ms)
+Ô£ö prepareNamedParams fails on extra keys (strict) (0.4036ms)
+Ô£ö prepareNamedParams fails when SQL placeholder count does not match (0.8101ms)
+Ô£ö applyRequestLogger adds middleware to app (5.2833ms)
+Ô£ö applyRequestLogger middleware calls next (0.6046ms)
+Ô£û applyRequestLogger logs on finish event for 2xx (2.8375ms)
+Ô£û applyRequestLogger logs warning for 4xx status (1.0404ms)
+Ô£ö applyRequestLogger skips logging if already logged (0.4788ms)
+Ô£ö buildPagesRouter redirects when validateIsAuth=true and session missing (155.6442ms)
+Ô£ö buildPagesRouter serves page when authenticated (75.5636ms)
+Ô£ö registerFrontendHosting does nothing when stage does not match (1.1356ms)
+Ô£ö registerPagesHosting mounts static + pages router (60.7512ms)
+Ô£ö registerFrontendHosting spa mode serves index.html fallback for html requests (73.3071ms)
+Ô£ö registerFrontendHosting spa mode throws when SPA_DIST_PATH is missing (non-interactive) (4.7297ms)
+Ô£ö redactSecretsInString redacts password in query string (3.6498ms)
+Ô£ö redactSecretsInString redacts password in JSON (0.3899ms)
+Ô£ö redactSecretsInString handles string without secrets (0.3923ms)
+Ô£ö redactSecretsInString handles empty string (0.2933ms)
+Ô£ö redactSecrets redacts password field (0.5872ms)
+Ô£ö redactSecrets redacts token field (0.4769ms)
+Ô£ö redactSecrets redacts secret field (0.4914ms)
+Ô£ö redactSecrets redacts code field (0.3377ms)
+Ô£ö redactSecrets handles nested objects (0.4585ms)
+Ô£ö redactSecrets handles null input (0.4151ms)
+Ô£ö redactSecrets handles non-object input (0.3123ms)
+Ô£ö redactSecrets does not mutate original object (0.3053ms)
+Ô£ö errorMessage extracts message from Error instance (0.3217ms)
+Ô£ö errorMessage extracts message from object with message property (0.2026ms)
+Ô£ö errorMessage converts unknown value to string (0.2076ms)
+Ô£ö errorMessage handles object without message (0.4779ms)
+Ô£ö errorMessage handles array (0.2865ms)
+ÔûÂ Auth Module Integration (HTTP)
+  Ô£ö 1. Should obtain CSRF token (89.6932ms)
+  Ô£ö 2. Should reject Login without CSRF token (61.7137ms)
+  Ô£ö 3. Should Login with valid credentials and CSRF (23.9546ms)
+  Ô£ö 4. Should Register (BO Execution) via /toProccess (719.9292ms)
+  Ô£ö 5. Should Logout (11.8814ms)
+Ô£ö Auth Module Integration (HTTP) (1033.5617ms)
+ÔûÂ SecurityService Integration
+  Ô£ö should load permissions and tx maps (1.4992ms)
+  Ô£ö should fail permission check for unknown profile (0.4591ms)
+Ô£ö SecurityService Integration (6.2078ms)
+Ô£ö BaseBO translates success message (3.1524ms)
+Ô£ö BaseBO translates created message (0.4875ms)
+Ô£ö BaseBO uses default message if not provided (0.873ms)
+Ô£ö BaseBO returns structured validation errors (12.7736ms)
+Ô£ö BaseBO returns success on valid data (2.5524ms)
+Ô£ö applyRequestId adds middleware to app (2.5652ms)
+Ô£ö applyRequestId middleware sets requestId on req (2.7026ms)
+Ô£ö applyRequestId middleware sets requestStartMs (0.5377ms)
+Ô£ö applyRequestId middleware sets X-Request-Id header (0.6301ms)
+Ô£ö applyCorsIfEnabled does nothing when cors is disabled (0.4195ms)
+Ô£ö applyCorsIfEnabled does nothing when cors config is missing (0.4725ms)
+Ô£û applyCorsIfEnabled adds middleware when cors is enabled (3.7607ms)
+Ô£û applyCorsIfEnabled handles empty origins array (0.7972ms)
+Ô£û applyCorsIfEnabled handles missing origins (0.6721ms)
+Ô£ö ProbeController.health returns 200 with uptime (2.2876ms)
+Ô£ö ProbeController.ready returns 200 when security is ready (0.6176ms)
+Ô£ö ProbeController.ready returns 503 when security is NOT ready (0.4312ms)
+Ô£ö Security.init loads permissions + tx map and sets isReady (9.2288ms)
+Ô£ö Security.init captures initError and rejects ready when DB fails (1.3558ms)
+Ô£ö Security.executeMethod dynamically imports BO and caches the instance (76.8717ms)
+Ô£ö Security.executeMethod returns serverError and logs when BO import fails (22.3381ms)
+Ô£ö I18nService constructor and registration (5.4867ms)
+Ô£ö I18nService translation with interpolation (0.8533ms)
+Ô£ö I18nService fallbacks to default locale (0.6811ms)
+Ô£ö I18nService use() method (10.0066ms)
+Ô£ö I18nService formatDate (48.4821ms)
+Ô£ö I18nService formatCurrency (11.5568ms)
+Ô£ö I18nService error() method (4.1942ms)
+Ô£ö SessionManager constructor initializes correctly (1.4016ms)
+Ô£ö SessionManager constructor handles missing auth config (0.2068ms)
+Ô£ö sessionExists returns true when session has user_id (0.249ms)
+Ô£ö sessionExists returns false when session is empty (0.1444ms)
+Ô£ö sessionExists returns false when no session (0.1568ms)
+Ô£ö createSession returns error if session already exists (1.653ms)
+Ô£ö createSession returns error for non-existent user (0.3893ms)
+Ô£ö createSession uses getUserByUsername for non-email identifier (0.3605ms)
+Ô£ö createSession uses getUserByEmail for email identifier (0.3826ms)
+Ô£ö createSession handles error gracefully and logs (0.576ms)
+Ôä╣ tests 130
+Ôä╣ suites 2
+Ôä╣ pass 121
+Ôä╣ fail 9
+Ôä╣ cancelled 0
+Ôä╣ skipped 0
+Ôä╣ todo 0
+Ôä╣ duration_ms 6597.0116
+
+Ô£û failing tests:
+
+test at test\bo.templates.test.mjs:15:1
+Ô£û templateBO genera arquitectura 7 archivos con nomenclatura Name.Type.ts (4.9345ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /OrderMessages/. Input:
+  
+  "import { BaseBO } from '../../src/core/business-objects/BaseBO.js'\n" +
+    "import type { BODependencies } from '../../src/core/business-objects/BaseBO.js'\n" +
+    "import { OrderRepository } from './Order.Repository.js'\n" +
+    "import { OrderService } from './Order.Service.js'\n" +
+    "import { OrderSchemas, GetOrderInput } from './Order.Schemas.js'\n" +
+    "import { Order, OrderSummary } from './Order.Types.js'\n" +
+    "import { OrderMessages } from './Order.Messages.js'\n" +
+    '\n' +
+    '/**\n' +
+    ' * Business Object para el dominio Order.\n' +
+    ' * \n' +
+    ' * Orquesta transacciones de Order y expone endpoints de API.\n' +
+    ' */\n' +
+    'export class OrderBO extends BaseBO {\n' +
+    '    private service: OrderService\n' +
+    '\n' +
+    '    constructor(deps: BODependencies) {\n' +
+    '        super(deps)\n' +
+    '        const repo = new OrderRepository(this.db)\n' +
+    '        this.service = new OrderService(repo, this.log, this.config, this.db)\n' +
+    '    }\n' +
+    '\n' +
+    '    /**\n' +
+    '     * Helpers para mensajes tipados\n' +
+    '     */\n' +
+    '    private get orderMessages() {\n' +
+    '        return this.i18n.use(OrderMessages)\n' +
+    '    }\n' +
+    '\n' +
+    '    /**\n' +
+    '     * Operaci├│n GetOrder\n' +
+    '     * \n' +
+    '     * @param params - Par├ímetros de la solicitud\n' +
+    '     * @returns ApiResponse con el resultado\n' +
+    '     */\n' +
+    '    async getOrder(params: GetOrderInput): Promise<ApiResponse> {\n' +
+    '        return this.exec<GetOrderInput, Order>(\n' +
+    '            params,\n' +
+    '            OrderSchemas.getOrder,\n' +
+    '            async (data) => {\n' +
+    '                const result: Order = await this.service.getOrder(data)\n' +
+    '                \n' +
+    "                return this.success(result, this.t('bo.order.getOrder'))\n" +
+    '            }\n' +
+    '        )\n' +
+    '    }\n' +
+    '}\n'
+  
+      at TestContext.<anonymous> (file:///C:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/test/bo.templates.test.mjs:20:12)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.start (node:internal/test_runner/test:1003:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:358:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: "import { BaseBO } from '../../src/core/business-objects/BaseBO.js'\nimport type { BODependencies } from '../../src/core/business-objects/BaseBO.js'\nimport { OrderRepository } from './Order.Repository.js'\nimport { OrderService } from './Order.Service.js'\nimport { OrderSchemas, GetOrderInput } from './Order.Schemas.js'\nimport { Order, OrderSummary } from './Order.Types.js'\nimport { OrderMessages } from './Order.Messages.js'\n\n/**\n * Business Object para el dominio Order.\n * \n * Orquesta transacciones de Order y expone endpoints de API.\n */\nexport class OrderBO extends BaseBO {\n    private service: OrderService\n\n    constructor(deps: BODependencies) {\n        super(deps)\n        const repo = new OrderRepository(this.db)\n        this.service = new OrderService(repo, this.log, this.config, this.db)\n    }\n\n    /**\n     * Helpers para mensajes tipados\n     */\n    private get orderMessages() {\n        return this.i18n.use(OrderMessages)\n    }\n\n    /**\n     * Operaci├│n GetOrder\n     * \n     * @param params - Par├ímetros de la solicitud\n     * @returns ApiResponse con el resultado\n     */\n    async getOrder(params: GetOrderInput): Promise<ApiResponse> {\n        return this.exec<GetOrderInput, Order>(\n            params,\n            OrderSchemas.getOrder,\n            async (data) => {\n                const result: Order = await this.service.getOrder(data)\n                \n                return this.success(result, this.t('bo.order.getOrder'))\n            }\n        )\n    }\n}\n",
+    expected: /OrderMessages/,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at test\csrf-handlers.test.mjs:94:1
+Ô£û createCsrfTokenHandler returns error if no session (0.5768ms)
+  TypeError: Cannot read properties of undefined (reading 'errors')
+      at csrfTokenHandler (C:\Users\Eliab Parra\Dev\nodejs-backend-architecture\src\api\http\middleware\csrf.ts:33:42)
+      at TestContext.<anonymous> (file:///C:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/test/csrf-handlers.test.mjs:108:5)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7)
+
+test at test\csrf-handlers.test.mjs:146:1
+Ô£û createCsrfProtection rejects when no expected token (0.5675ms)
+  TypeError: Cannot read properties of undefined (reading 'errors')
+      at csrfProtection (C:\Users\Eliab Parra\Dev\nodejs-backend-architecture\src\api\http\middleware\csrf.ts:62:42)
+      at TestContext.<anonymous> (file:///C:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/test/csrf-handlers.test.mjs:164:5)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7)
+
+test at test\csrf-handlers.test.mjs:169:1
+Ô£û createCsrfProtection rejects when token mismatch (0.6646ms)
+  TypeError: Cannot read properties of undefined (reading 'errors')
+      at csrfProtection (C:\Users\Eliab Parra\Dev\nodejs-backend-architecture\src\api\http\middleware\csrf.ts:66:42)
+      at TestContext.<anonymous> (file:///C:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/test/csrf-handlers.test.mjs:187:5)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7)
+
+test at test\express-middleware.test.mjs:49:1
+Ô£û applyRequestLogger logs on finish event for 2xx (2.8375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///C:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/test/express-middleware.test.mjs:82:12)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\express-middleware.test.mjs:86:1
+Ô£û applyRequestLogger logs warning for 4xx status (1.0404ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  null !== 'warn'
+  
+      at TestContext.<anonymous> (file:///C:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/test/express-middleware.test.mjs:111:12)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'warn',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\middleware.test.mjs:119:1
+Ô£û applyCorsIfEnabled adds middleware when cors is enabled (3.7607ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///C:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/test/middleware.test.mjs:136:12)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\middleware.test.mjs:139:1
+Ô£û applyCorsIfEnabled handles empty origins array (0.7972ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///C:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/test/middleware.test.mjs:156:12)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test\middleware.test.mjs:159:1
+Ô£û applyCorsIfEnabled handles missing origins (0.6721ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///C:/Users/Eliab%20Parra/Dev/nodejs-backend-architecture/test/middleware.test.mjs:175:12)
+      at Test.runInAsyncScope (node:async_hooks:213:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+ÔÇëELIFECYCLEÔÇë Test failed. See above for more details.

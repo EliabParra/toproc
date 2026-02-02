@@ -60,6 +60,18 @@ export class EnvLoader {
                 publicProfileId: envInt(env.AUTH_PUBLIC_PROFILE_ID),
                 sessionProfileId: envInt(env.AUTH_SESSION_PROFILE_ID),
                 requireEmailVerification: envBool(env.AUTH_REQUIRE_EMAIL_VERIFICATION),
+
+                deviceCookieName: env.AUTH_DEVICE_COOKIE_NAME,
+                deviceCookieMaxAgeMs: envInt(env.AUTH_DEVICE_COOKIE_MAX_AGE_MS),
+
+                loginChallengeExpiresSeconds: envInt(env.AUTH_LOGIN_CHALLENGE_EXPIRES_SEC),
+                loginChallengeMaxAttempts: envInt(env.AUTH_LOGIN_CHALLENGE_MAX_ATTEMPTS),
+
+                passwordResetExpiresSeconds: envInt(env.AUTH_PASSWORD_RESET_EXPIRES_SEC),
+                passwordResetMaxAttempts: envInt(env.AUTH_PASSWORD_RESET_MAX_ATTEMPTS),
+
+                emailVerificationExpiresSeconds: envInt(env.AUTH_EMAIL_VERIFY_EXPIRES_SEC),
+                emailVerificationMaxAttempts: envInt(env.AUTH_EMAIL_VERIFY_MAX_ATTEMPTS),
             },
             cors: {
                 enabled: envBool(env.CORS_ENABLED),

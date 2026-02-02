@@ -97,7 +97,7 @@ test('applyCorsIfEnabled does nothing when cors is disabled', () => {
     }
     const config = { cors: { enabled: false } }
 
-    applyCorsIfEnabled(mockApp, { config })
+    applyCorsIfEnabled(mockApp, config)
 
     assert.equal(middlewareAdded, false)
 })
@@ -111,7 +111,7 @@ test('applyCorsIfEnabled does nothing when cors config is missing', () => {
     }
     const config = {}
 
-    applyCorsIfEnabled(mockApp, { config })
+    applyCorsIfEnabled(mockApp, config)
 
     assert.equal(middlewareAdded, false)
 })
@@ -131,7 +131,7 @@ test('applyCorsIfEnabled adds middleware when cors is enabled', () => {
         },
     }
 
-    applyCorsIfEnabled(mockApp, { config })
+    applyCorsIfEnabled(mockApp, config)
 
     assert.equal(middlewareAdded, true)
 })
@@ -151,7 +151,7 @@ test('applyCorsIfEnabled handles empty origins array', () => {
         },
     }
 
-    applyCorsIfEnabled(mockApp, { config })
+    applyCorsIfEnabled(mockApp, config)
 
     assert.equal(middlewareAdded, true)
 })
@@ -170,7 +170,7 @@ test('applyCorsIfEnabled handles missing origins', () => {
         },
     }
 
-    applyCorsIfEnabled(mockApp, { config })
+    applyCorsIfEnabled(mockApp, config)
 
     assert.equal(middlewareAdded, true)
 })
