@@ -12,6 +12,8 @@ export class EnvGenerator {
         let content = ''
         // If file exists, maybe read it first? (TODO for robustness)
         // For now, simple append or create structure
+        
+        
 
         content += `\n# --- ToProccess Init Config ---\n`
         content += `NODE_ENV=${config.app.profile}\n`

@@ -9,6 +9,7 @@ import type {
     ApiResponse,
     TxKey,
     ValidationError,
+    AppMessages,
 } from '../../types/index.js'
 
 export type { BODependencies }
@@ -59,6 +60,11 @@ export abstract class BaseBO {
 
     /** Servicio i18n */
     protected readonly i18n: II18nService
+
+    /** Acceso tipado a mensajes de aplicación */
+    protected get appMessages(): AppMessages {
+        return this.i18n.messages
+    }
 
     /**
      * Crea una nueva instancia de Business Object.

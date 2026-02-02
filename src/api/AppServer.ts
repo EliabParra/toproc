@@ -88,10 +88,6 @@ export class AppServer {
     private txController!: TransactionController
     private probeController!: ProbeController
 
-    // Cache de mensajes localizados (para rate limiters y error handler)
-    private serverErrors: LocalizedMessages
-    private clientErrors: LocalizedMessages
-
     // Middlewares guardados
     private loginRateLimiter: RequestHandler
     private authPasswordResetRateLimiter: RequestHandler
@@ -112,22 +108,18 @@ export class AppServer {
         this.server = null
         this.initialized = false
 
-        this.serverErrors = this.i18n.get('errors.server') as LocalizedMessages
-        this.clientErrors = this.i18n.get('errors.client') as LocalizedMessages
-
         // Configurar Express base
         this.setupExpress()
 
         // Inicializar Middlewares de Seguridad (Factories)
-        this.csrfTokenHandler = createCsrfTokenHandler({
-            config: this.config,
-            i18n: this.i18n,
-        } as any)
-        this.csrfProtection = createCsrfProtection({ config: this.config, i18n: this.i18n } as any)
+        this.csrfTokenHandler = createCsrfTokenHandler(this.i18n)
+        this.csrfProtection = createCsrfProtection(this.i18n)
 
-        this.loginRateLimiter = createLoginRateLimiter(this.clientErrors as unknown as ClientErrors)
+        this.loginRateLimiter = createLoginRateLimiter(
+            this.i18n.messages.errors.client
+        )
         this.authPasswordResetRateLimiter = createAuthPasswordResetRateLimiter(
-            this.clientErrors as unknown as ClientErrors,
+            this.i18n.messages.errors.client,
             this.security
         )
     }
@@ -138,7 +130,7 @@ export class AppServer {
     public get toProccessRateLimiter(): RequestHandler {
         if (!this._toProccessRateLimiter) {
             this._toProccessRateLimiter = createToProccessRateLimiter(
-                this.clientErrors as unknown as ClientErrors
+                this.i18n.messages.errors.client
             )
         }
         return this._toProccessRateLimiter
@@ -151,10 +143,10 @@ export class AppServer {
         }
         applyHelmet(this.app)
         applyRequestId(this.app)
-        applyRequestLogger(this.app, { log: this.log } as any)
-        applyCorsIfEnabled(this.app, { config: this.config } as any)
+        applyRequestLogger(this.app, this.log)
+        applyCorsIfEnabled(this.app, this.config)
         applyBodyParsers(this.app, this.config)
-        this.app.use(createJsonSyntaxErrorHandler({ config: this.config, i18n: this.i18n }))
+        this.app.use(createJsonSyntaxErrorHandler(this.i18n))
     }
 
     /**
@@ -181,8 +173,7 @@ export class AppServer {
         this.probeController = new ProbeController(this.security, this.config.app.name)
 
         // 2. Session Middleware
-        const { applySessionMiddleware } =
-            await import('./http/session/apply-session-middleware.js')
+        const { applySessionMiddleware } = await import('./http/session/apply-session-middleware.js')
         applySessionMiddleware(this.app, {
             config: this.config,
             log: this.log,
@@ -213,8 +204,8 @@ export class AppServer {
         // 6. Error Handler Final
         this.app.use(
             createFinalErrorHandler({
-                clientErrors: this.clientErrors,
-                serverErrors: this.serverErrors,
+                clientErrors: this.i18n.messages.errors.client,
+                serverErrors: this.i18n.messages.errors.server,
                 log: this.log,
             })
         )

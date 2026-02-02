@@ -84,6 +84,32 @@ function createDeps() {
             if (k === 'success') return { logout: { code: 200, msg: 'Logged out' } }
             return {}
         },
+        get messages() {
+            return {
+                errors: {
+                    server: {
+                        serverError: { code: 500, msg: 'Server Error' },
+                        txNotFound: { msg: 'Tx {tx} not found' },
+                    },
+                    client: {
+                        unknown: { code: 500 },
+                        csrfInvalid: { code: 403, msg: 'CSRF Invalid' },
+                        permissionDenied: { code: 403, msg: 'Denied' },
+                        login: { code: 401, msg: 'Login Required' },
+                        invalidParameters: { code: 400, msg: 'Invalid Params' },
+                        serviceUnavailable: { code: 503, msg: 'Service Unavailable' },
+                    },
+                },
+                success: {
+                    logout: { code: 200, msg: 'Logged out' },
+                },
+                alerts: {
+                    invalidBody: 'Invalid body',
+                    invalidTx: 'Invalid tx',
+                    paramsType: 'Invalid params',
+                },
+            }
+        },
         translate: (k) => k,
         error: (k) => {
             const map = {

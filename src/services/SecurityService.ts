@@ -85,10 +85,6 @@ export class SecurityService implements ISecurityService {
         this.executor = new TransactionExecutor(boDeps)
     }
 
-    private get serverErrors(): Record<string, { msg: string; code: number }> {
-        return this.i18n.get('errors.server') as Record<string, { msg: string; code: number }>
-    }
-
     /**
      * Inicializa los subsistemas de seguridad (Mapper y Guard).
      * Carga permisos y mapeos desde la base de datos.
@@ -107,7 +103,7 @@ export class SecurityService implements ISecurityService {
             } catch (err: unknown) {
                 this.log.show({
                     type: this.log.TYPE_ERROR,
-                    msg: `${this.serverErrors.serverError.msg}, SecurityService.init: ${err instanceof Error ? err.message : String(err)}`,
+                    msg: `${this.i18n.messages.errors.server.serverError.msg}, SecurityService.init: ${err instanceof Error ? err.message : String(err)}`,
                 })
                 throw err
             }
@@ -167,13 +163,13 @@ export class SecurityService implements ISecurityService {
         } catch (err: unknown) {
             this.log.show({
                 type: this.log.TYPE_ERROR,
-                msg: `${this.serverErrors.serverError.msg}, SecurityService.executeMethod: ${err instanceof Error ? err.message : String(err)}`,
+                msg: `${this.i18n.messages.errors.server.serverError.msg}, SecurityService.executeMethod: ${err instanceof Error ? err.message : String(err)}`,
                 ctx: {
                     objectName: jsonData.objectName,
                     methodName: jsonData.methodName,
                 },
             })
-            return this.serverErrors.serverError
+            return this.i18n.messages.errors.server.serverError
         }
     }
 }

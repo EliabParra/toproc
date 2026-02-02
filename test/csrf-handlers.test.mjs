@@ -67,11 +67,8 @@ test('ensureCsrfToken generates new token if empty string', () => {
 
 // --- createCsrfTokenHandler tests ---
 test('createCsrfTokenHandler returns 200 with token', () => {
-    const deps = {
-        config: { app: { lang: 'es' } },
-        i18n: createMockI18n(),
-    }
-    const handler = createCsrfTokenHandler(deps)
+    const i18n = createMockI18n()
+    const handler = createCsrfTokenHandler(i18n)
 
     const req = { session: {} }
     let statusCode = null
@@ -95,11 +92,8 @@ test('createCsrfTokenHandler returns 200 with token', () => {
 })
 
 test('createCsrfTokenHandler returns error if no session', () => {
-    const deps = {
-        config: { app: { lang: 'es' } },
-        i18n: createMockI18n(),
-    }
-    const handler = createCsrfTokenHandler(deps)
+    const i18n = createMockI18n()
+    const handler = createCsrfTokenHandler(i18n)
 
     const req = {} // No session
     let statusCode = null
@@ -118,11 +112,8 @@ test('createCsrfTokenHandler returns error if no session', () => {
 
 // --- createCsrfProtection tests ---
 test('createCsrfProtection allows request without session for /toProccess', () => {
-    const deps = {
-        config: { app: { lang: 'es' } },
-        i18n: createMockI18n(),
-    }
-    const middleware = createCsrfProtection(deps)
+    const i18n = createMockI18n()
+    const middleware = createCsrfProtection(i18n)
 
     const req = { path: '/toProccess', session: {} }
     let nextCalled = false
@@ -137,11 +128,8 @@ test('createCsrfProtection allows request without session for /toProccess', () =
 })
 
 test('createCsrfProtection allows request without session for /logout', () => {
-    const deps = {
-        config: { app: { lang: 'es' } },
-        i18n: createMockI18n(),
-    }
-    const middleware = createCsrfProtection(deps)
+    const i18n = createMockI18n()
+    const middleware = createCsrfProtection(i18n)
 
     const req = { path: '/logout', session: {} }
     let nextCalled = false
@@ -156,11 +144,8 @@ test('createCsrfProtection allows request without session for /logout', () => {
 })
 
 test('createCsrfProtection rejects when no expected token', () => {
-    const deps = {
-        config: { app: { lang: 'es' } },
-        i18n: createMockI18n(),
-    }
-    const middleware = createCsrfProtection(deps)
+    const i18n = createMockI18n()
+    const middleware = createCsrfProtection(i18n)
 
     const req = {
         path: '/api/action',
@@ -182,11 +167,8 @@ test('createCsrfProtection rejects when no expected token', () => {
 })
 
 test('createCsrfProtection rejects when token mismatch', () => {
-    const deps = {
-        config: { app: { lang: 'es' } },
-        i18n: createMockI18n(),
-    }
-    const middleware = createCsrfProtection(deps)
+    const i18n = createMockI18n()
+    const middleware = createCsrfProtection(i18n)
 
     const req = {
         path: '/api/action',
@@ -208,11 +190,8 @@ test('createCsrfProtection rejects when token mismatch', () => {
 })
 
 test('createCsrfProtection allows when token matches', () => {
-    const deps = {
-        config: { app: { lang: 'es' } },
-        i18n: createMockI18n(),
-    }
-    const middleware = createCsrfProtection(deps)
+    const i18n = createMockI18n()
+    const middleware = createCsrfProtection(i18n)
 
     const req = {
         path: '/api/action',

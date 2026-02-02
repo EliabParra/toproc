@@ -9,8 +9,7 @@ import { Express } from 'express'
  * Configura métodos permitidos, credenciales y headers expuestos seguramenete.
  *
  */
-export function applyCorsIfEnabled(app: Express, deps: { config: IConfig }) {
-    const { config } = deps
+export function applyCorsIfEnabled(app: Express, config: IConfig) {
     if (!config.cors?.enabled) return
 
     const allowedOrigins = Array.isArray(config.cors.origins) ? config.cors.origins : []

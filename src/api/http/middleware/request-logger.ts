@@ -15,8 +15,7 @@ import { Express, NextFunction } from 'express'
  * (usando `res.locals.__errorLogged`).
  *
  */
-export function applyRequestLogger(app: Express, deps: { log: ILogger }) {
-    const { log } = deps
+export function applyRequestLogger(app: Express, log: ILogger) {
     // Log completed responses with duration and requestId.
     // For status >= 400 we log only if it wasn't already logged (to avoid duplication).
     app.use((req: AppRequest, res: AppResponse, next: NextFunction) => {

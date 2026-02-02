@@ -22,9 +22,6 @@ export class DatabaseService implements IDatabase {
     /** Pool de conexiones de PostgreSQL */
     public pool: Pool
 
-    /** Cache de mensajes de error del servidor para acceso rápido */
-    public serverErrors: LocalizedMessages
-
     private log: ILogger
 
     /**
@@ -36,9 +33,11 @@ export class DatabaseService implements IDatabase {
     constructor(deps: { config: IConfig; i18n: II18nService; log: ILogger }) {
         const { config, i18n, log } = deps
         this.pool = new Pool(config.db)
-        this.serverErrors = i18n.get('errors.server') as LocalizedMessages
+        this.i18n = i18n
         this.log = log
     }
+
+    private i18n: II18nService
 
     /**
      * Ejecuta una definición de consulta (Query Definition) o SQL crudo.
@@ -96,16 +95,16 @@ export class DatabaseService implements IDatabase {
             return await client.query(sql, paramsArray as unknown[])
         } catch (e: unknown) {
             // Manejo de errores centralizado
-            const msg = `${this.serverErrors.dbError.msg}, DatabaseService.exeRaw: ${e instanceof Error ? e.message : String(e)}`
+            const msg = `${this.i18n.messages.errors.server.dbError.msg}, DatabaseService.exeRaw: ${e instanceof Error ? e.message : String(e)}`
 
             this.log.show({ type: this.log.TYPE_ERROR, msg })
 
             // Re-empaquetar error para mantener consistencia
-            const err = new Error(this.serverErrors.dbError.msg) as Error & {
+            const err = new Error(this.i18n.messages.errors.server.dbError.msg) as Error & {
                 code?: unknown
                 cause?: unknown
             }
-            err.code = this.serverErrors.dbError.code
+            err.code = this.i18n.messages.errors.server.dbError.code
             ;(err as any).cause = e
 
             throw err

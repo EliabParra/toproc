@@ -2,6 +2,8 @@ import { Pool } from 'pg'
 import type { AppMessages } from '../locales/es.js'
 import type { AppRequest, AppResponse } from './http.js'
 
+export type { AppMessages }
+
 /**
  * Interfaz para servicios de logging.
  * Estandariza la salida de logs en toda la aplicación.

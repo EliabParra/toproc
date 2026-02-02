@@ -333,6 +333,7 @@ import { ${pascalName}Repository } from './${pascalName}.Repository.js'
 import { ${pascalName}Service } from './${pascalName}.Service.js'
 import { ${pascalName}Schemas, ${inputTypes} } from './${pascalName}.Schemas.js'
 import { ${pascalName}, ${pascalName}Summary } from './${pascalName}.Types.js'
+import { ${pascalName}Messages } from './${pascalName}.Messages.js'
 
 /**
  * Business Object para el dominio ${pascalName}.
@@ -351,9 +352,8 @@ export class ${boClassName} extends BaseBO {
     /**
      * Helpers para mensajes tipados
      */
-    private get m() {
-        // TODO: Importar y usar mensajes tipados desde locales/ si es necesario
-        return {} as any 
+    private get ${lowerName}Messages() {
+        return this.i18n.use(${pascalName}Messages)
     }
 
 ${methodStubs}

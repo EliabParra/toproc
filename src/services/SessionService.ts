@@ -31,10 +31,6 @@ export class SessionManager implements ISessionService {
     private audit: IAuditService
     private validator: ValidatorService
 
-    // Cache localized messages
-    private serverErrors: LocalizedMessages
-    private clientErrors: LocalizedMessages
-    private successMsgs: LocalizedMessages
     private authCfg: Record<string, unknown>
     private requireEmailVerification: boolean
 
@@ -53,9 +49,8 @@ export class SessionManager implements ISessionService {
         this.audit = deps.audit
         this.validator = deps.validator
 
-        this.serverErrors = this.i18n.get('errors.server') as LocalizedMessages
-        this.clientErrors = this.i18n.get('errors.client') as LocalizedMessages
-        this.successMsgs = this.i18n.get('success') as LocalizedMessages
+        // No longer need manual casting or get() calls
+        // We will access this.i18n.messages directly in methods
 
         this.authCfg = (this.config.auth ?? {}) as Record<string, unknown>
         this.requireEmailVerification = Boolean(this.authCfg.requireEmailVerification)
@@ -83,25 +78,28 @@ export class SessionManager implements ISessionService {
             if (!validation.success) {
                 return {
                     status: 'validation_error',
-                    error: this.clientErrors.invalidParameters,
+                    error: this.i18n.messages.errors.client.invalidParameters,
                     errors: validation.errors,
                     alerts: this.validator.getAlerts(validation.errors),
                 }
             }
 
             if (this.sessionExists(req)) {
-                return { status: 'error', error: this.clientErrors.sessionExists }
+                return { status: 'error', error: this.i18n.messages.errors.client.sessionExists }
             }
 
             const { identifier, password } = validation.data
             const user = await this.findUserByIdentifier(identifier)
 
             if (!user || !(await this.passwordsMatch(password, user.password_hash))) {
-                return { status: 'error', error: this.clientErrors.usernameOrPasswordIncorrect }
+                return {
+                    status: 'error',
+                    error: this.i18n.messages.errors.client.usernameOrPasswordIncorrect,
+                }
             }
 
             if (this.isEmailVerificationPending(user)) {
-                return { status: 'error', error: this.clientErrors.emailNotVerified }
+                return { status: 'error', error: this.i18n.messages.errors.client.emailNotVerified }
             }
 
             this.initializeUserSession(req, user)
@@ -109,14 +107,17 @@ export class SessionManager implements ISessionService {
             await this.updateUserStats(user.id)
             await this.auditLoginSuccess(req, user)
 
-            return { status: 'success', user, msg: this.successMsgs.login }
+            return { status: 'success', user, msg: this.i18n.messages.success.login }
         } catch (error) {
             // En caso de error de sistema, lo relanzamos o devolvemos error genérico
             // Para mantener consistencia con dispatcher, devolvemos result de error tras loguear
             this.logSystemError(req, error)
             return {
                 status: 'error',
-                error: this.clientErrors.unknown || { code: 500, msg: 'Unknown Error' },
+                error: this.i18n.messages.errors.client.unknown || {
+                    code: 500,
+                    msg: 'Unknown Error',
+                },
             }
         }
     }
@@ -197,8 +198,8 @@ export class SessionManager implements ISessionService {
     // =========================================================================
 
     private logSystemError(req: AppRequest, error: unknown): void {
-        const msg = this.serverErrors.serverError.msg || 'Server Error'
-        const status = this.serverErrors.serverError.code || 500
+        const msg = this.i18n.messages.errors.server.serverError.msg || 'Server Error'
+        const status = this.i18n.messages.errors.server.serverError.code || 500
 
         this.log.show({
             type: this.log.TYPE_ERROR,

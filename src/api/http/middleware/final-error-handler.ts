@@ -1,10 +1,10 @@
 import { redactSecretsInString } from '../../../utils/sanitize.js'
-import { ILogger, LocalizedMessage, AppRequest, AppResponse } from '../../../types/index.js'
+import { ILogger, LocalizedMessage, AppRequest, AppResponse, LocalizedMessages } from '../../../types/index.js'
 import { NextFunction } from 'express'
 
 export type FinalErrorHandlerArgs = {
-    clientErrors: Record<string, LocalizedMessage>
-    serverErrors: Record<string, LocalizedMessage>
+    clientErrors: LocalizedMessages
+    serverErrors: LocalizedMessages
     log: ILogger
 }
 

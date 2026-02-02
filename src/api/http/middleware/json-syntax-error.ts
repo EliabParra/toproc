@@ -1,4 +1,4 @@
-import { IConfig, II18nService, AppRequest, AppResponse } from '../../../types/index.js'
+import { II18nService, AppRequest, AppResponse } from '../../../types/index.js'
 import { NextFunction } from 'express'
 
 /**
@@ -8,11 +8,10 @@ import { NextFunction } from 'express'
  * Este middleware intercepta ese error específico y devuelve nuestra respuesta estándar de "Parámetros inválidos".
  *
  * @function createJsonSyntaxErrorHandler
- * @param deps - Dependencias (config, i18n)
+ * @param i18n - Servicio de internacionalización
  * @returns {Function} Middleware de manejo de errores Express
  */
-export function createJsonSyntaxErrorHandler(deps: { config: IConfig; i18n: II18nService }) {
-    const { i18n } = deps
+export function createJsonSyntaxErrorHandler(i18n: II18nService) {
     return function jsonBodySyntaxErrorHandler(
         err: any,
         req: AppRequest,
@@ -28,7 +27,7 @@ export function createJsonSyntaxErrorHandler(deps: { config: IConfig; i18n: II18
         if (!looksLikeJsonParseError) return next(err)
 
         const alert = i18n.translate('alerts.invalidJson', { value: 'body' })
-        const errorDef = i18n.error('errors.client.invalidParameters')
+        const errorDef = i18n.messages.errors.client.invalidParameters
 
         return res.status(errorDef.code).send({
             msg: errorDef.msg,

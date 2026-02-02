@@ -36,19 +36,13 @@ export class TransactionController {
     private config: IConfig
     private i18n: II18nService
 
-    // Cache de mensajes
-    private clientErrors: LocalizedMessages
-    private serverErrors: LocalizedMessages
-
     constructor(deps: TransactionControllerDeps) {
         this.security = deps.security
         this.session = deps.session
         this.audit = deps.audit
         this.config = deps.config
         this.i18n = deps.i18n
-
-        this.clientErrors = deps.i18n.get('errors.client') as LocalizedMessages
-        this.serverErrors = deps.i18n.get('errors.server') as LocalizedMessages
+        this.i18n = deps.i18n
     }
 
     /**
@@ -73,7 +67,9 @@ export class TransactionController {
                   : null
 
             if (!hasSession && effectiveProfileId == null) {
-                res.status(this.clientErrors.login.code).send(this.clientErrors.login)
+                res.status(this.i18n.messages.errors.client.login.code).send(
+                    this.i18n.messages.errors.client.login
+                )
                 return
             }
 
@@ -82,12 +78,12 @@ export class TransactionController {
             const alerts: string[] = []
 
             if (!body || typeof body !== 'object' || Array.isArray(body)) {
-                alerts.push(this.i18n.translate('alerts.invalidBody') || 'Invalid body')
+                alerts.push(this.i18n.messages.alerts.invalidBody || 'Invalid body')
             }
 
             const tx = body?.tx
             if (!Number.isInteger(tx) || tx <= 0) {
-                alerts.push(this.i18n.translate('alerts.invalidTx') || 'Invalid tx')
+                alerts.push(this.i18n.messages.alerts.invalidTx || 'Invalid tx')
             }
 
             const params = body?.params
@@ -99,14 +95,19 @@ export class TransactionController {
 
                 if (!isValidParams) {
                     alerts.push(
-                        this.i18n.translate('alerts.paramsType', { value: 'params' }) ||
-                            'Invalid params'
+                        this.i18n.format(this.i18n.messages.alerts.paramsType, {
+                            value: 'params',
+                        }) || 'Invalid params'
                     )
                 }
             }
 
             if (alerts.length > 0) {
-                sendInvalidParameters(res, this.clientErrors.invalidParameters, alerts)
+                sendInvalidParameters(
+                    res,
+                    this.i18n.messages.errors.client.invalidParameters,
+                    alerts
+                )
                 return
             }
 
@@ -115,8 +116,8 @@ export class TransactionController {
                 try {
                     await this.security.ready
                 } catch {
-                    res.status(this.clientErrors.serviceUnavailable.code).send(
-                        this.clientErrors.serviceUnavailable
+                    res.status(this.i18n.messages.errors.client.serviceUnavailable.code).send(
+                        this.i18n.messages.errors.client.serviceUnavailable
                     )
                     return
                 }
@@ -125,7 +126,9 @@ export class TransactionController {
             // 4. Resolver transacción
             const txData = this.security.getDataTx(tx)
             if (!txData) {
-                throw new Error(this.serverErrors.txNotFound.msg.replace('{tx}', String(tx)))
+                throw new Error(
+                    this.i18n.messages.errors.server.txNotFound.msg.replace('{tx}', String(tx))
+                )
             }
 
             // 5. Preparar parámetros (inyectar metadata para Auth)
@@ -170,8 +173,8 @@ export class TransactionController {
                     details: { reason: 'permissionDenied' },
                 })
 
-                res.status(this.clientErrors.permissionDenied.code).send(
-                    this.clientErrors.permissionDenied
+                res.status(this.i18n.messages.errors.client.permissionDenied.code).send(
+                    this.i18n.messages.errors.client.permissionDenied
                 )
                 return
             }

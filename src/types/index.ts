@@ -56,4 +56,5 @@ export type {
     BODependencies,
     SessionResult,
     TxKey,
+    AppMessages,
 } from './core.js'

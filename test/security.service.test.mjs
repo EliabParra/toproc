@@ -41,6 +41,9 @@ function createMockI18n() {
             for (const p of parts) val = val?.[p]
             return val
         },
+        get messages() {
+            return mockLocaleData
+        },
     }
 }
 

@@ -1,9 +1,9 @@
 import {
     ISessionService,
     IAuditService,
+    II18nService,
     AppRequest,
     AppResponse,
-    LocalizedMessages,
     ILogger,
 } from '../../../types/index.js'
 import { sendInvalidParameters } from '../../../utils/http-responses.js'
@@ -30,18 +30,18 @@ export class AuthController {
     private session: ISessionService
     private audit: IAuditService
     private log: ILogger
+    private i18n: II18nService
 
-    // Mensajes cacheados
-    private clientErrors: LocalizedMessages
-    private successMsgs: LocalizedMessages
-
-    constructor(deps: AuthControllerDeps) {
+    constructor(deps: {
+        session: ISessionService
+        audit: IAuditService
+        log: ILogger
+        i18n: II18nService
+    }) {
         this.session = deps.session
         this.audit = deps.audit
         this.log = deps.log
-
-        this.clientErrors = deps.i18n.get('errors.client') as LocalizedMessages
-        this.successMsgs = deps.i18n.get('success') as LocalizedMessages
+        this.i18n = deps.i18n
     }
 
     /**
@@ -89,18 +89,24 @@ export class AuthController {
             const body = req.body
             // Validación básica de body vacío o objeto
             if (body != null && (typeof body !== 'object' || Array.isArray(body))) {
-                sendInvalidParameters(res, this.clientErrors.invalidParameters, ['Invalid body'])
+                sendInvalidParameters(res, this.i18n.messages.errors.client.invalidParameters, [
+                    'Invalid body',
+                ])
                 return
             }
 
             if (this.session.sessionExists(req)) {
                 await this.audit.log(req, { action: 'logout', details: {} })
                 this.session.destroySession(req)
-                res.status(this.successMsgs.logout.code).send(this.successMsgs.logout)
+                res.status(this.i18n.messages.success.logout.code).send(
+                    this.i18n.messages.success.logout
+                )
                 return
             }
 
-            res.status(this.clientErrors.login.code).send(this.clientErrors.login)
+            res.status(this.i18n.messages.errors.client.login.code).send(
+                this.i18n.messages.errors.client.login
+            )
         } catch (err) {
             next(err)
         }

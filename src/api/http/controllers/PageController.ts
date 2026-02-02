@@ -24,11 +24,10 @@ export class PageController {
                     msg: `Exception serving ${view}: ${message}`,
                 })
 
-                const clientErrors = this.i18n.get('errors.client') as Record<
-                    string,
-                    { msg: string; code: number }
-                >
-                const error = clientErrors?.unknown || { code: 500, msg: 'Internal Server Error' }
+                const error = this.i18n.messages.errors.client.unknown || {
+                    code: 500,
+                    msg: 'Internal Server Error',
+                }
 
                 if (!res.headersSent) {
                     res.status(error.code).send(error)
