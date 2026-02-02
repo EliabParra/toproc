@@ -1,4 +1,4 @@
-import { BODependencies, ITransactionExecutor } from '../../types/index.js'
+import { BODependencies, ITransactionExecutor, ILogger } from '../../types/index.js'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
@@ -16,6 +16,7 @@ import { pathToFileURL } from 'node:url'
 export class TransactionExecutor implements ITransactionExecutor {
     private instances: Map<string, Record<string, unknown>> = new Map()
     private readonly boBasePath: string
+    private log: ILogger
 
     /**
      * Crea una instancia de TransactionExecutor.
@@ -23,6 +24,7 @@ export class TransactionExecutor implements ITransactionExecutor {
      * @param deps - Dependencias de negocio (BODependencies)
      */
     constructor(private deps: BODependencies) {
+        this.log = deps.log.child({ category: 'TransactionExecutor' })
         // Resolver ruta base una sola vez y asegurar que es absoluta
         const configPath = this.deps.config.bo.path || '../../BO/'
         // Si el usuario configuró 'BO', lo normalizamos a 'BO/'
@@ -79,9 +81,7 @@ export class TransactionExecutor implements ITransactionExecutor {
         // 2. Verificar que la ruta resultante sigue estando dentro de boBasePath
         // Previene ataques tipo "param: ../../etc/passwd" aunque validación previa fallase
         if (!expectedPath.startsWith(this.boBasePath)) {
-            this.deps.log.error(
-                `SECURITY: Path Traversal attempt detected. ObjectName: ${objectName}`
-            )
+            this.log.error(`SECURITY: Path Traversal attempt detected. ObjectName: ${objectName}`)
             throw new Error('Access Denied: Invalid Object Path')
         }
 
@@ -106,7 +106,7 @@ export class TransactionExecutor implements ITransactionExecutor {
             return { instance }
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err)
-            this.deps.log.error(`Fallo en carga de BO ${objectName}: ${msg}`, {
+            this.log.error(`Fallo en carga de BO ${objectName}: ${msg}`, {
                 objectName,
                 path: expectedPath,
             })

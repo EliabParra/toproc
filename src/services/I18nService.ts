@@ -77,7 +77,7 @@ export class I18nService implements II18nService {
      * @returns String formateado.
      *
      * @example
-     * i18n.format('Hola {name}', { name: 'Eliab' }); // 'Hola Eliab'
+     * i18n.format('Hola {name}', { name: 'Juan' }); // 'Hola Juan'
      */
     format(template: string, params?: Record<string, unknown>): string {
         return this.interpolate(template, params)

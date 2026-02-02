@@ -63,7 +63,7 @@ export class SecurityService implements ISecurityService {
         session: ISessionService
         validator: IValidator
     }) {
-        this.log = deps.log
+        this.log = deps.log.child({ category: 'Security' })
         this.config = deps.config
         this.i18n = deps.i18n
 

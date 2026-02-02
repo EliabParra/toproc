@@ -12,6 +12,8 @@ import { IPermissionProvider, ILogger } from '../../types/core.js'
  * @class AuthorizationService
  */
 export class AuthorizationService {
+    private log: ILogger
+
     /**
      * Crea una instancia de AuthorizationService.
      *
@@ -20,8 +22,10 @@ export class AuthorizationService {
      */
     constructor(
         private guard: IPermissionProvider,
-        private log: ILogger
-    ) {}
+        log: ILogger
+    ) {
+        this.log = log.child({ category: 'Authorization' })
+    }
 
     /**
      * Inicializa el servicio cargando los permisos.

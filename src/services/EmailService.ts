@@ -65,7 +65,7 @@ export class EmailService implements IEmailService {
     _transport: unknown
 
     constructor(deps: { log: ILogger; config: IConfig }) {
-        this.log = deps.log
+        this.log = deps.log.child({ category: 'Email' })
         this.config = deps.config
 
         this.cfg = (this.config?.email ?? {}) as EmailConfig

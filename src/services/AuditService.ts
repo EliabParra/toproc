@@ -24,7 +24,7 @@ export class AuditService implements IAuditService {
 
     constructor(deps: { db: IDatabase; logger: ILogger }) {
         this.db = deps.db
-        this.logger = deps.logger
+        this.logger = deps.logger.child({ category: 'Audit' })
     }
 
     async log(req: AppRequest, args: AuditArgs): Promise<void> {

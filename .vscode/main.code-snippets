@@ -235,8 +235,29 @@
     "Logger Info": {
 		"prefix": "tp-log",
 		"body": [
-			"this.log.show({ type: this.log.TYPE_INFO, msg: '${1:Message}' })"
+			"this.log.info('${1:Message}')"
 		],
 		"description": "Log an info message"
+	},
+    "Logger Error": {
+		"prefix": "tp-log-error",
+		"body": [
+			"this.log.error('${1:Message}', ${2:error})"
+		],
+		"description": "Log an error message"
+	},
+    "Logger Warn": {
+		"prefix": "tp-log-warn",
+		"body": [
+			"this.log.warn('${1:Message}')"
+		],
+		"description": "Log a warning message"
+	},
+    "Logger Debug": {
+		"prefix": "tp-log-debug",
+		"body": [
+			"this.log.debug('${1:Message}')"
+		],
+		"description": "Log a debug message"
 	}
 }

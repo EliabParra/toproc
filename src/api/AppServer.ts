@@ -31,7 +31,7 @@ import {
 import {
     createLoginRateLimiter,
     createToProccessRateLimiter,
-    createAuthPasswordResetRateLimiter
+    createAuthPasswordResetRateLimiter,
 } from './http/rate-limit/index.js'
 
 import { PermissionGuard } from '../core/security/PermissionGuard.js'
@@ -108,7 +108,7 @@ export class AppServer {
 
     constructor(deps: AppServerDependencies) {
         this.config = deps.config
-        this.log = deps.log
+        this.log = deps.log.child({ category: 'System' })
         this.security = deps.security
         this.session = deps.session
         this.i18n = deps.i18n

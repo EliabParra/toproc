@@ -28,6 +28,7 @@ interface TxRow {
  */
 export class TransactionMapper implements ITransactionMapper {
     private txMap: Map<number, TransactionRoute> = new Map()
+    private log: ILogger
 
     /**
      * Crea una instancia de TransactionMapper.
@@ -37,8 +38,10 @@ export class TransactionMapper implements ITransactionMapper {
      */
     constructor(
         private db: IDatabase,
-        private log: ILogger
-    ) {}
+        log: ILogger
+    ) {
+        this.log = log.child({ category: 'TransactionMapper' })
+    }
 
     /**
      * Carga el mapa de transacciones desde la base de datos.

@@ -3,10 +3,14 @@ import { pagesPath } from '../router/routes.js'
 import type { AppRequest, AppResponse, ILogger, II18nService } from '../../../types/index.js'
 
 export class PageController {
+    private log: ILogger
+
     constructor(
-        private log: ILogger,
+        log: ILogger,
         private i18n: II18nService
-    ) {}
+    ) {
+        this.log = log.child({ category: 'PageController' })
+    }
 
     /**
      * Sirve una vista estática HTML.

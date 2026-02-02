@@ -23,7 +23,6 @@ import { AuthorizationService } from '../security/AuthorizationService.js'
  */
 export class TransactionOrchestrator {
     private readonly validNameRegex = /^[a-zA-Z0-9]+$/
-
     constructor(
         private mapper: ITransactionMapper,
         private auth: AuthorizationService,
@@ -31,7 +30,9 @@ export class TransactionOrchestrator {
         private log: ILogger,
         private audit: IAuditService,
         private i18n: II18nService
-    ) {}
+    ) {
+        this.log = log.child({ category: 'TransactionOrchestrator' })
+    }
 
     /**
      * Ejecuta una transacción completa de forma segura.

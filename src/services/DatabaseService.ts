@@ -34,7 +34,7 @@ export class DatabaseService implements IDatabase {
         const { config, i18n, log } = deps
         this.pool = new Pool(config.db)
         this.i18n = i18n
-        this.log = log
+        this.log = log.child({ category: 'Database' })
     }
 
     private i18n: II18nService

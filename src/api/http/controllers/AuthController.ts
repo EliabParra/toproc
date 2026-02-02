@@ -40,7 +40,7 @@ export class AuthController {
     }) {
         this.session = deps.session
         this.audit = deps.audit
-        this.log = deps.log
+        this.log = deps.log.child({ category: 'AuthController' })
         this.i18n = deps.i18n
     }
 

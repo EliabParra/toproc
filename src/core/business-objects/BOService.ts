@@ -12,7 +12,10 @@ export abstract class BOService {
     protected readonly config: IConfig
 
     constructor(log: ILogger, config: IConfig, db: IDatabase) {
-        this.log = log
+        // Auto-categorization: "AuthService" -> "Auth"
+        const category = this.constructor.name.replace('Service', '')
+        this.log = log.child({ category })
+
         this.config = config
         this.db = db
     }

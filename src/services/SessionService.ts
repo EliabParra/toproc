@@ -42,7 +42,7 @@ export class SessionManager implements ISessionService {
         validator: ValidatorService
     }) {
         this.db = deps.db
-        this.log = deps.log
+        this.log = deps.log.child({ category: 'Session' })
         this.config = deps.config
         this.i18n = deps.i18n
         this.audit = deps.audit

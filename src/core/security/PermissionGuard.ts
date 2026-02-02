@@ -36,7 +36,7 @@ export class PermissionGuard implements IPermissionProvider {
      */
     constructor(db: IDatabase, log: ILogger) {
         this.db = db
-        this.log = log
+        this.log = log.child({ category: 'PermissionGuard' })
     }
 
     /**
