@@ -23,6 +23,7 @@ const mockLog = {
     info: () => {},
     error: () => {},
     warn: () => {},
+    child: () => mockLog,
 }
 const mockConfig = {
     bo: { path: '../../test/mocks/BO/' }, // Point to test BOs

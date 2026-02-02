@@ -39,6 +39,7 @@ const mockLog = {
     info: () => {},
     error: () => {},
     warn: () => {},
+    child: () => mockLog,
 }
 const mockConfig = { app: { lang: 'en' } }
 const mockI18n = createMockI18n()

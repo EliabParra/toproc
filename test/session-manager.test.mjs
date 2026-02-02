@@ -73,7 +73,16 @@ function createMockDeps(overrides = {}) {
             warn: () => {},
             error: () => {},
             critical: () => {},
-            child: () => ({}),
+            child: () => ({
+                trace: () => {},
+                debug: () => {},
+                info: () => {},
+                warn: () => {},
+                error: (msg) => {
+                    if (msg) logCalled = true
+                }, // simplistic for the specific test relying on logCalled closure in one test, but safer to just recurse or return dummy.
+                critical: () => {},
+            }),
         },
         config: {
             app: { lang: 'es' },
@@ -225,7 +234,11 @@ test('createSession handles error gracefully and logs', async () => {
                 logCalled = true
             },
             critical: () => {},
-            child: () => ({}),
+            child: () => ({
+                error: (msg) => {
+                    if (msg) logCalled = true
+                },
+            }),
         },
     })
     const sm = new SessionManager(deps)

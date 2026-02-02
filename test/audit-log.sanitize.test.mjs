@@ -12,7 +12,13 @@ test('AuditService.log redacts secrets in details before insert', async () => {
         },
     }
 
-    const audit = new AuditService({ db: dbStub })
+    const mockLog = {
+        child: () => mockLog,
+        info: () => {},
+        error: () => {},
+        debug: () => {},
+    }
+    const audit = new AuditService({ db: dbStub, log: mockLog })
 
     const req = {
         requestId: 'req-1',

@@ -59,7 +59,7 @@ container.register('db', db)
 // 7. Capa de Servicios
 
 // Auditoría
-const audit = new AuditService({ db, logger: appLogger })
+const audit = new AuditService({ db, log: appLogger })
 container.register('audit', audit)
 
 // Servicio de Email

@@ -67,7 +67,14 @@ test('Security.init loads permissions + tx map and sets isReady', async () => {
                 trace: () => {},
                 debug: () => {},
                 critical: () => {},
-                child: () => ({}),
+                child: () => ({
+                    info: (e) => logs.push(e),
+                    error: (e) => logs.push(e),
+                    warn: (e) => logs.push(e),
+                    debug: () => {},
+                    trace: () => {},
+                    critical: () => {},
+                }),
             }
 
             globalThis.db = {
@@ -145,7 +152,14 @@ test('Security.init captures initError and rejects ready when DB fails', async (
                 warn: (msg) => logs.push({ msg }),
                 error: (msg) => logs.push({ msg }),
                 critical: () => {},
-                child: () => ({}),
+                child: () => ({
+                    trace: () => {},
+                    debug: () => {},
+                    info: (msg) => logs.push({ msg }),
+                    warn: (msg) => logs.push({ msg }),
+                    error: (msg) => logs.push({ msg }),
+                    critical: () => {},
+                }),
             }
 
             globalThis.db = {
@@ -216,7 +230,14 @@ test('Security.executeMethod dynamically imports BO and caches the instance', as
                     warn: () => {},
                     error: () => {},
                     critical: () => {},
-                    child: () => ({}),
+                    child: () => ({
+                        trace: () => {},
+                        debug: () => {},
+                        info: () => {},
+                        warn: () => {},
+                        error: () => {},
+                        critical: () => {},
+                    }),
                 }
                 globalThis.db = {
                     query: async (sql) => {
@@ -276,7 +297,14 @@ test('Security.executeMethod returns serverError and logs when BO import fails',
                 warn: (e) => logs.push(e),
                 error: (e) => logs.push(e),
                 critical: () => {},
-                child: () => ({}),
+                child: () => ({
+                    trace: () => {},
+                    debug: () => {},
+                    info: (e) => logs.push(e),
+                    warn: (e) => logs.push(e),
+                    error: (e) => logs.push(e),
+                    critical: () => {},
+                }),
             }
 
             globalThis.db = {
