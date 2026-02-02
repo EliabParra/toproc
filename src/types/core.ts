@@ -8,16 +8,33 @@ export type { AppMessages }
  * Interfaz para servicios de logging.
  * Estandariza la salida de logs en toda la aplicación.
  */
+/**
+ * Niveles de Log estándar (RFC 5424 simplificado).
+ */
+export enum LogLevel {
+    TRACE = 10,
+    DEBUG = 20,
+    INFO = 30,
+    WARN = 40,
+    ERROR = 50,
+    CRITICAL = 60,
+}
+
+/**
+ * Interfaz para servicios de logging.
+ * Estandariza la salida de logs en toda la aplicación.
+ */
 export interface ILogger {
-    TYPE_ERROR: number
-    TYPE_INFO: number
-    TYPE_DEBUG: number
-    TYPE_WARNING: number
-    /**
-     * Escribe una entrada en el log.
-     * @param params - Objeto con detalles o mensaje simple
-     */
-    show(params: { type: number; msg?: unknown; ctx?: unknown } | string): void
+    // Niveles estándar
+    trace(msg: string, ctx?: object): void
+    debug(msg: string, ctx?: object): void
+    info(msg: string, ctx?: object): void
+    warn(msg: string, ctx?: object): void
+    error(msg: string, ctx?: object | Error): void
+    critical(msg: string, ctx?: object | Error): void
+
+    // Soporte para loggers hijos con contexto pinned
+    child(ctx: object): ILogger
 }
 
 /**

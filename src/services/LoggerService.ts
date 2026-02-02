@@ -1,5 +1,5 @@
 import 'colors'
-import { ILogger, IConfig } from '../types/core.js'
+import { ILogger, IConfig, LogLevel } from '../types/core.js'
 
 type LogEvent = {
     type: unknown
@@ -14,122 +14,110 @@ type LogEvent = {
  * Configurable mediante `config.log`.
  */
 export class AppLogger implements ILogger {
-    TYPE_ERROR = 0
-    TYPE_INFO = 1
-    TYPE_DEBUG = 2
-    TYPE_WARNING = 3
+    private minLevel: LogLevel
+    private format: 'json' | 'text'
+    private context: object = {}
+    private useColors: boolean = true
 
-    private activation: Record<number, boolean>
-    private format: unknown
-
-    constructor(deps: { config: IConfig }) {
+    constructor(deps: { config: IConfig }, context: object = {}) {
         const config = deps.config
-        this.activation = (config as any).log.activation
-        this.format = (config as any)?.log?.format ?? 'text'
+        // Default to INFO if not configured
+        const levelName = (config as any).log?.minLevel?.toUpperCase() ?? 'INFO'
+        this.minLevel = LogLevel[levelName as keyof typeof LogLevel] ?? LogLevel.INFO
+
+        this.format = (config as any).log?.format ?? 'text'
+        this.context = context
+
+        // Colors only in text mode
+        this.useColors = this.format === 'text'
     }
 
-    show(params: unknown) {
-        const isJson = String(this.format).toLowerCase() === 'json'
+    trace(msg: string, ctx?: object): void {
+        this.log(LogLevel.TRACE, msg, ctx)
+    }
 
-        const typeToLevel = (t: unknown) => {
-            switch (t) {
-                case this.TYPE_ERROR:
-                    return 'error'
-                case this.TYPE_WARNING:
-                    return 'warn'
-                case this.TYPE_DEBUG:
-                    return 'debug'
-                case this.TYPE_INFO:
-                default:
-                    return 'info'
+    debug(msg: string, ctx?: object): void {
+        this.log(LogLevel.DEBUG, msg, ctx)
+    }
+
+    info(msg: string, ctx?: object): void {
+        this.log(LogLevel.INFO, msg, ctx)
+    }
+
+    warn(msg: string, ctx?: object): void {
+        this.log(LogLevel.WARN, msg, ctx)
+    }
+
+    error(msg: string, ctx?: object | Error): void {
+        this.log(LogLevel.ERROR, msg, ctx)
+    }
+
+    critical(msg: string, ctx?: object | Error): void {
+        this.log(LogLevel.CRITICAL, msg, ctx)
+    }
+
+    child(ctx: object): ILogger {
+        // Create new instance with merged context
+        // We pass { config: ... } to match constructor signature
+        return new AppLogger(
+            { config: { log: { minLevel: this.getLevelName(), format: this.format } } as any },
+            { ...this.context, ...ctx }
+        )
+    }
+
+    private log(level: LogLevel, msg: string, ctx?: object | Error): void {
+        if (level < this.minLevel) return
+
+        const timestamp = new Date().toISOString()
+        const mergedCtx = { ...this.context, ...(ctx instanceof Error ? { error: ctx } : ctx) }
+        const hasCtx = Object.keys(mergedCtx).length > 0
+
+        if (this.format === 'json') {
+            const entry = {
+                time: timestamp,
+                level: LogLevel[level].toLowerCase(),
+                msg,
+                ...(hasCtx ? { ctx: mergedCtx } : {}),
             }
-        }
+            console.log(JSON.stringify(entry))
+        } else {
+            // Text format
+            const levelLabel = LogLevel[level].padEnd(5)
+            let formattedMsg = `[${timestamp}] ${levelLabel}: ${msg}`
 
-        const isActiveForType = (t: unknown) => {
-            switch (t) {
-                case this.TYPE_ERROR:
-                    return Boolean(this.activation?.[0])
-                case this.TYPE_INFO:
-                    return Boolean(this.activation?.[1])
-                case this.TYPE_DEBUG:
-                    return Boolean(this.activation?.[2])
-                case this.TYPE_WARNING:
-                    return Boolean(this.activation?.[3])
-                default:
-                    return true
-            }
-        }
-
-        const safeSerializeCtx = (ctx: unknown) => {
-            if (!ctx || typeof ctx !== 'object') return undefined
-            try {
-                JSON.stringify(ctx)
-                return ctx
-            } catch {
-                return '[unserializable]'
-            }
-        }
-
-        switch (typeof params) {
-            case 'string':
-                if (isJson) {
-                    console.log(
-                        JSON.stringify({
-                            time: new Date().toISOString(),
-                            level: 'info',
-                            msg: params,
-                        })
-                    )
-                } else {
-                    console.log(params)
-                }
-                break
-            case 'object': {
-                const e = params as LogEvent
-                const level = typeToLevel(e.type)
-                if (!isActiveForType(e.type)) break
-
-                if (isJson) {
-                    console.log(
-                        JSON.stringify({
-                            time: new Date().toISOString(),
-                            level,
-                            msg: e.msg,
-                            ctx: safeSerializeCtx(e.ctx),
-                        })
-                    )
-                    break
-                }
-
-                const ctx = e.ctx
-                let ctxText = ''
-                if (ctx && typeof ctx === 'object') {
-                    try {
-                        ctxText = ` | ctx=${JSON.stringify(ctx)}`
-                    } catch {
-                        ctxText = ' | ctx=[unserializable]'
-                    }
-                }
-                switch (e.type) {
-                    case this.TYPE_ERROR:
-                        if (this.activation[0])
-                            console.log('[' + level + ']: ' + `${String(e.msg)}${ctxText}`.red)
+            if (this.useColors) {
+                switch (level) {
+                    case LogLevel.TRACE:
+                        formattedMsg = formattedMsg.gray
                         break
-                    case this.TYPE_WARNING:
-                        if (this.activation[3])
-                            console.log('[' + level + ']: ' + `${String(e.msg)}${ctxText}`.yellow)
+                    case LogLevel.DEBUG:
+                        formattedMsg = formattedMsg.magenta
                         break
-                    case this.TYPE_INFO:
-                        if (this.activation[1])
-                            console.log('[' + level + ']: ' + `${String(e.msg)}${ctxText}`.blue)
+                    case LogLevel.INFO:
+                        formattedMsg = formattedMsg.blue
                         break
-                    case this.TYPE_DEBUG:
-                        if (this.activation[2])
-                            console.log('[' + level + ']: ' + `${String(e.msg)}${ctxText}`.magenta)
+                    case LogLevel.WARN:
+                        formattedMsg = formattedMsg.yellow
+                        break
+                    case LogLevel.ERROR:
+                        formattedMsg = formattedMsg.red
+                        break
+                    case LogLevel.CRITICAL:
+                        formattedMsg = formattedMsg.bgRed.white
                         break
                 }
-                break
             }
+
+            if (hasCtx) {
+                const ctxStr = JSON.stringify(mergedCtx)
+                formattedMsg += ` | ${this.useColors ? ctxStr.gray : ctxStr}`
+            }
+
+            console.log(formattedMsg)
         }
+    }
+
+    private getLevelName(): string {
+        return LogLevel[this.minLevel]
     }
 }
