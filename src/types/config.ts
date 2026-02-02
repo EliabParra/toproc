@@ -89,11 +89,13 @@ export interface CorsConfig {
  */
 export interface LogConfig {
     /** Nivel de log: 'debug', 'info', 'warn', 'error' */
-    level?: 'debug' | 'info' | 'warn' | 'error'
+    minLevel?: 'debug' | 'info' | 'warn' | 'error'
     /** Formato de salida */
     format?: 'json' | 'text' | 'pretty'
     /** Incluir timestamp */
     timestamp?: boolean
+    /** Niveles por categoría/módulo */
+    categories?: Record<string, 'debug' | 'info' | 'warn' | 'error'>
 }
 
 /**

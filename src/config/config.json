@@ -7,7 +7,11 @@
         "path": "../../BO/"
     },
     "log": {
-        "activation": [true, true, true, true]
+        "minLevel": "info",
+        "format": "text",
+        "categories": {
+            "Database": "warn"
+        }
     },
     "cors": {
         "enabled": true

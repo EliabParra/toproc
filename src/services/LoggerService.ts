@@ -18,6 +18,7 @@ export class AppLogger implements ILogger {
     private format: 'json' | 'text'
     private context: object = {}
     private useColors: boolean = true
+    private categories: Record<string, LogLevel> = {}
 
     constructor(deps: { config: IConfig }, context: object = {}) {
         const config = deps.config
@@ -27,6 +28,15 @@ export class AppLogger implements ILogger {
 
         this.format = (config as any).log?.format ?? 'text'
         this.context = context
+
+        // Load categories
+        const categories = (config as any).log?.categories ?? {}
+        for (const [cat, level] of Object.entries(categories)) {
+            const lvl = LogLevel[(level as string).toUpperCase() as keyof typeof LogLevel]
+            if (lvl !== undefined) {
+                this.categories[cat] = lvl
+            }
+        }
 
         // Colors only in text mode
         this.useColors = this.format === 'text'
@@ -60,13 +70,34 @@ export class AppLogger implements ILogger {
         // Create new instance with merged context
         // We pass { config: ... } to match constructor signature
         return new AppLogger(
-            { config: { log: { minLevel: this.getLevelName(), format: this.format } } as any },
+            {
+                config: {
+                    log: {
+                        minLevel: this.getLevelName(),
+                        format: this.format,
+                        categories: Object.fromEntries(
+                            Object.entries(this.categories).map(([k, v]) => [
+                                k,
+                                LogLevel[v].toLowerCase(),
+                            ])
+                        ) as any,
+                    },
+                } as any,
+            },
             { ...this.context, ...ctx }
         )
     }
 
     private log(level: LogLevel, msg: string, ctx?: object | Error): void {
-        if (level < this.minLevel) return
+        let minLevel = this.minLevel
+
+        // Check for category override
+        const category = (this.context as any).category || (ctx as any)?.category
+        if (category && this.categories[category] !== undefined) {
+            minLevel = this.categories[category]
+        }
+
+        if (level < minLevel) return
 
         const timestamp = new Date().toISOString()
         const mergedCtx = { ...this.context, ...(ctx instanceof Error ? { error: ctx } : ctx) }

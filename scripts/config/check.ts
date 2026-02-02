@@ -11,7 +11,7 @@ async function main() {
         const env = config.app.env
         console.log(`\nMode: ${env.blue.bold}`)
         console.log(`DB Host: ${config.db.host.yellow}`)
-        console.log(`Log Level: ${config.log.level}`)
+        console.log(`Log Level: ${config.log.minLevel}`)
 
         if (env === 'production') {
             console.log('\n🔒 Production Security Checks:'.bold)
