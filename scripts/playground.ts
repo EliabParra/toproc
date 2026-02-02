@@ -1,5 +1,5 @@
 import readline from 'node:readline'
-import { AppValidator } from '../src/services/ValidatorService.js'
+import { ValidatorService } from '../src/services/ValidatorService.js'
 import { AuthSchemas } from '../BO/Auth/Auth.Schemas.js'
 import { ZodObject } from 'zod'
 
@@ -19,7 +19,7 @@ const mockI18n = {
     locale: () => 'dev',
 }
 
-const validator = new AppValidator(mockI18n as any)
+const validator = new ValidatorService(mockI18n as any)
 
 const colorObj = (obj: any) => JSON.stringify(obj, null, 2)
 

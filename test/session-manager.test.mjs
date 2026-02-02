@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 
 import { SessionManager } from '../src/services/SessionService.js'
 // Assuming this path is correct or will be fixed if broken, keeping original
-import { AppValidator } from '../src/core/AppValidator.js'
+import { ValidatorService } from '../src/services/ValidatorService.js'
 
 // Mock i18n data
 const mockLocaleData = {
@@ -62,7 +62,7 @@ function createMockI18n() {
 // Helper to create mock dependencies
 function createMockDeps(overrides = {}) {
     const i18n = createMockI18n()
-    const validator = new AppValidator(i18n)
+    const validator = new ValidatorService(i18n)
 
     return {
         db: { query: async () => ({ rows: [] }), exe: async () => ({ rows: [] }) },

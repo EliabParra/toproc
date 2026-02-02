@@ -7,7 +7,7 @@ import { container } from './core/Container.js'
 import { ConfigLoader } from './config/index.js'
 import { I18nService } from './services/I18nService.js'
 import { FeatureFlags } from './config/FeatureFlags.js'
-import { AppValidator } from './services/ValidatorService.js'
+import { ValidatorService } from './services/ValidatorService.js'
 import { AppLogger } from './services/LoggerService.js'
 import { SecurityService } from './services/SecurityService.js'
 import { SessionManager } from './services/SessionService.js'
@@ -44,7 +44,7 @@ const features = new FeatureFlags(config)
 container.register('features', features)
 
 // 4. Validador (Zod)
-const validator = new AppValidator(i18n)
+const validator = new ValidatorService(i18n)
 container.register('validator', validator)
 
 // 5. Logger

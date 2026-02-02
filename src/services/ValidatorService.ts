@@ -1,197 +1,204 @@
 import { z, ZodType } from 'zod'
-import type { ValidationResult, ValidationError } from '../types/api.js'
-import { I18nService } from './I18nService.js'
+import type { IValidator, ValidationResult, ValidationError, II18nService } from '../types/index.js'
 
-// Define a robust interface compatible with the installed Zod version's output
+// Interface compatible with ZodIssue to avoid strict type mismatch issues
 interface ZodIssueCompatible {
     code: string
     path: (string | number)[]
-    message?: string
+    message: string
     expected?: string
     received?: string
     minimum?: number
     maximum?: number
     type?: string
     validation?: string
-    format?: string // For invalid_format
+    format?: string
 }
 
 /**
- * Servicio de validación moderno usando esquemas Zod con soporte i18n.
+ * Servicio de validación unificado que implementa `IValidator`.
+ * Utiliza Zod para la validación de esquemas y I18nService para la localización de mensajes.
  *
- * AppValidator proporciona validación type-safe con mensajes de error localizados.
- * Se integra con el mapa de errores de Zod para producir alertas amigables
+ * Reemplaza al antiguo `AppValidator` proporcionando una implementación más robusta
+ * y estandarizada dentro de la capa de servicios.
  *
- * @example
- * ```typescript
- * import { z } from 'zod'
- * import { AppValidator } from './core/validation/AppValidator.js'
- * import { I18nService } from './core/i18n/I18nService.js'
- *
- * const i18n = new I18nService(messagesJson, 'es')
- * const validator = new AppValidator(i18n)
- *
- * const UserSchema = z.object({
- *     email: z.email(),
- *     age: z.number().min(18)
- * })
- *
- * const result = validator.validate({ email: 'invalid', age: 15 }, UserSchema)
- * if (!result.valid) {
- *     console.log(result.errors) // Mensajes de error localizados
- * }
- * ```
+ * @class ValidatorService
+ * @implements {IValidator}
  */
-export class AppValidator {
-    /** Servicio i18n para mensajes de error localizados */
-    private i18n: I18nService
-
+export class ValidatorService implements IValidator {
     /**
-     * Crea una nueva instancia de AppValidator.
+     * Crea una nueva instancia de ValidatorService.
      *
-     * Configura automáticamente el mapa de errores de Zod para usar i18n en todos los errores de validación.
-     *
-     * @param i18n - Instancia de I18nService para localización de mensajes
+     * @param i18n - Servicio de internacionalización para traducir mensajes de error.
      */
-    constructor(i18n: I18nService) {
-        this.i18n = i18n
-    }
+    constructor(private i18n: II18nService) {}
 
     /**
-     * Valida datos contra un esquema Zod.
+     * Valida datos arbitrarios contra un esquema Zod.
      *
-     * Retorna un resultado de unión discriminada:
-     * - En éxito: `{ valid: true, data: T }` con datos parseados y tipados
-     * - En fallo: `{ valid: false, errors: ValidationError[] }` con mensajes localizados
+     * Retorna un resultado tipado que indica éxito o fallo, con mensajes de error
+     * traducidos automáticamente según el idioma configurado.
      *
-     * @template T - El tipo esperado después de validación exitosa
-     * @param data - Datos de entrada crudos a validar (típicamente del body de request)
-     * @param schema - Esquema Zod definiendo la estructura esperada
-     * @returns ValidationResult conteniendo datos parseados o errores de validación
+     * @template T - Tipo de dato esperado al validar exitosamente.
+     * @param data - Datos crudos a validar (ej. body de un request).
+     * @param schema - Esquema Zod que define la estructura y reglas.
+     * @returns {ValidationResult<T>} Objeto con propiedad `valid` y datos o errores.
      *
      * @example
      * ```typescript
-     * const CreateUserSchema = z.object({
-     *     name: z.string().min(2),
-     *     email: z.email()
-     * })
-     *
-     * const result = validator.validate(req.body, CreateUserSchema)
+     * const schema = z.object({ email: z.string().email() });
+     * const result = validator.validate(body, schema);
      *
      * if (result.valid) {
-     *     // TypeScript sabe que result.data es { name: string, email: string }
-     *     await userService.create(result.data)
+     *   // result.data está tipado correctamente
+     *   process(result.data.email);
      * } else {
+     *   // result.errors contiene array de ValidationError
+     *   console.error(result.errors);
+     * }
+     * ```
      */
-    /**
-     * Valida datos contra un esquema Zod.
-     *
-     * Retorna un resultado de unión discriminada:
-     * - En éxito: `{ valid: true, data: T }` con datos parseados y tipados
-     * - En fallo: `{ valid: false, errors: ValidationError[] }` con mensajes localizados
-     *
-     * @template T - El tipo esperado después de validación exitosa
-     * @param data - Datos de entrada crudos a validar (típicamente del body de request)
-     * @param schema - Esquema Zod definiendo la estructura esperada
-     * @returns ValidationResult conteniendo datos parseados o errores de validación
-     *
-     * @example
-     * ```typescript
-     * const CreateUserSchema = z.object({
-     *     name: z.string().min(2),
-     *     email: z.email()
-     * })
-     *
-     * const result = validator.validate(req.body, CreateUserSchema)
-     *
-     * if (result.valid) {
-     *     // TypeScript sabe que result.data es { name: string, email: string }
-     *     await userService.create(result.data)
-     * } else {
-     */
-    validate<T>(data: unknown, schema: ZodType): ValidationResult<T> {
-        // Standard safeParse without options (since errorMap is ignored in this version)
+    public validate<T>(data: unknown, schema: ZodType): ValidationResult<T> {
+        // Usamos safeParse estándar de Zod
         const result = schema.safeParse(data)
-        const resultData = result.data as T
 
-        if (result.success) return { valid: true, data: resultData }
+        if (result.success) {
+            return { valid: true, data: result.data as T }
+        }
 
-        const issues = result.error.issues
-        const errors: ValidationError[] = issues.map((zodIssue) => {
-            // Apply our custom localization logic manually to each issue
-            const issue = zodIssue as ZodIssueCompatible
-            const pathStr = issue.path.join('.') || ''
-
-            // Default message from Zod if we don't match anything
-            let message = issue.message || 'Error'
-
-            // Try to resolve a localized message
-            const localized = this.resolveLocalizedError(issue)
-            if (localized) {
-                message = localized
-            } else {
-                // Fallback: translate the default message if possible (legacy behavior)
-                message = this.i18n.t(message)
-            }
-
-            return {
-                path: pathStr,
-                message: message,
-                code: issue.code,
-            }
-        })
+        // Mapeo detallado de errores delegando a método especializado
+        const errors: ValidationError[] = result.error.issues.map((issue) =>
+            this.mapZodIssue(issue as ZodIssueCompatible)
+        )
 
         return { valid: false, errors }
     }
 
-    getAlerts(errors: ValidationError[]) {
-        const alerts: string[] = []
-        errors.forEach((error) => {
-            alerts.push(error.message)
-        })
-        return alerts
+    /**
+     * Transforma un error de Zod en un ValidationError de nuestra aplicación.
+     * Encapsula la lógica de resolución de mensajes y formateo de rutas.
+     *
+     * @param issue - El error crudo de Zod
+     */
+    private mapZodIssue(issue: ZodIssueCompatible): ValidationError {
+        const pathStr = issue.path.join('.') || 'root'
+        let message = issue.message
+
+        // Intentar resolver mensaje localizado con nuestra lógica custom
+        const localized = this.resolveLocalizedError(issue)
+
+        if (localized) {
+            message = localized
+        } else {
+            // Fallback: traducir el mensaje por defecto si es posible
+            message = this.i18n.t(message)
+        }
+
+        return {
+            path: pathStr,
+            message: message,
+            code: issue.code,
+        }
     }
 
     /**
-     * Resuelve el mensaje de error localizado basado en el issue de Zod
+     * Extrae una lista simple de mensajes de alerta de los errores de validación.
+     * Útil para mostrar tostadas o mensajes flash en el frontend.
+     *
+     * @param errors - Array de errores de validación.
+     * @returns Array de strings con los mensajes.
+     */
+    public getAlerts(errors: ValidationError[]): string[] {
+        return errors.map((e) => e.message)
+    }
+
+    /**
+     * Formatea un mensaje con parámetros.
+     * Mantenido para compatibilidad con la interfaz IValidator anterior.
+     *
+     * @param msg - Clave del mensaje o texto.
+     * @param args - Parámetros para la interpolación.
+     */
+    public format(msg: string, ...args: unknown[]): string {
+        const params =
+            args.length > 0 && typeof args[0] === 'object'
+                ? (args[0] as Record<string, unknown>)
+                : undefined
+        return this.i18n.format(msg, params)
+    }
+
+    /**
+     * Resuelve un mensaje de error localizado basado en el código de error de Zod.
+     * Utiliza las alertas configuradas en el servicio de i18n.
+     *
+     * @param issue - Objeto de error interno de Zod.
+     * @returns El mensaje traducido o null si no se encuentra.
      */
     private resolveLocalizedError(issue: ZodIssueCompatible): string | null {
-        const msgs = this.i18n.messages.alerts
-        const pathStr = issue.path?.join('.') || ''
+        try {
+            // Definición de tipos para las alertas esperadas
+            interface AlertMessages {
+                string?: string
+                number?: string
+                lengthMin?: string
+                lengthMax?: string
+                email?: string
+                notEmpty?: string
+                [key: string]: string | undefined
+            }
 
-        if (issue.code === 'invalid_type') {
-            if (issue.received === 'undefined' || issue.received === 'null') {
-                return this.i18n.format(msgs.notEmpty, { value: pathStr })
-            } else {
-                const typeMsg = msgs[issue.expected as keyof typeof msgs]
-                if (typeMsg) {
-                    return this.i18n.format(typeMsg, { value: pathStr })
+            // Acceso seguro a los mensajes de alertas
+            // Nota: Asumimos que i18n.messages tiene la estructura esperada
+            const msgs = (this.i18n.messages as { alerts?: AlertMessages })?.alerts
+            if (!msgs) return null
+
+            const pathStr = issue.path.join('.') || ''
+
+            // Mapeo según código de error Zod
+            if (issue.code === 'invalid_type') {
+                // Caso especial para campos requeridos faltantes
+                if (issue.received === 'undefined' || issue.received === 'null') {
+                    return this.i18n.format(msgs.notEmpty || 'Required', { value: pathStr })
+                }
+
+                const realIssue = issue as { expected?: string }
+                if (realIssue.expected && msgs[realIssue.expected]) {
+                    return this.i18n.format(msgs[realIssue.expected]!, { value: pathStr })
+                }
+
+                // Fallback genérico para tipos inválidos
+                return this.i18n.t('errors.client.invalidParameters.msg')
+            }
+
+            if (issue.code === 'too_small') {
+                return this.i18n.format(msgs.lengthMin || 'Too short', {
+                    value: pathStr,
+                    min: issue.minimum,
+                })
+            }
+
+            if (issue.code === 'too_big') {
+                return this.i18n.format(msgs.lengthMax || 'Too long', {
+                    value: pathStr,
+                    max: issue.maximum,
+                })
+            }
+
+            if (issue.code === 'invalid_string') {
+                const realIssue = issue as { validation?: string }
+                if (realIssue.validation === 'email') {
+                    return this.i18n.format(msgs.email || 'Invalid email', { value: pathStr })
                 }
             }
-        }
 
-        if (issue.code === 'invalid_format' && issue.format === 'email') {
-            return this.i18n.format(msgs.email, { value: pathStr })
-        }
+            if (issue.code === 'invalid_format' && issue.format === 'email') {
+                return this.i18n.format(msgs.email || 'Invalid email', { value: pathStr })
+            }
 
-        if (issue.code === 'invalid_string' && issue.validation === 'email') {
-            return this.i18n.format(msgs.email, { value: pathStr })
+            return null
+        } catch (e) {
+            // En caso de cualquier error de resolución, retornamos null para usar el fallback
+            return null
         }
-
-        if (issue.code === 'too_small' && issue.type === 'string') {
-            return this.i18n.format(msgs.lengthMin, {
-                value: pathStr,
-                min: issue.minimum,
-            })
-        }
-
-        if (issue.code === 'too_big' && issue.type === 'string') {
-            return this.i18n.format(msgs.lengthMax, {
-                value: pathStr,
-                max: issue.maximum,
-            })
-        }
-
-        return null
     }
 }

@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { z } from 'zod'
 
-import { AppValidator } from '../src/services/ValidatorService.js'
+import { ValidatorService } from '../src/services/ValidatorService.js'
 
 function createValidator() {
     const i18nStub = {
@@ -19,10 +19,10 @@ function createValidator() {
             },
         },
     }
-    return new AppValidator(i18nStub)
+    return new ValidatorService(i18nStub)
 }
 
-test('AppValidator.validate returns valid=true for correct data', () => {
+test('ValidatorService.validate returns valid=true for correct data', () => {
     const v = createValidator()
     const schema = z.object({ name: z.string(), age: z.number() })
     const result = v.validate({ name: 'Alice', age: 30 }, schema)
@@ -31,7 +31,7 @@ test('AppValidator.validate returns valid=true for correct data', () => {
     assert.deepEqual(result.data, { name: 'Alice', age: 30 })
 })
 
-test('AppValidator.validate returns valid=false for invalid data', () => {
+test('ValidatorService.validate returns valid=false for invalid data', () => {
     const v = createValidator()
     const schema = z.object({ name: z.string(), age: z.number() })
     const result = v.validate({ name: 123, age: 'not a number' }, schema)
@@ -40,7 +40,7 @@ test('AppValidator.validate returns valid=false for invalid data', () => {
     assert.ok(result.errors && result.errors.length > 0)
 })
 
-test('AppValidator.validate handles nested objects', () => {
+test('ValidatorService.validate handles nested objects', () => {
     const v = createValidator()
     const schema = z.object({
         user: z.object({
@@ -62,7 +62,7 @@ test('AppValidator.validate handles nested objects', () => {
     assert.equal(result.valid, true)
 })
 
-test('AppValidator.validate handles arrays', () => {
+test('ValidatorService.validate handles arrays', () => {
     const v = createValidator()
     const schema = z.object({
         items: z.array(z.number().positive()),
@@ -72,7 +72,7 @@ test('AppValidator.validate handles arrays', () => {
     assert.equal(v.validate({ items: [1, -2, 3] }, schema).valid, false)
 })
 
-test('AppValidator.validate returns error paths correctly', () => {
+test('ValidatorService.validate returns error paths correctly', () => {
     const v = createValidator()
     const schema = z.object({
         user: z.object({
@@ -85,7 +85,7 @@ test('AppValidator.validate returns error paths correctly', () => {
     assert.ok(result.errors?.some((e) => e.path === 'user.email'))
 })
 
-test('AppValidator.validate handles optional fields', () => {
+test('ValidatorService.validate handles optional fields', () => {
     const v = createValidator()
     const schema = z.object({
         required: z.string(),
@@ -96,7 +96,7 @@ test('AppValidator.validate handles optional fields', () => {
     assert.equal(v.validate({ required: 'yes', optional: 'also' }, schema).valid, true)
 })
 
-test('AppValidator.validate handles default values', () => {
+test('ValidatorService.validate handles default values', () => {
     const v = createValidator()
     const schema = z.object({
         name: z.string().default('Anonymous'),
@@ -107,7 +107,7 @@ test('AppValidator.validate handles default values', () => {
     assert.equal(result.data?.name, 'Anonymous')
 })
 
-test('AppValidator.validate handles refinements', () => {
+test('ValidatorService.validate handles refinements', () => {
     const v = createValidator()
     const schema = z.object({
         password: z.string().refine((val) => val.length >= 8, {
@@ -119,7 +119,7 @@ test('AppValidator.validate handles refinements', () => {
     assert.equal(v.validate({ password: '1234' }, schema).valid, false)
 })
 
-test('AppValidator.validate handles transform', () => {
+test('ValidatorService.validate handles transform', () => {
     const v = createValidator()
     // In Zod, transformations happen AFTER validation
     // So email validation happens on raw input, then transforms
@@ -132,7 +132,7 @@ test('AppValidator.validate handles transform', () => {
     assert.equal(result.data?.email, 'user@example.com')
 })
 
-test('AppValidator.validate handles union types', () => {
+test('ValidatorService.validate handles union types', () => {
     const v = createValidator()
     const schema = z.object({
         value: z.union([z.string(), z.number()]),
@@ -143,7 +143,7 @@ test('AppValidator.validate handles union types', () => {
     assert.equal(v.validate({ value: true }, schema).valid, false)
 })
 
-test('AppValidator works with complex auth schema', () => {
+test('ValidatorService works with complex auth schema', () => {
     const v = createValidator()
     const loginSchema = z.object({
         identifier: z.string().min(1),

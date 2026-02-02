@@ -12,7 +12,7 @@ import type {
     SessionResult,
 } from '../types/index.js'
 import { LoginSchema, LoginInput, SessionUserRow } from './schemas/session.js'
-import { AppValidator } from './ValidatorService.js'
+import { ValidatorService } from './ValidatorService.js'
 import { SessionQueries } from './queries/session.js'
 
 type ValidationResponse =
@@ -29,7 +29,7 @@ export class SessionManager implements ISessionService {
     private config: IConfig
     private i18n: II18nService
     private audit: IAuditService
-    private validator: AppValidator
+    private validator: ValidatorService
 
     // Cache localized messages
     private serverErrors: LocalizedMessages
@@ -44,7 +44,7 @@ export class SessionManager implements ISessionService {
         config: IConfig
         i18n: II18nService
         audit: IAuditService
-        validator: AppValidator
+        validator: ValidatorService
     }) {
         this.db = deps.db
         this.log = deps.log

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { z } from 'zod'
 
 import { BaseBO } from '../src/core/business-objects/BaseBO.js'
-import { AppValidator } from '../src/core/AppValidator.js'
+import { ValidatorService } from '../src/services/ValidatorService.js'
 
 // Create concrete test implementation
 class TestBO extends BaseBO {
@@ -41,7 +41,7 @@ function createTestBO() {
     }
     const configStub = { app: { lang: 'en' } }
 
-    const validator = new AppValidator(i18nStub)
+    const validator = new ValidatorService(i18nStub)
 
     return new TestBO({
         db: dbStub,
