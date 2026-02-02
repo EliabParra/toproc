@@ -8,6 +8,7 @@ import type {
     BODependencies,
     ApiResponse,
     TxKey,
+    ValidationError,
 } from '../../types/index.js'
 
 export type { BODependencies }
@@ -101,8 +102,8 @@ export abstract class BaseBO {
      * return this.success({ id: 1 }, 'Usuario creado exitosamente')
      * ```
      */
-    protected success<T>(data: T, msg = 'OK'): ApiResponse<T> {
-        return { code: 200, msg, data }
+    protected success<T>(data: T, msg: TxKey | (string & {}) = 'OK'): ApiResponse<T> {
+        return { code: 200, msg: this.translate(msg), data }
     }
 
     /**
@@ -119,8 +120,8 @@ export abstract class BaseBO {
      * return this.created(newUser)
      * ```
      */
-    protected created<T>(data: T, msg = 'Created'): ApiResponse<T> {
-        return { code: 201, msg, data }
+    protected created<T>(data: T, msg: TxKey | (string & {}) = 'Created'): ApiResponse<T> {
+        return { code: 201, msg: this.translate(msg), data }
     }
 
     /**
@@ -153,8 +154,8 @@ export abstract class BaseBO {
      * if (!parsed.ok) return this.validationError(parsed.alerts)
      * ```
      */
-    protected validationError(alerts: string[]): ApiResponse {
-        return { code: 400, msg: 'Validation Error', alerts }
+    protected validationError(alerts: string[], errors: ValidationError[] = []): ApiResponse {
+        return { code: 400, msg: 'Validation Error', alerts, errors }
     }
 
     /**
@@ -183,16 +184,18 @@ export abstract class BaseBO {
     protected validate<T>(
         data: unknown,
         schema: unknown
-    ): { ok: true; data: T } | { ok: false; alerts: string[] } {
+    ): { ok: true; data: T } | { ok: false; alerts: string[]; errors: ValidationError[] } {
         const result = this.v.validate<T>(data, schema)
         if (result.valid && result.data) {
             return { ok: true, data: result.data }
         }
 
-        const alerts = result.errors?.map((e: { message: string }) =>
-            this.translate(e.message)
-        ) || ['Error de validación desconocido']
-        return { ok: false, alerts }
+        const errors = result.errors || []
+        // ValidatorService already translates messages, no need to re-translate here
+        const alerts = result.errors?.map((e: { message: string }) => e.message) || [
+            'Error de validación desconocido',
+        ]
+        return { ok: false, alerts, errors }
     }
     /**
      * Ejecuta una operación de negocio con validación y manejo de errores estandarizado.
@@ -217,7 +220,7 @@ export abstract class BaseBO {
         try {
             if (schema) {
                 const vRes = this.validate<TIn>(params, schema)
-                if (!vRes.ok) throw this.validationError(vRes.alerts)
+                if (!vRes.ok) throw this.validationError(vRes.alerts, vRes.errors)
                 return await fn(vRes.data)
             }
 

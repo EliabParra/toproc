@@ -42,6 +42,8 @@ export interface ApiResponse<T = unknown> {
     data?: T | null
     /** Alertas de validación (opcional) */
     alerts?: string[]
+    /** Errores estructurados de validación (opcional) */
+    errors?: ValidationError[]
 }
 
 /**
@@ -59,6 +61,7 @@ export interface ApiError extends ApiResponse<null> {
     code: 400 | 401 | 403 | 404 | 500
     data: null
     alerts: string[]
+    errors?: ValidationError[]
 }
 
 /**
