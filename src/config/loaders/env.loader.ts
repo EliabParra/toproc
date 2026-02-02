@@ -19,7 +19,14 @@ export class EnvLoader {
                 env: env.NODE_ENV as any,
                 lang: env.APP_LANG as any,
                 frontendMode: env.APP_FRONTEND_MODE as any,
-                trustProxy: env.APP_TRUST_PROXY,
+                trustProxy:
+                    env.APP_TRUST_PROXY === 'true'
+                        ? true
+                        : env.APP_TRUST_PROXY === 'false'
+                          ? false
+                          : /^\d+$/.test(env.APP_TRUST_PROXY || '')
+                            ? parseInt(env.APP_TRUST_PROXY!, 10)
+                            : env.APP_TRUST_PROXY,
             },
             db: {
                 host: env.PGHOST,

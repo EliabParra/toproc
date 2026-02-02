@@ -320,7 +320,7 @@ export function templateBO(className: string, methods: string[]) {
             async (data) => {
                 const result: ${returnType} = ${serviceCall}
                 
-                return this.${isCreate ? 'created' : 'success'}(${isDelete ? 'null' : 'result'}, this.t('${messageKey}'))
+                return this.${isCreate ? 'created' : 'success'}(${isDelete ? 'null' : 'result'}, this.translate('${messageKey}'))
             }
         )
     }`

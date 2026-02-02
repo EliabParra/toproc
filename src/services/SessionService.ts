@@ -7,7 +7,6 @@ import type {
     IAuditService,
     II18nService,
     AppRequest,
-    LocalizedMessages,
     ValidationError,
     SessionResult,
 } from '../types/index.js'

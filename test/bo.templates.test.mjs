@@ -17,11 +17,12 @@ test('templateBO genera arquitectura 7 archivos con nomenclatura Name.Type.ts', 
     assert.match(out, /extends BaseBO/)
     // New naming: Name.Schemas.js only, no Messages
     assert.match(out, /import \{ OrderSchemas.*\} from '\.\/Order\.Schemas\.js'/)
-    assert.doesNotMatch(out, /OrderMessages/)
+    // OrderMessages IS required for i18n.use
+    assert.match(out, /OrderMessages/)
     // Error imports removed from templateBO
     assert.match(out, /this\.exec/)
-    // Now uses exec and this.t
-    assert.match(out, /this\.t\('bo\.order\.getOrder'\)/)
+    // Now uses exec and this.translate
+    assert.match(out, /this\.translate\('bo\.order\.getOrder'\)/)
     assert.match(out, /OrderSchemas\.getOrder/)
 })
 

@@ -1,4 +1,4 @@
-import { z, ZodType } from 'zod'
+import { ZodType } from 'zod'
 import type { IValidator, ValidationResult, ValidationError, II18nService } from '../types/index.js'
 
 // Interface compatible with ZodIssue to avoid strict type mismatch issues
@@ -148,9 +148,8 @@ export class ValidatorService implements IValidator {
             }
 
             // Acceso seguro a los mensajes de alertas
-            // Nota: Asumimos que i18n.messages tiene la estructura esperada
-            const msgs = (this.i18n.messages as { alerts?: AlertMessages })?.alerts
-            if (!msgs) return null
+            const alertMessages = this.i18n.messages.alerts as AlertMessages
+            if (!alertMessages) return null
 
             const pathStr = issue.path.join('.') || ''
 
@@ -158,12 +157,12 @@ export class ValidatorService implements IValidator {
             if (issue.code === 'invalid_type') {
                 // Caso especial para campos requeridos faltantes
                 if (issue.received === 'undefined' || issue.received === 'null') {
-                    return this.i18n.format(msgs.notEmpty || 'Required', { value: pathStr })
+                    return this.i18n.format(alertMessages.notEmpty || 'Required', { value: pathStr })
                 }
 
                 const realIssue = issue as { expected?: string }
-                if (realIssue.expected && msgs[realIssue.expected]) {
-                    return this.i18n.format(msgs[realIssue.expected]!, { value: pathStr })
+                if (realIssue.expected && alertMessages[realIssue.expected]) {
+                    return this.i18n.format(alertMessages[realIssue.expected]!, { value: pathStr })
                 }
 
                 // Fallback genérico para tipos inválidos
@@ -171,14 +170,14 @@ export class ValidatorService implements IValidator {
             }
 
             if (issue.code === 'too_small') {
-                return this.i18n.format(msgs.lengthMin || 'Too short', {
+                return this.i18n.format(alertMessages.lengthMin || 'Too short', {
                     value: pathStr,
                     min: issue.minimum,
                 })
             }
 
             if (issue.code === 'too_big') {
-                return this.i18n.format(msgs.lengthMax || 'Too long', {
+                return this.i18n.format(alertMessages.lengthMax || 'Too long', {
                     value: pathStr,
                     max: issue.maximum,
                 })
@@ -187,12 +186,12 @@ export class ValidatorService implements IValidator {
             if (issue.code === 'invalid_string') {
                 const realIssue = issue as { validation?: string }
                 if (realIssue.validation === 'email') {
-                    return this.i18n.format(msgs.email || 'Invalid email', { value: pathStr })
+                    return this.i18n.format(alertMessages.email || 'Invalid email', { value: pathStr })
                 }
             }
 
             if (issue.code === 'invalid_format' && issue.format === 'email') {
-                return this.i18n.format(msgs.email || 'Invalid email', { value: pathStr })
+                return this.i18n.format(alertMessages.email || 'Invalid email', { value: pathStr })
             }
 
             return null
