@@ -71,18 +71,18 @@ pnpm run bo new Orders --dry
 
 ### File Naming Convention
 
-Files follow the `{Name}.{Type}.ts` convention:
+Files follow the `{Name}{Type}.ts` convention:
 
 ```
 BO/Product/
 ├── 📦 ProductBO.ts            # Business Object (main file)
-├── 🧠 Product.Service.ts      # Business logic
-├── 🗄️ Product.Repository.ts   # Database access
-├── 🔍 Product.Queries.ts      # Colocated SQL
-├── ✅ Product.Schemas.ts       # Zod validations
-├── 📘 Product.Types.ts         # TypeScript interfaces
-├── 💬 Product.Messages.ts      # i18n strings (ES/EN)
-└── ❌ Product.Errors.ts        # Custom error classes
+├── 🧠 ProductService.ts       # Business logic
+├── 🗄️ ProductRepository.ts    # Database access
+├── 🔍 ProductQueries.ts       # Colocated SQL
+├── ✅ ProductSchemas.ts        # Zod validations
+├── 📘 ProductTypes.ts          # TypeScript interfaces
+├── 💬 ProductMessages.ts       # i18n strings (ES/EN)
+└── ❌ ProductErrors.ts         # Custom error classes
 ```
 
 > [!NOTE]
@@ -159,13 +159,13 @@ Creates:
 ```
 BO/Auth/
 ├── 📦 AuthBO.ts              # Main Business Object
-├── 🧠 Auth.Service.ts        # Auth logic
-├── 🗄️ Auth.Repository.ts     # DB access
-├── 🔍 Auth.Queries.ts        # Colocated SQL
-├── ✅ Auth.Schemas.ts         # Zod validations
-├── 📘 Auth.Types.ts           # Interfaces (User, Session, etc.)
-├── 💬 Auth.Messages.ts        # i18n messages (ES/EN)
-└── ❌ Auth.Errors.ts          # Custom errors
+├── 🧠 AuthService.ts         # Auth logic
+├── 🗄️ AuthRepository.ts      # DB access
+├── 🔍 AuthQueries.ts         # Colocated SQL
+├── ✅ AuthSchemas.ts          # Zod validations
+├── 📘 AuthTypes.ts            # Interfaces (User, Session, etc.)
+├── 💬 AuthMessages.ts         # i18n messages (ES/EN)
+└── ❌ AuthErrors.ts           # Custom errors
 ```
 
 ---

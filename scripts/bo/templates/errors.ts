@@ -1,14 +1,14 @@
 /**
- * Generador de plantillas para archivos errors.ts de BO
+ * Generador de plantillas para archivos Errors.ts de BO
  * Contiene clases de error personalizadas y utilidades de manejo de errores
  */
 
 /**
- * Genera el contenido del archivo errors.ts para un Business Object
+ * Genera el contenido del archivo Errors.ts para un Business Object
  *
  * @param objectName - Nombre del objeto (ej: "Product")
  * @param _methods - Lista de métodos del BO (no usado actualmente)
- * @returns Contenido del archivo errors.ts generado
+ * @returns Contenido del archivo Errors.ts generado
  */
 export function templateErrors(objectName: string, _methods: string[]) {
     const cleanName = objectName.replace(/BO$/, '')
@@ -18,7 +18,7 @@ export function templateErrors(objectName: string, _methods: string[]) {
 
     return `/**
  * Clases de Error Personalizadas para ${pascalName} Business Object
- * 
+ *
  * Usa errores específicos del dominio en lugar de genéricos para:
  * - Mejor manejo y recuperación de errores
  * - Respuestas de API más claras
@@ -121,7 +121,7 @@ export class ${pascalName}PermissionError extends ${pascalName}Error {
 /**
  * Convierte errores desconocidos a ${pascalName}Error
  * Usar en bloques catch para manejo de errores consistente
- * 
+ *
  * @example
  * try {
  *     await this.service.create(data)

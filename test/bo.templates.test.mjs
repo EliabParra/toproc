@@ -12,11 +12,11 @@ import {
 import { templateTypes } from '../scripts/bo/templates/types.ts'
 import { templateErrors } from '../scripts/bo/templates/errors.ts'
 
-test('templateBO genera arquitectura 7 archivos con nomenclatura Name.Type.ts', () => {
+test('templateBO genera arquitectura 8 archivos con nomenclatura NameType.ts', () => {
     const out = templateBO('Order', ['getOrder'])
     assert.match(out, /extends BaseBO/)
     // New naming: Name.Schemas.js only, no Messages
-    assert.match(out, /import \{ OrderSchemas.*\} from '\.\/Order\.Schemas\.js'/)
+    assert.match(out, /import \{ OrderSchemas.*\} from '\.\/OrderSchemas\.js'/)
     // OrderMessages IS required for i18n.use
     assert.match(out, /OrderMessages/)
     // Error imports removed from templateBO
@@ -38,7 +38,7 @@ test('templateSchemas genera schemas con mensajes (nuevos imports)', () => {
 
 test('templateRepository genera repo con tipos (nuevos imports)', () => {
     const out = templateRepository('Product')
-    assert.match(out, /import type { .*Product.*ProductSummary.* } from '\.\/Product\.Types\.js'/)
+    assert.match(out, /import type { .*Product.*ProductSummary.* } from '\.\/ProductTypes\.js'/)
     assert.match(out, /class ProductRepository/)
     assert.match(out, /findAll.*ProductSummary\[\]/)
     assert.match(out, /findById.*Product \| null/)
@@ -46,8 +46,8 @@ test('templateRepository genera repo con tipos (nuevos imports)', () => {
 
 test('templateService genera service con errores (nuevos imports)', () => {
     const out = templateService('Product')
-    assert.match(out, /import { ProductNotFoundError } from '\.\/Product\.Errors\.js'/)
-    assert.match(out, /import type .* from '\.\/Product\.Types\.js'/)
+    assert.match(out, /import { ProductNotFoundError } from '\.\/ProductErrors\.js'/)
+    assert.match(out, /import type .* from '\.\/ProductTypes\.js'/)
     assert.match(out, /class ProductService extends BOService/)
     assert.match(out, /throw new ProductNotFoundError/)
 })

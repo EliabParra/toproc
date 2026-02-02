@@ -3,10 +3,10 @@ import bcrypt from 'bcryptjs'
 import { BOService } from '../../src/core/business-objects/BOService.js'
 import type { IConfig, IDatabase } from '../../src/types/core.js'
 import { EmailService } from '../../src/services/EmailService.js'
-import { AuthRepository } from './Auth.Repository.js'
-import { UserRow } from './Auth.Types.js'
-import type { User, RegisterData } from './Auth.Types.js'
-import { AuthEmailExistsError, AuthTokenInvalidError } from './Auth.Errors.js'
+import { AuthRepository } from './AuthRepository.js'
+import { UserRow } from './AuthTypes.js'
+import type { User, RegisterData } from './AuthTypes.js'
+import { AuthEmailExistsError, AuthTokenInvalidError } from './AuthErrors.js'
 
 function sha256Hex(value: string): string {
     return createHash('sha256').update(value, 'utf8').digest('hex')

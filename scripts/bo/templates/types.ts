@@ -1,9 +1,9 @@
 /**
- * Genera el contenido del archivo Types (.Types.ts)
+ * Genera el contenido del archivo Types (Types.ts)
  *
  * @param objectName - Nombre del objeto (ej: "ProductBO" o "Product")
  * @param methods - Lista de métodos opcional
- * @returns Contenido del archivo .Types.ts
+ * @returns Contenido del archivo Types.ts
  */
 export function templateTypes(objectName: string, methods: string[] = []) {
     const cleanName = objectName.replace(/BO$/, '')

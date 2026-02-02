@@ -38,7 +38,7 @@ test('bo CLI auth --dry does not write files', async () => {
     assert.equal(r.status, 0, r.stderr || r.stdout)
     // assert.match(r.stdout, /Dry run.*would create/i) // Flaky due to ansi colors
     assert.match(r.stdout, /AuthBO\.ts/)
-    assert.match(r.stdout, /Auth\.Service\.ts/)
+    assert.match(r.stdout, /AuthService\.ts/)
 
     const existsAfter = await pathExists(targetDir)
     assert.equal(existsAfter, existedBefore)

@@ -1,5 +1,5 @@
 /**
- * Genera el contenido del archivo de locales (Auth.Messages.ts)
+ * Genera el contenido del archivo de locales (AuthMessages.ts)
  *
  * @param objectName - Nombre del objeto
  * @param methods - Lista de métodos a generar
@@ -37,14 +37,14 @@ export function templateLocales(objectName: string, methods: string[]) {
     es: {
         // Success
         ${methods.map((m) => `${m}: '${methodMessagesEs[m]}',`).join('\n        ')}
-        
+
         // Common errors
         notFound: '${pascalName} no encontrado',
         alreadyExists: 'Ya existe un registro con estos datos',
         invalidData: 'Datos inválidos',
         cannotDelete: 'No se puede eliminar el registro',
         permissionDenied: 'Permiso denegado',
-        
+
         // Validation
         validation: {
             requiredField: 'Campo requerido',
@@ -54,14 +54,14 @@ export function templateLocales(objectName: string, methods: string[]) {
     en: {
         // Success
         ${methods.map((m) => `${m}: '${methodMessagesEn[m]}',`).join('\n        ')}
-        
+
         // Common errors
         notFound: '${pascalName} not found',
         alreadyExists: 'Record already exists',
         invalidData: 'Invalid data',
         cannotDelete: 'Cannot delete record',
         permissionDenied: 'Permission denied',
-        
+
         // Validation
         validation: {
             requiredField: 'Field required',

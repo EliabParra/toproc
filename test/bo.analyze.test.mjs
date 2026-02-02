@@ -32,7 +32,7 @@ test('AnalyzeCommand analiza estructura de BO', async () => {
     assert.ok(cmd, 'AnalyzeCommand should be instantiable')
 })
 
-test('Analyze detecta archivos esperados con nomenclatura Name.Type.ts', async () => {
+test('Analyze detecta archivos esperados con nomenclatura NameType.ts', async () => {
     // Verify the expected files array uses new naming convention
     const analyzeCode = await fs.readFile(
         path.join(repoRoot, 'scripts/bo/commands/analyze.ts'),
@@ -41,10 +41,11 @@ test('Analyze detecta archivos esperados con nomenclatura Name.Type.ts', async (
 
     // New naming convention
     assert.match(analyzeCode, /{Name}BO\.ts/)
-    assert.match(analyzeCode, /{Name}\.Service\.ts/)
-    assert.match(analyzeCode, /{Name}\.Repository\.ts/)
-    assert.match(analyzeCode, /{Name}\.Schemas\.ts/)
-    assert.match(analyzeCode, /{Name}\.Types\.ts/)
-    assert.match(analyzeCode, /{Name}\.Messages\.ts/)
-    assert.match(analyzeCode, /{Name}\.Errors\.ts/)
+    assert.match(analyzeCode, /{Name}Service\.ts/)
+    assert.match(analyzeCode, /{Name}Repository\.ts/)
+    assert.match(analyzeCode, /{Name}Queries\.ts/)
+    assert.match(analyzeCode, /{Name}Schemas\.ts/)
+    assert.match(analyzeCode, /{Name}Types\.ts/)
+    assert.match(analyzeCode, /{Name}Messages\.ts/)
+    assert.match(analyzeCode, /{Name}Errors\.ts/)
 })

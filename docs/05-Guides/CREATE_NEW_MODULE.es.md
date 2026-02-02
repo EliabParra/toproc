@@ -18,13 +18,17 @@ Esto crea:
 - `BO/Coupons/CouponsBO.ts`
 - `BO/Coupons/CouponsService.ts`
 - `BO/Coupons/CouponsRepository.ts`
-- `BO/Coupons/schemas.ts`
+- `BO/Coupons/CouponsSchemas.ts`
+- `BO/Coupons/CouponsTypes.ts`
+- `BO/Coupons/CouponsMessages.ts`
+- `BO/Coupons/CouponsErrors.ts`
+- `BO/Coupons/CouponsQueries.ts`
 
 ---
 
 ## Paso 2: El Contrato (Schemas)
 
-Primero definimos los datos. Abre `BO/Coupons/schemas.ts`.
+Primero definimos los datos. Abre `BO/Coupons/CouponsSchemas.ts`.
 
 ```typescript
 import { z } from 'zod'

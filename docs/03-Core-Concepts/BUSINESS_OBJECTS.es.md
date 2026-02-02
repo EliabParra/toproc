@@ -8,10 +8,10 @@ Todo BO debe heredar de `BaseBO`. Esto le da superpoderes (acceso a DB, Logger, 
 
 ```typescript
 import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
-import { UserRepository } from './User.Repository.js'
-import { UserService } from './User.Service.js'
-import { UserSchemas, CreateInput } from './User.Schemas.js'
-import { UserMessages } from './User.Messages.js'
+import { UserRepository } from './UserRepository.js'
+import { UserService } from './UserService.js'
+import { UserSchemas, CreateInput } from './UserSchemas.js'
+import { UserMessages } from './UserMessages.js'
 
 export class UserBO extends BaseBO {
     private service: UserService
@@ -62,18 +62,18 @@ Dentro de un BO, tienes acceso a:
 
 ## Estructura de 8 Archivos
 
-Cada BO genera **8 archivos** con la nomenclatura `{Nombre}.{Tipo}.ts`:
+Cada BO genera **8 archivos** con la nomenclatura `{Nombre}{Tipo}.ts`:
 
 ```
 BO/User/
 ├── 📦 UserBO.ts            # Business Object (archivo principal)
-├── 🧠 User.Service.ts      # Lógica de negocio
-├── 🗄️ User.Repository.ts   # Acceso a base de datos
-├── 🔍 User.Queries.ts      # SQL colocalizado
-├── ✅ User.Schemas.ts       # Validaciones Zod
-├── 📘 User.Types.ts         # Interfaces TypeScript
-├── 💬 User.Messages.ts      # Strings i18n (ES/EN)
-└── ❌ User.Errors.ts        # Clases de error personalizadas
+├── 🧠 UserService.ts       # Lógica de negocio
+├── 🗄️ UserRepository.ts    # Acceso a base de datos
+├── 🔍 UserQueries.ts       # SQL colocalizado
+├── ✅ UserSchemas.ts        # Validaciones Zod
+├── 📘 UserTypes.ts          # Interfaces TypeScript
+├── 💬 UserMessages.ts       # Strings i18n (ES/EN)
+└── ❌ UserErrors.ts         # Clases de error personalizadas
 ```
 
 ## Servicios y BOError
@@ -88,8 +88,8 @@ Para mantener el código limpio:
 ```typescript
 // Repository
 import { IDatabase } from '../../src/types/core.js'
-import { UserQueries } from './User.Queries.js'
-import { User } from './User.Types.js'
+import { UserQueries } from './UserQueries.js'
+import { User } from './UserTypes.js'
 
 export class UserRepository {
     constructor(private db: IDatabase) {}

@@ -21,12 +21,13 @@ interface FileCheck {
 
 const EXPECTED_FILES = [
     { pattern: '{Name}BO.ts', required: true },
-    { pattern: '{Name}.Service.ts', required: false },
-    { pattern: '{Name}.Repository.ts', required: false },
-    { pattern: '{Name}.Schemas.ts', required: true },
-    { pattern: '{Name}.Types.ts', required: false },
-    { pattern: '{Name}.Messages.ts', required: false },
-    { pattern: '{Name}.Errors.ts', required: false },
+    { pattern: '{Name}Service.ts', required: false },
+    { pattern: '{Name}Repository.ts', required: false },
+    { pattern: '{Name}Queries.ts', required: false },
+    { pattern: '{Name}Schemas.ts', required: true },
+    { pattern: '{Name}Types.ts', required: false },
+    { pattern: '{Name}Messages.ts', required: false },
+    { pattern: '{Name}Errors.ts', required: false },
 ]
 
 /**
@@ -87,7 +88,7 @@ export class AnalyzeCommand {
             const methodCount = result.methods.length
 
             console.log(
-                `${icon} ${result.name.padEnd(20)} ${fileCount}/7 files  ${methodCount} methods`
+                `${icon} ${result.name.padEnd(20)} ${fileCount}/8 files  ${methodCount} methods`
             )
 
             if (result.status === 'ok') okCount++
@@ -101,7 +102,7 @@ export class AnalyzeCommand {
         console.log('')
 
         if (warnCount > 0 || errorCount > 0) {
-            console.log(`Run pnpm run bo analyze <Name>'.bold} for details on a specific BO`)
+            console.log(`Run pnpm run bo analyze <Name>`)
         }
     }
 
@@ -163,7 +164,7 @@ export class AnalyzeCommand {
         }
 
         // Check for types file content
-        const typesFile = files.find((f) => f.name.endsWith('.Types.ts'))
+        const typesFile = files.find((f) => f.name.endsWith('Types.ts'))
         if (typesFile?.exists) {
             const typesContent = await fs.readFile(path.join(boDir, typesFile.name), 'utf-8')
             if (typesContent.includes('TODO')) {
@@ -172,7 +173,7 @@ export class AnalyzeCommand {
         }
 
         // Check for messages file content
-        const messagesFile = files.find((f) => f.name.endsWith('.Messages.ts'))
+        const messagesFile = files.find((f) => f.name.endsWith('Messages.ts'))
         if (messagesFile?.exists) {
             const messagesContent = await fs.readFile(path.join(boDir, messagesFile.name), 'utf-8')
             if (!messagesContent.includes('NOT_FOUND')) {
@@ -181,9 +182,9 @@ export class AnalyzeCommand {
         }
 
         // Check for errors file
-        const errorsFile = files.find((f) => f.name.endsWith('.Errors.ts'))
+        const errorsFile = files.find((f) => f.name.endsWith('Errors.ts'))
         if (!errorsFile?.exists && methods.length > 2) {
-            suggestions.push(`Consider adding ${objectName}.Errors.ts for better error handling`)
+            suggestions.push(`Consider adding ${objectName}Errors.ts for better error handling`)
         }
 
         // Determine status

@@ -52,5 +52,5 @@ export const AuthMessages = {
         },
         welcomeBack: 'Welcome back, {name}',
         verificationSentTo: 'Verification sent to {email}',
-    }
+    },
 }

@@ -21,13 +21,13 @@ const AUTH_FEATURES = [
  *
  * Estructura generada:
  * - AuthBO.ts (archivo principal)
- * - Auth.Service.ts
- * - Auth.Repository.ts
- * - Auth.Schemas.ts
- * - Auth.Types.ts
- * - Auth.Messages.ts
- * - Auth.Errors.ts
- * - Auth.SocialAuth.ts (placeholder)
+ * - AuthService.ts
+ * - AuthRepository.ts
+ * - AuthSchemas.ts
+ * - AuthTypes.ts
+ * - AuthMessages.ts
+ * - AuthErrors.ts
+ * - AuthSocialAuth.ts (placeholder)
  */
 export class AuthCommand {
     private interactor: Interactor
@@ -87,14 +87,14 @@ export class AuthCommand {
             console.log('\n📋 Dry run - would create:'.gray)
             console.log('   BO/Auth/')
             console.log('      ├── 📦 AuthBO.ts')
-            console.log('      ├── 🧠 Auth.Service.ts')
-            console.log('      ├── 🗄️ Auth.Repository.ts')
-            console.log('      ├── ✅ Auth.Schemas.ts')
-            console.log('      ├── 📘 Auth.Types.ts')
-            console.log('      ├── 🌎 Auth.Messages.ts')
-            console.log('      ├── ❌ Auth.Errors.ts')
-            console.log('      ├── 🔍 Auth.Queries.ts')
-            console.log('      └── 🔜 Auth.SocialAuth.ts (Coming Soon)')
+            console.log('      ├── 🧠 AuthService.ts')
+            console.log('      ├── 🗄️ AuthRepository.ts')
+            console.log('      ├── ✅ AuthSchemas.ts')
+            console.log('      ├── 📘 AuthTypes.ts')
+            console.log('      ├── 🌎 AuthMessages.ts')
+            console.log('      ├── ❌ AuthErrors.ts')
+            console.log('      ├── 🔍 AuthQueries.ts')
+            console.log('      └── 🔜 AuthSocialAuth.ts (Coming Soon)')
             this.interactor.close()
             return
         }
@@ -112,34 +112,34 @@ export class AuthCommand {
                 icon: '📦',
             },
             {
-                path: path.join(authDir, 'Auth.Service.ts'),
+                path: path.join(authDir, 'AuthService.ts'),
                 content: AuthPreset.service(),
                 icon: '🧠',
             },
             {
-                path: path.join(authDir, 'Auth.Repository.ts'),
+                path: path.join(authDir, 'AuthRepository.ts'),
                 content: AuthPreset.repository(),
                 icon: '🗄️',
                 desc: 'Auth Repository',
             },
             {
-                path: path.join(authDir, 'Auth.Schemas.ts'),
+                path: path.join(authDir, 'AuthSchemas.ts'),
                 content: AuthPreset.schemas(),
                 icon: '✅',
             },
-            { path: path.join(authDir, 'Auth.Types.ts'), content: AuthPreset.types(), icon: '📘' },
+            { path: path.join(authDir, 'AuthTypes.ts'), content: AuthPreset.types(), icon: '📘' },
             {
-                path: path.join(authDir, 'Auth.Messages.ts'),
+                path: path.join(authDir, 'AuthMessages.ts'),
                 content: AuthPreset.messages(),
                 icon: '🌎',
             },
             {
-                path: path.join(authDir, 'Auth.Errors.ts'),
+                path: path.join(authDir, 'AuthErrors.ts'),
                 content: AuthPreset.errors(),
                 icon: '❌',
             },
             {
-                path: path.join(authDir, 'Auth.Queries.ts'),
+                path: path.join(authDir, 'AuthQueries.ts'),
                 content: AuthPreset.queries(),
                 icon: '🔍',
                 desc: 'SQL Queries',
@@ -153,16 +153,16 @@ export class AuthCommand {
         }
 
         // Create Social Auth placeholder
-        const socialAuthPath = path.join(authDir, 'Auth.SocialAuth.ts')
+        const socialAuthPath = path.join(authDir, 'AuthSocialAuth.ts')
         await fs.writeFile(socialAuthPath, this.generateSocialAuthPlaceholder())
-        console.log(`   └── 🔜 Auth.SocialAuth.ts ........ ${'Coming Soon'.yellow}`)
+        console.log(`   └── 🔜 AuthSocialAuth.ts ........ ${'Coming Soon'.yellow}`)
 
         console.log('')
-        console.log('🎉 Auth module created with 7 files!'.green.bold)
+        console.log('🎉 Auth module created with 8 files!'.green.bold)
         console.log('')
         console.log('💡 Next steps:'.cyan)
-        console.log(`   1. Edit ${'Auth.Types.ts'.bold} to define user interfaces`)
-        console.log(`   2. Edit ${'Auth.Schemas.ts'.bold} to add validation rules`)
+        console.log(`   1. Edit ${'AuthTypes.ts'.bold} to define user interfaces`)
+        console.log(`   2. Edit ${'AuthSchemas.ts'.bold} to add validation rules`)
         console.log(`   3. Configure auth in ${'config.json'.bold}:`)
         console.log('      "auth": {')
         console.log('        "loginId": "email",')
@@ -180,18 +180,18 @@ export class AuthCommand {
     private generateSocialAuthPlaceholder(): string {
         return `/**
  * Social Authentication (OAuth) - Coming Soon
- * 
+ *
  * Este módulo proveerá integración OAuth para:
  * - Google Sign-In
  * - GitHub OAuth
  * - Microsoft Account
  * - Apple Sign-In
- * 
+ *
  * Estado: 🔜 Próximamente
  */
 
-import { AuthMessages } from './Auth.Messages.js'
-import { AuthError } from './Auth.Errors.js'
+import { AuthMessages } from './AuthMessages.js'
+import { AuthError } from './AuthErrors.js'
 
 // ============================================================
 // PLACEHOLDER - NO USAR EN PRODUCCIÓN
@@ -222,7 +222,7 @@ export interface OAuthUser {
 
 /**
  * 🔜 Próximamente: Social Authentication Service
- * 
+ *
  * Métodos planeados:
  * - getAuthorizationUrl(provider: string): string
  * - handleCallback(provider: string, code: string): Promise<OAuthUser>
@@ -256,7 +256,7 @@ export class SocialAuthService {
  */
 export const SOCIAL_AUTH_METHODS = [
     'socialLoginStart',
-    'socialLoginCallback', 
+    'socialLoginCallback',
     'linkSocialAccount',
     'unlinkSocialAccount',
 ]

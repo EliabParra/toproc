@@ -41,10 +41,10 @@ const res = await db.exeRaw('SELECT count(*) FROM users')
 
 ## 3. Colocated Queries
 
-Each BO has its own `{Name}.Queries.ts` file with all SQL queries.
+Each BO has its own `{Name}Queries.ts` file with all SQL queries.
 
 ```typescript
-// User.Queries.ts
+// UserQueries.ts
 export const UserQueries = {
     findAll: `SELECT * FROM users ORDER BY created_at DESC`,
 

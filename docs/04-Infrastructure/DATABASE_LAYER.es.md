@@ -41,10 +41,10 @@ const res = await db.exeRaw('SELECT count(*) FROM users')
 
 ## 3. Queries Colocalizadas
 
-Cada BO tiene su archivo `{Nombre}.Queries.ts` con todas las queries SQL.
+Cada BO tiene su archivo `{Nombre}Queries.ts` con todas las queries SQL.
 
 ```typescript
-// User.Queries.ts
+// UserQueries.ts
 export const UserQueries = {
     findAll: `SELECT * FROM users ORDER BY created_at DESC`,
 

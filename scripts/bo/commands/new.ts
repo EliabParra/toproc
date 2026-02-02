@@ -27,14 +27,15 @@ type Preset = 'Default (CRUD)' | 'ReadOnly' | 'Minimal' | 'Custom'
 /**
  * Comando para crear nuevos Business Objects
  *
- * Genera la estructura de 7 archivos con la nomenclatura:
+ * Genera la estructura de 8 archivos con la nomenclatura:
  * - {Nombre}BO.ts (archivo principal)
- * - {Nombre}.Service.ts
- * - {Nombre}.Repository.ts
- * - {Nombre}.Schemas.ts
- * - {Nombre}.Types.ts
- * - {Nombre}.Messages.ts
- * - {Nombre}.Errors.ts
+ * - {Nombre}Service.ts
+ * - {Nombre}Repository.ts
+ * - {Nombre}Schemas.ts
+ * - {Nombre}Types.ts
+ * - {Nombre}Messages.ts
+ * - {Nombre}Errors.ts
+ * - {Nombre}Queries.ts
  */
 export class NewCommand {
     private ui: Interactor
@@ -121,30 +122,30 @@ export class NewCommand {
                     desc: 'Main Entry Point',
                 },
                 {
-                    path: path.join(dir, `${pascalName}.Service.ts`),
+                    path: path.join(dir, `${pascalName}Service.ts`),
                     content: serviceContent,
-                    name: `${pascalName}.Service.ts`,
+                    name: `${pascalName}Service.ts`,
                     icon: '🧠',
                     desc: 'Business Logic',
                 },
                 {
-                    path: path.join(dir, `${pascalName}.Repository.ts`),
+                    path: path.join(dir, `${pascalName}Repository.ts`),
                     content: repoContent,
-                    name: `${pascalName}.Repository.ts`,
+                    name: `${pascalName}Repository.ts`,
                     icon: '🛢️',
                     desc: 'Data Access',
                 },
                 {
-                    path: path.join(dir, `${pascalName}.Queries.ts`),
+                    path: path.join(dir, `${pascalName}Queries.ts`),
                     content: queriesContent,
-                    name: `${pascalName}.Queries.ts`,
+                    name: `${pascalName}Queries.ts`,
                     icon: '🔍',
                     desc: 'SQL Queries',
                 },
                 {
-                    path: path.join(dir, `${pascalName}.Schemas.ts`),
+                    path: path.join(dir, `${pascalName}Schemas.ts`),
                     content: schemasContent,
-                    name: `${pascalName}.Schemas.ts`,
+                    name: `${pascalName}Schemas.ts`,
                     icon: '📜',
                     desc: 'Validation',
                 },
@@ -152,27 +153,27 @@ export class NewCommand {
 
             if (!skipTypes) {
                 files.push({
-                    path: path.join(dir, `${pascalName}.Types.ts`),
+                    path: path.join(dir, `${pascalName}Types.ts`),
                     content: typesContent,
-                    name: `${pascalName}.Types.ts`,
+                    name: `${pascalName}Types.ts`,
                     icon: '📘',
                     desc: 'TypeScript Interfaces',
                 })
             }
             if (!skipMessages) {
                 files.push({
-                    path: path.join(dir, `${pascalName}.Messages.ts`),
+                    path: path.join(dir, `${pascalName}Messages.ts`),
                     content: localesContent,
-                    name: `${pascalName}.Messages.ts`,
+                    name: `${pascalName}Messages.ts`,
                     icon: '💬',
                     desc: 'Messages for i18n',
                 })
             }
             if (!skipErrors) {
                 files.push({
-                    path: path.join(dir, `${pascalName}.Errors.ts`),
+                    path: path.join(dir, `${pascalName}Errors.ts`),
                     content: errorsContent,
-                    name: `${pascalName}.Errors.ts`,
+                    name: `${pascalName}Errors.ts`,
                     icon: '🛑',
                     desc: 'Domain Errors',
                 })
@@ -221,9 +222,9 @@ export class NewCommand {
 
                 console.log('')
                 console.log('💡 Next steps:'.cyan)
-                console.log(`   1. Edit ${`${pascalName}.Types.ts`.bold}`)
-                console.log(`   2. Edit ${`${pascalName}.Schemas.ts`.bold}`)
-                console.log(`   3. Configure DB queries in ${`${pascalName}.Repository.ts`.bold}`)
+                console.log(`   1. Edit ${`${pascalName}Types.ts`.bold}`)
+                console.log(`   2. Edit ${`${pascalName}Schemas.ts`.bold}`)
+                console.log(`   3. Configure DB queries in ${`${pascalName}Repository.ts`.bold}`)
                 console.log(`   4. Run: ${'pnpm run bo sync'.bold}`)
                 console.log('')
             }

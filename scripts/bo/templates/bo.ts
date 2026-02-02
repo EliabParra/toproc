@@ -4,12 +4,12 @@
  * Funciones para generar archivos de Business Object desde plantillas.
  * Nomenclatura de archivos:
  * - {Nombre}BO.ts (archivo principal)
- * - {Nombre}.Service.ts
- * - {Nombre}.Repository.ts
- * - {Nombre}.Schemas.ts
- * - {Nombre}.Types.ts
- * - {Nombre}.Messages.ts
- * - {Nombre}.Errors.ts
+ * - {Nombre}Service.ts
+ * - {Nombre}Repository.ts
+ * - {Nombre}Schemas.ts
+ * - {Nombre}Types.ts
+ * - {Nombre}Messages.ts
+ * - {Nombre}Errors.ts
  */
 
 export * from './types.js'
@@ -35,11 +35,11 @@ export function parseMethodsFromBO(fileContent: string): string[] {
 }
 
 /**
- * Genera el contenido del archivo schemas (.Schemas.ts)
+ * Genera el contenido del archivo schemas (Schemas.ts)
  *
  * @param objectName - Nombre del objeto
  * @param methods - Lista de métodos a generar
- * @returns Contenido del archivo .Schemas.ts
+ * @returns Contenido del archivo Schemas.ts
  */
 export function templateSchemas(objectName: string, methods: string[]) {
     const cleanName = objectName.replace(/BO$/, '')
@@ -75,7 +75,7 @@ ${content}
 
 /**
  * Schemas Zod para métodos de ${pascalName}BO
- * 
+ *
  * Los mensajes de validación se traducen automáticamente si
  * coinciden con keys en locales/es.json.
  */
@@ -89,22 +89,22 @@ ${methods.map((m) => `export type ${m.charAt(0).toUpperCase() + m.slice(1)}Input
 }
 
 /**
- * Genera el contenido del archivo Repository (.Repository.ts)
+ * Genera el contenido del archivo Repository (Repository.ts)
  *
  * @param objectName - Nombre del objeto
- * @returns Contenido del archivo .Repository.ts
+ * @returns Contenido del archivo Repository.ts
  */
 export function templateRepository(objectName: string) {
     const cleanName = objectName.replace(/BO$/, '')
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
 
     return `import { IDatabase } from '../../src/types/core.js'
-import type { Exists${pascalName}, ${pascalName}, ${pascalName}Summary, RowCount${pascalName} } from './${pascalName}.Types.js'
-import { ${pascalName}Queries } from './${pascalName}.Queries.js'
+import type { Exists${pascalName}, ${pascalName}, ${pascalName}Summary, RowCount${pascalName} } from './${pascalName}Types.js'
+import { ${pascalName}Queries } from './${pascalName}Queries.js'
 
 /**
  * Repositorio para operaciones de base de datos de ${pascalName}BO.
- * 
+ *
  * Todas las consultas a la base de datos se encapsulan aquí.
  * Los nombres de queries deben coincidir con entradas en src/config/queries.json
  */
@@ -168,10 +168,10 @@ export class ${pascalName}Repository {
 }
 
 /**
- * Genera el contenido del archivo Service (.Service.ts)
+ * Genera el contenido del archivo Service (Service.ts)
  *
  * @param objectName - Nombre del objeto
- * @returns Contenido del archivo .Service.ts
+ * @returns Contenido del archivo Service.ts
  */
 export function templateService(objectName: string) {
     const cleanName = objectName.replace(/BO$/, '')
@@ -179,15 +179,15 @@ export function templateService(objectName: string) {
 
     return `import { BOService } from '../../src/core/business-objects/BOService.js'
 import { ILogger, IConfig, IDatabase } from '../../src/types/core.js'
-import { ${pascalName}Repository } from './${pascalName}.Repository.js'
-import type { ${pascalName}, ${pascalName}Summary } from './${pascalName}.Types.js'
-import { ${pascalName}NotFoundError } from './${pascalName}.Errors.js'
+import { ${pascalName}Repository } from './${pascalName}Repository.js'
+import type { ${pascalName}, ${pascalName}Summary } from './${pascalName}Types.js'
+import { ${pascalName}NotFoundError } from './${pascalName}Errors.js'
 
 /**
  * Capa de servicio para lógica de negocio de ${pascalName}.
- * 
+ *
  * Contiene lógica de negocio pura, libre de concerns HTTP.
- * Lanza errores específicos del dominio desde ./${pascalName}.Errors.js
+ * Lanza errores específicos del dominio desde ./${pascalName}Errors.js
  */
 export class ${pascalName}Service extends BOService {
     constructor(
@@ -309,7 +309,7 @@ export function templateBO(className: string, methods: string[]) {
 
             return `    /**
      * Operación ${methodPascal}
-     * 
+     *
      * @param params - Parámetros de la solicitud
      * @returns ApiResponse con el resultado
      */
@@ -319,7 +319,7 @@ export function templateBO(className: string, methods: string[]) {
             ${pascalName}Schemas.${m},
             async (data) => {
                 const result: ${returnType} = ${serviceCall}
-                
+
                 return this.${isCreate ? 'created' : 'success'}(${isDelete ? 'null' : 'result'}, this.translate('${messageKey}'))
             }
         )
@@ -329,15 +329,15 @@ export function templateBO(className: string, methods: string[]) {
 
     return `import { BaseBO } from '../../src/core/business-objects/BaseBO.js'
 import type { BODependencies } from '../../src/core/business-objects/BaseBO.js'
-import { ${pascalName}Repository } from './${pascalName}.Repository.js'
-import { ${pascalName}Service } from './${pascalName}.Service.js'
-import { ${pascalName}Schemas, ${inputTypes} } from './${pascalName}.Schemas.js'
-import { ${pascalName}, ${pascalName}Summary } from './${pascalName}.Types.js'
-import { ${pascalName}Messages } from './${pascalName}.Messages.js'
+import { ${pascalName}Repository } from './${pascalName}Repository.js'
+import { ${pascalName}Service } from './${pascalName}Service.js'
+import { ${pascalName}Schemas, ${inputTypes} } from './${pascalName}Schemas.js'
+import { ${pascalName}, ${pascalName}Summary } from './${pascalName}Types.js'
+import { ${pascalName}Messages } from './${pascalName}Messages.js'
 
 /**
  * Business Object para el dominio ${pascalName}.
- * 
+ *
  * Orquesta transacciones de ${pascalName} y expone endpoints de API.
  */
 export class ${boClassName} extends BaseBO {

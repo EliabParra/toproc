@@ -2,7 +2,7 @@ import { describe, it, before } from 'node:test'
 import assert from 'node:assert/strict'
 import request from 'supertest'
 import { AppServer } from '../../src/api/AppServer.js'
-import { AuthQueries } from '../../BO/Auth/Auth.Queries.js'
+import { AuthQueries } from '../../BO/Auth/AuthQueries.js'
 
 // Mock Data
 const MOCK_USER = {

@@ -1,17 +1,17 @@
 /**
  * Social Authentication (OAuth) - Coming Soon
- * 
+ *
  * Este módulo proveerá integración OAuth para:
  * - Google Sign-In
  * - GitHub OAuth
  * - Microsoft Account
  * - Apple Sign-In
- * 
+ *
  * Estado: 🔜 Próximamente
  */
 
-import { AuthMessages } from './Auth.Messages.js'
-import { AuthError } from './Auth.Errors.js'
+import { AuthMessages } from './AuthMessages.js'
+import { AuthError } from './AuthErrors.js'
 
 // ============================================================
 // PLACEHOLDER - NO USAR EN PRODUCCIÓN
@@ -42,7 +42,7 @@ export interface OAuthUser {
 
 /**
  * 🔜 Próximamente: Social Authentication Service
- * 
+ *
  * Métodos planeados:
  * - getAuthorizationUrl(provider: string): string
  * - handleCallback(provider: string, code: string): Promise<OAuthUser>
@@ -76,7 +76,7 @@ export class SocialAuthService {
  */
 export const SOCIAL_AUTH_METHODS = [
     'socialLoginStart',
-    'socialLoginCallback', 
+    'socialLoginCallback',
     'linkSocialAccount',
     'unlinkSocialAccount',
 ]

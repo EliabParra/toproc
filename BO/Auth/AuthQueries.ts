@@ -39,7 +39,7 @@ export const AuthQueries = {
 
     // --- Password reset
     insertPasswordReset: `
-        INSERT INTO security.password_resets 
+        INSERT INTO security.password_resets
         (user_id, token_hash, expires_at, created_at, used_at, attempt_count, token_sent_to, request_ip, user_agent)
         VALUES ($1, $2, NOW() + ($3 || ' seconds')::INTERVAL, NOW(), NULL, 0, $4, $5, $6)
         RETURNING id
@@ -52,7 +52,7 @@ export const AuthQueries = {
     `,
 
     getPasswordResetByTokenHash: `
-        SELECT * FROM security.password_resets 
+        SELECT * FROM security.password_resets
         WHERE token_hash = $1
     `,
 

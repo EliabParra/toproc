@@ -1,6 +1,6 @@
 import readline from 'node:readline'
 import { ValidatorService } from '../src/services/ValidatorService.js'
-import { AuthSchemas } from '../BO/Auth/Auth.Schemas.js'
+import { AuthSchemas } from '../BO/Auth/AuthSchemas.js'
 import { ZodObject } from 'zod'
 
 console.log('⚡ Initializing Playground...')

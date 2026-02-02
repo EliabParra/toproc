@@ -1,7 +1,7 @@
 import { BaseBO } from '../../src/core/business-objects/BaseBO.js'
 import type { BODependencies } from '../../src/core/business-objects/BaseBO.js'
 import type { ApiResponse } from '../../src/types/api.js'
-import { AuthService } from './Auth.Service.js'
+import { AuthService } from './AuthService.js'
 import {
     AuthSchemas,
     RegisterInput,
@@ -10,9 +10,9 @@ import {
     ResetPasswordInput,
     VerifyPasswordResetInput,
     ResetPasswordConfirmInput,
-} from './Auth.Schemas.js'
+} from './AuthSchemas.js'
 
-import { AuthMessages } from './Auth.Messages.js'
+import { AuthMessages } from './AuthMessages.js'
 
 export class AuthBO extends BaseBO {
     private service: AuthService

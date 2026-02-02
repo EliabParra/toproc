@@ -3,12 +3,12 @@
  *
  * Genera la estructura de 7 archivos con nomenclatura Name.Type.ts:
  * - AuthBO.ts
- * - Auth.Service.ts
- * - Auth.Repository.ts
- * - Auth.Schemas.ts
- * - Auth.Types.ts
- * - Auth.Messages.ts
- * - Auth.Errors.ts
+ * - AuthService.ts
+ * - AuthRepository.ts
+ * - AuthSchemas.ts
+ * - AuthTypes.ts
+ * - AuthMessages.ts
+ * - AuthErrors.ts
  */
 
 export const AuthPreset = {
@@ -27,7 +27,7 @@ export const AuthPreset = {
     // ============================================================
 
     bo: () => `import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
-import { AuthService } from './Auth.Service.js'
+import { AuthService } from './AuthService.js'
 import {
     AuthSchemas,
     RegisterInput,
@@ -36,9 +36,9 @@ import {
     ResetPasswordInput,
     VerifyPasswordResetInput,
     ResetPasswordConfirmInput,
-} from './Auth.Schemas.js'
+} from './AuthSchemas.js'
 
-import { AuthMessages } from './Auth.Messages.js'
+import { AuthMessages } from './AuthMessages.js'
 
 export class AuthBO extends BaseBO {
     private service: AuthService
@@ -121,9 +121,9 @@ import bcrypt from 'bcryptjs'
 import { BOService } from '../../src/core/business-objects/BOService.js'
 import type { IConfig, IDatabase } from '../../src/types/core.js'
 import { EmailService } from '../../src/services/EmailService.js'
-import { AuthRepository } from './Auth.Repository.js'
-import type { User, RegisterData, UserRow } from './Auth.Types.js'
-import { AuthEmailExistsError, AuthTokenInvalidError } from './Auth.Errors.js'
+import { AuthRepository } from './AuthRepository.js'
+import type { User, RegisterData, UserRow } from './AuthTypes.js'
+import { AuthEmailExistsError, AuthTokenInvalidError } from './AuthErrors.js'
 
 function sha256Hex(value: string): string {
     return createHash('sha256').update(value, 'utf8').digest('hex')
@@ -328,7 +328,7 @@ export class AuthService extends BOService {
 
     // --- Password reset
     insertPasswordReset: \`
-        INSERT INTO security.password_resets 
+        INSERT INTO security.password_resets
         (user_id, token_hash, expires_at, created_at, used_at, attempt_count, sent_to, ip_address, user_agent)
         VALUES ($1, $2, NOW() + ($3 || ' seconds')::INTERVAL, NOW(), NULL, 0, $4, $5, $6)
         RETURNING reset_id
@@ -341,7 +341,7 @@ export class AuthService extends BOService {
     \`,
 
     getPasswordResetByTokenHash: \`
-        SELECT * FROM security.password_resets 
+        SELECT * FROM security.password_resets
         WHERE token_hash = $1
     \`,
 
@@ -380,12 +380,12 @@ export type AuthQueryKey = keyof typeof AuthQueries
 Auth Repository
 
 - DB access helpers used by AuthBO.
-- Uses AuthQueries from ./Auth.Queries.ts
+- Uses AuthQueries from ./AuthQueries.ts
 */
 
 import { IDatabase } from '../../src/types/core.js'
-import { AuthQueries } from './Auth.Queries.js'
-import { OneTimeCodeRow, PasswordResetRow, UserRow, UserId, UserWithProfileId, PasswordReset, OneTimeCode, InsertUserParams, GetActiveOneTimeCodeParams, UserPasswordResetParams } from './Auth.Types.js'
+import { AuthQueries } from './AuthQueries.js'
+import { OneTimeCodeRow, PasswordResetRow, UserRow, UserId, UserWithProfileId, PasswordReset, OneTimeCode, InsertUserParams, GetActiveOneTimeCodeParams, UserPasswordResetParams } from './AuthTypes.js'
 
 export class AuthRepository {
     constructor(private db: IDatabase) {}

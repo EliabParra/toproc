@@ -8,10 +8,10 @@ Every BO must inherit from `BaseBO`. This gives it superpowers (access to DB, Lo
 
 ```typescript
 import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
-import { UserRepository } from './User.Repository.js'
-import { UserService } from './User.Service.js'
-import { UserSchemas, CreateInput } from './User.Schemas.js'
-import { UserMessages } from './User.Messages.js'
+import { UserRepository } from './UserRepository.js'
+import { UserService } from './UserService.js'
+import { UserSchemas, CreateInput } from './UserSchemas.js'
+import { UserMessages } from './UserMessages.js'
 
 export class UserBO extends BaseBO {
     private service: UserService
@@ -62,18 +62,18 @@ Inside a BO, you have access to:
 
 ## 8-File Structure
 
-Each BO generates **8 files** with the nomenclature `{Name}.{Type}.ts`:
+Each BO generates **8 files** with the nomenclature `{Name}{Type}.ts`:
 
 ```
 BO/User/
 ├── 📦 UserBO.ts            # Business Object (main file)
-├── 🧠 User.Service.ts      # Business Logic
-├── 🗄️ User.Repository.ts   # Database Access
-├── 🔍 User.Queries.ts      # Colocated SQL
-├── ✅ User.Schemas.ts       # Zod Validations
-├── 📘 User.Types.ts         # TypeScript Interfaces
-├── 💬 User.Messages.ts      # I18n strings (ES/EN)
-└── ❌ User.Errors.ts        # Custom Error Classes
+├── 🧠 UserService.ts       # Business Logic
+├── 🗄️ UserRepository.ts    # Database Access
+├── 🔍 UserQueries.ts       # Colocated SQL
+├── ✅ UserSchemas.ts        # Zod Validations
+├── 📘 UserTypes.ts          # TypeScript Interfaces
+├── 💬 UserMessages.ts       # I18n strings (ES/EN)
+└── ❌ UserErrors.ts         # Custom Error Classes
 ```
 
 ## Services and BOError
@@ -88,8 +88,8 @@ To keep code clean:
 ```typescript
 // Repository
 import { IDatabase } from '../../src/types/core.js'
-import { UserQueries } from './User.Queries.js'
-import { User } from './User.Types.js'
+import { UserQueries } from './UserQueries.js'
+import { User } from './UserTypes.js'
 
 export class UserRepository {
     constructor(private db: IDatabase) {}

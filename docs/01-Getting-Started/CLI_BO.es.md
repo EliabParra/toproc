@@ -34,7 +34,7 @@ Si ejecutas solo `pnpm run bo`, verás un menú interactivo:
 
 | Comando                        | Descripción                                |
 | ------------------------------ | ------------------------------------------ |
-| `pnpm run bo new <Nombre>`     | Crea un nuevo Business Object (7 archivos) |
+| `pnpm run bo new <Nombre>`     | Crea un nuevo Business Object (8 archivos) |
 | `pnpm run bo list`             | Lista todos los BOs registrados            |
 | `pnpm run bo sync [nombre]`    | Sincroniza métodos con la base de datos    |
 | `pnpm run bo perms [nombre]`   | Gestiona permisos para un BO               |
@@ -71,18 +71,18 @@ pnpm run bo new Orders --dry
 
 ### Nomenclatura de Archivos
 
-Los archivos siguen la convención `{Nombre}.{Tipo}.ts`:
+Los archivos siguen la convención `{Nombre}{Tipo}.ts`:
 
 ```
 BO/Product/
 ├── 📦 ProductBO.ts            # Business Object (archivo principal)
-├── 🧠 Product.Service.ts      # Lógica de negocio
-├── 🗄️ Product.Repository.ts   # Acceso a base de datos
-├── 🔍 Product.Queries.ts      # SQL colocalizado
-├── ✅ Product.Schemas.ts       # Validaciones Zod
-├── 📘 Product.Types.ts         # Interfaces TypeScript
-├── 💬 Product.Messages.ts      # Strings i18n (ES/EN)
-└── ❌ Product.Errors.ts        # Clases de error personalizadas
+├── 🧠 ProductService.ts       # Lógica de negocio
+├── 🗄️ ProductRepository.ts    # Acceso a base de datos
+├── 🔍 ProductQueries.ts       # SQL colocalizado
+├── ✅ ProductSchemas.ts        # Validaciones Zod
+├── 📘 ProductTypes.ts          # Interfaces TypeScript
+├── 💬 ProductMessages.ts       # Strings i18n (ES/EN)
+└── ❌ ProductErrors.ts         # Clases de error personalizadas
 ```
 
 > [!NOTE]
@@ -159,13 +159,13 @@ Crea:
 ```
 BO/Auth/
 ├── 📦 AuthBO.ts              # Business Object principal
-├── 🧠 Auth.Service.ts        # Lógica de autenticación
-├── 🗄️ Auth.Repository.ts     # Acceso a DB
-├── 🔍 Auth.Queries.ts        # SQL colocalizado
-├── ✅ Auth.Schemas.ts         # Validaciones Zod
-├── 📘 Auth.Types.ts           # Interfaces (User, Session, etc.)
-├── 💬 Auth.Messages.ts        # Mensajes i18n (ES/EN)
-└── ❌ Auth.Errors.ts          # Errores personalizados
+├── 🧠 AuthService.ts         # Lógica de autenticación
+├── 🗄️ AuthRepository.ts      # Acceso a DB
+├── 🔍 AuthQueries.ts         # SQL colocalizado
+├── ✅ AuthSchemas.ts          # Validaciones Zod
+├── 📘 AuthTypes.ts            # Interfaces (User, Session, etc.)
+├── 💬 AuthMessages.ts         # Mensajes i18n (ES/EN)
+└── ❌ AuthErrors.ts           # Errores personalizados
 ```
 
 ---

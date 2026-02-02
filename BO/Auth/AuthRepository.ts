@@ -2,11 +2,11 @@
 Auth Repository
 
 - DB access helpers used by AuthBO.
-- Uses AuthQueries from ./Auth.Queries.ts
+- Uses AuthQueries from ./AuthQueries.ts
 */
 
 import { IDatabase } from '../../src/types/core.js'
-import { AuthQueries } from './Auth.Queries.js'
+import { AuthQueries } from './AuthQueries.js'
 import {
     OneTimeCodeRow,
     PasswordResetRow,
@@ -18,7 +18,7 @@ import {
     InsertUserParams,
     GetActiveOneTimeCodeParams,
     UserPasswordResetParams,
-} from './Auth.Types.js'
+} from './AuthTypes.js'
 
 export class AuthRepository {
     constructor(private db: IDatabase) {}
