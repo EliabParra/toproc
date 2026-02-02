@@ -48,7 +48,7 @@ function createTestBO() {
         log: logStub,
         config: configStub,
         i18n: i18nStub,
-        v: validator,
+        validator: validator,
     })
 }
 

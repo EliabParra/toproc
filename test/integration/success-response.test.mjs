@@ -7,7 +7,7 @@ const mockDeps = {
     db: {},
     log: { TYPE_ERROR: 1, show: () => {} },
     config: {},
-    v: {},
+    validator: { validate: (d) => ({ valid: true, data: d }) },
     i18n: {
         translate: (key) => {
             if (key === 'success.create') return 'Elemento creado con éxito'

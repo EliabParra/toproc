@@ -56,7 +56,7 @@ export abstract class BaseBO {
     protected readonly config: IConfig
 
     /** Validador para validación de entrada (soporta esquemas Zod) */
-    protected readonly v: IValidator
+    protected readonly validator: IValidator
 
     /** Servicio i18n */
     protected readonly i18n: II18nService
@@ -72,14 +72,14 @@ export abstract class BaseBO {
      * @param deps - Dependencias requeridas inyectadas por el Dispatcher
      */
     constructor(deps: Partial<BODependencies> = {}) {
-        if (!deps.db || !deps.log || !deps.config || !deps.v || !deps.i18n) {
+        if (!deps.db || !deps.log || !deps.config || !deps.validator || !deps.i18n) {
             throw new Error('Missing required dependencies')
         }
 
         this.db = deps.db
         this.log = deps.log
         this.config = deps.config
-        this.v = deps.v
+        this.validator = deps.validator
         this.i18n = deps.i18n
     }
 
@@ -191,7 +191,7 @@ export abstract class BaseBO {
         data: unknown,
         schema: unknown
     ): { ok: true; data: T } | { ok: false; alerts: string[]; errors: ValidationError[] } {
-        const result = this.v.validate<T>(data, schema)
+        const result = this.validator.validate<T>(data, schema)
         if (result.valid && result.data) {
             return { ok: true, data: result.data }
         }

@@ -4,7 +4,7 @@ El Business Object (BO) es la clase suprema en nuestra arquitectura. Es donde tu
 
 ## Anatomía de un BO
 
-Todo BO debe heredar de `BaseBO`. Esto le da superpoderes (acceso a DB, Logger, Config, etc.) y métodos de ejecución estandarizados.
+Todo BO debe heredar de `BaseBO`. Esto le da superpoderes (acceso a DB, Logger, Config, Validator, etc.) y métodos de ejecución estandarizados.
 
 ```typescript
 import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
@@ -51,13 +51,14 @@ En lugar de escribir bloques repetitivos `try/catch` y `validate`, usa `this.exe
 
 Dentro de un BO, tienes acceso a:
 
-| Propiedad     | Tipo           | Descripción                       |
-| :------------ | :------------- | :-------------------------------- |
-| `this.db`     | `IDatabase`    | Acceso directo a Postgres.        |
-| `this.log`    | `ILogger`      | Logger estructurado.              |
-| `this.config` | `IConfig`      | Variables de entorno tipadas.     |
-| `this.i18n`   | `II18nService` | Servicio de internacionalización. |
-| `this.m`      | (getter)       | Mensajes tipados del BO actual.   |
+| Propiedad        | Tipo           | Descripción                       |
+| :--------------- | :------------- | :-------------------------------- |
+| `this.db`        | `IDatabase`    | Acceso directo a Postgres.        |
+| `this.log`       | `ILogger`      | Logger estructurado.              |
+| `this.config`    | `IConfig`      | Variables de entorno tipadas.     |
+| `this.i18n`      | `II18nService` | Servicio de internacionalización. |
+| `this.validator` | `IValidator`   | Servicio de validación (Zod).     |
+| `this.m`         | (getter)       | Mensajes tipados del BO actual.   |
 
 ## Estructura de 8 Archivos
 

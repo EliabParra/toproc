@@ -78,7 +78,7 @@ export class SecurityService implements ISecurityService {
             config: deps.config,
             audit: deps.audit,
             session: deps.session,
-            v: deps.validator,
+            validator: deps.validator,
             security: this,
             i18n: deps.i18n,
         }

@@ -1,78 +1,80 @@
 # Unified Security System
 
-Security in ToProccess is the architectural foundation.
-It is based on a **Transaction-Oriented** model where every business action has a unique ID and granular permissions.
+Security in ToProccess is the foundation of the architecture.
+It is based on a **Transaction-Oriented** model where every business action has a unique ID, granular permissions, and securely orchestrated execution.
 
 ## 1. Concept: Transaction-Oriented Security
 
-Instead of exposing traditional REST CRUD resources (`POST /users`), we expose Business Intents (`tx: 1001` -> "Register User").
+Instead of exposing traditional CRUD resources (`POST /users`), we expose Business Intentions (`tx: 1001` -> "Register User").
 
 **Advantages**:
 
-1.  **Decoupling**: Frontend doesn't know `UserBO` class exists. Only knows ID `1001`.
-2.  **Audit**: It's trivial to know who executed transaction `1001` and when.
+1.  **Decoupling**: The frontend doesn't know `UserBO` exists. It only knows ID `1001`.
+2.  **Audit**: Trivial to track who executed transaction `1001` and when.
 3.  **Refactoring**: You can rename methods without breaking clients.
-4.  **Deny by Default**: If a transaction has no explicit permission in DB, no one can execute it.
+4.  **Deny by Default**: If a transaction doesn't have explicit permission in the DB, no one can execute it.
 
 ---
 
-## 2. Key Components
+## 2. New Architecture (Core Refactor)
 
-### A. Permission Matrix (DB -> RAM)
+We have separated responsibilities into specialized components to comply with **SOLID** and enhance security:
 
-All authorization is based on `security.permissions` table.
+### A. Permission Matrix (`security.permissions`)
 
-| transaction_id (`tx`) | profile_id | description          |
-| :-------------------- | :--------- | :------------------- |
-| 1001 (Register)       | 2 (Public) | Allowed to anonymous |
-| 1002 (Admin Panel)    | 1 (Admin)  | Admins only          |
+Authorization is based on the database, loaded into RAM (`PermissionGuard`) for O(1) speed.
 
-**PermissionGuard (`PermissionGuard.ts`)**:
-Loads this full table into RAM at server start (O(1) Lookup Map).
+| transaction_id (`tx`) | profile_id | description        |
+| :-------------------- | :--------- | :----------------- |
+| 1001 (Register)       | 2 (Public) | Allowed for guests |
+| 1002 (Admin Panel)    | 1 (Admin)  | Admins only        |
 
-- **Speed**: Permission check takes nanoseconds.
-- **Consistency**: No SQL queries per request to verify auth.
+### B. Core Components (`src/core/*`)
 
-### B. Transaction Mapper (`TransactionMapper.ts`)
+1.  **TransactionOrchestrator** (The Director):
+    - Receives request from controller.
+    - Coordinates: Resolution -> Route Validation -> AuthZ -> Execution -> Audit.
+    - **Security**: Validates method names against a whitelist (Regex) to prevent arbitrary execution.
 
-The dictionary translating numbers to code.
+2.  **AuthorizationService** (The Guardian):
+    - Solely responsible for permissions (YES/NO).
+    - Consults `PermissionGuard`.
+    - Logs denied access attempts.
 
-```json
-// security.transactions
-{
-    "1001": { "object": "Auth", "method": "register" },
-    "1002": { "object": "Dashboard", "method": "getData" }
-}
-```
+3.  **TransactionExecutor** (The Executor):
+    - Dynamically loads the Business Object (BO).
+    - **Critical Security**: Implements **Path Containment**. Verifies the file to load is strictly within `/BO` and checks for path traversal (`../../etc/passwd`).
+    - Injects dependencies (DB, Log, Validator, I18n).
 
-### C. SecurityService (The Guardian)
-
-The service orchestrating everything.
-
-1. Receives `tx: 1001`.
-2. Calls Mapper -> `Auth.register`.
-3. Calls Guard -> `Does Profile X have permission for Auth.register?`.
-4. If YES -> Executes BO.
-5. If NO -> Logs incident and returns 403.
+4.  **TransactionMapper** (The Map):
+    - Translates `tx: 1001` -> `{ object: "Auth", method: "register" }`.
 
 ---
 
-## 3. Special Profiles
+## 3. Secure Flow
+
+1. **Resolution**: `TransactionMapper` finds the route.
+2. **Route Validation (Anti-Traversal)**: `TransactionOrchestrator` checks for illegal characters.
+3. **Authorization**: `AuthorizationService` verifies permission matrix.
+4. **Secure Execution**: `TransactionExecutor` resolves absolute path, ensures root containment, and executes.
+5. **Audit**: Success or error is logged.
+
+---
+
+## 4. Special Profiles
 
 - **Public Profile (Configurable ID)**:
-    - Used automatically when user has no session (cookie).
-    - Defines what an anonymous user can do (Login, Register, Password Reset).
+    - Automatically used when a user has no session.
+    - Defines what an anonymous user can do.
 - **Super Admin (ID 1)**:
-    - Typically has access to everything, but system treats it as just another profile.
-    - No hardcoded "if (admin) bypass" in code, everything is in DB.
+    - Typically has access to everything, but handled as just another profile.
+    - No hardcoded "if (admin) bypass".
 
 ---
 
-## 4. Additional Layers
+## 5. Additional Layers
 
 1.  **CSRF (Cross-Site Request Forgery)**:
     - Synchronized token in cookie and header.
-    - Prevents other sites from executing `tx` on behalf of user.
 2.  **Rate Limiting**:
-    - `LoginRateLimiter`: 5 attempts/minute (Strict).
-    - `AppRateLimiter`: 100 requests/minute (Lax).
+    - Strict strategies for sensitive endpoints (`/login`).

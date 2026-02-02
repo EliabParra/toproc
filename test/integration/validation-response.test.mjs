@@ -11,7 +11,7 @@ const mockDeps = {
         show: () => {},
     },
     config: {},
-    v: {
+    validator: {
         validate: (data, schema) => {
             const result = schema.safeParse(data)
             if (result.success) return { valid: true, data: result.data }

@@ -1,6 +1,6 @@
 # AppServer Core: The HTTP Entry Point
 
-The `AppServer` (formerly Dispatcher) is the core entry point to the system. It bootstraps Express and wires up the Controllers.
+The `AppServer` (formerly Dispatcher) is the main entry point. It initializes Express and connects Controllers.
 
 ## Architecture
 
@@ -13,9 +13,13 @@ graph TD
     Router -->|/login, /logout| AuthCtrl[AuthController]
     Router -->|/toProccess| TxCtrl[TransactionController]
     Router -->|/*| PageCtrl[PageController]
-    TxCtrl --> Security[SecurityService]
+
+    TxCtrl --> Orchestrator[TransactionOrchestrator]
+    Orchestrator --> Authorization[AuthorizationService]
+    Orchestrator --> Executor[TransactionExecutor]
+    Executor --> BO[Business Object]
+
     AuthCtrl --> Session[SessionService]
-    Security --> BO[Business Object]
     BO --> Response[Response]
 ```
 
@@ -26,11 +30,12 @@ graph TD
 - **Bootstrap**: Configures Express, Helmet, CORS, BodyParsers.
 - **Routing**: Maps URLs to Controllers.
 - **Lifecycle**: Handles `init()`, `serverOn()`, and `shutdown()`.
+- **Injection**: Instantiates `TransactionOrchestrator` and injects it into the controller.
 
 ### 2. TransactionController (`TransactionController.ts`)
 
 - **Orchestration**: Handles the master route `/toProccess`.
-- **Logic**: Validates `tx`, checks permissions, executes BOs via `SecurityService`.
+- **Logic**: Validates `tx` and delegates execution to `TransactionOrchestrator`.
 
 ### 3. AuthController (`AuthController.ts`)
 
@@ -40,12 +45,12 @@ graph TD
 ### 4. ProbeController (`ProbeController.ts`)
 
 - **Observability**: Handles `/health` and `/ready`.
-- **Logic**: Checks system uptime and security service readiness.
+- **Logic**: Checks uptime and service status.
 
 ### 5. PageController (`PageController.ts`)
 
 - **Static Content**: Serves views from `public/pages`.
-- **Routing**: Fallback for all non-API routes.
+- **Routing**: Fallback for non-API routes.
 
 ## The Master Route: `/toProccess`
 
@@ -65,36 +70,40 @@ X-CSRF-Token: <token>
 ### Internal Flow
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  1. Validate session → get profileId                        │
-│  2. Validate body (tx: number, params: object)              │
-│  3. Resolve tx → objectName + methodName                    │
-│  4. Check permissions (SecurityService.getPermissions)      │
-│  5. Execute method (SecurityService.executeMethod)          │
-│  6. Log audit                                               │
-│  7. Respond to client                                       │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  1. Validate session → get profileId                            │
+│  2. Validate body (tx: number, params: object)                  │
+│  3. TransactionOrchestrator.execute()                           │
+│     → Resolve Route (Mapper)                                    │
+│     → Validate Regex (Security)                                 │
+│     → AuthorizationService.check()                              │
+│     → TransactionExecutor.execute()                             │
+│       → Validate Path Containment                               │
+│       → Instantiate BO                                          │
+│       → Execute Method                                          │
+│  4. Respond to client                                           │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Error Handling
 
 The `createFinalErrorHandler` middleware centralizes handling:
 
-1. **Marks** `res.locals.__errorLogged = true` to avoid duplicate logs
-2. **Logs** error redacting secrets
-3. **Responds** with generic error (no sensitive information leakage)
+1. **Marks** `res.locals.__errorLogged = true` to avoid duplicate logs.
+2. **Logs** the error scrubbing secrets.
+3. **Responds** with a generic error (no info leak).
 
 ```typescript
 // Client receives
 { "code": 500, "msg": "Server error" }
 
-// Log receives (server-side)
-"Server error, /toProccess: Cannot read property 'x' of undefined"
-// + full stack trace + context (userId, profileId, tx, etc.)
+// Log receives (server)
+"[ERROR] Server error, /toProccess: Cannot read property 'x' of undefined"
+// + stack trace + context (userId, profileId, tx, etc.)
 ```
 
 ## See Also
 
 - [Bootstrap](./BOOTSTRAP.en.md) - System initialization
 - [Security System](./SECURITY_SYSTEM.en.md) - Permissions and transactions
-- [Transaction Flow](./TRANSACTION_FLOW.en.md) - Business method execution
+- [Transaction Flow](./TRANSACTION_FLOW.en.md) - Execution of business methods

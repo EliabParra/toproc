@@ -13,9 +13,13 @@ graph TD
     Router -->|/login, /logout| AuthCtrl[AuthController]
     Router -->|/toProccess| TxCtrl[TransactionController]
     Router -->|/*| PageCtrl[PageController]
-    TxCtrl --> Security[SecurityService]
+
+    TxCtrl --> Orchestrator[TransactionOrchestrator]
+    Orchestrator --> Authorization[AuthorizationService]
+    Orchestrator --> Executor[TransactionExecutor]
+    Executor --> BO[Business Object]
+
     AuthCtrl --> Session[SessionService]
-    Security --> BO[Business Object]
     BO --> Response[Response]
 ```
 
@@ -26,11 +30,12 @@ graph TD
 - **Bootstrap**: Configura Express, Helmet, CORS, BodyParsers.
 - **Routing**: Mapea URLs a los Controladores.
 - **Ciclo de Vida**: Maneja `init()`, `serverOn()` y `shutdown()`.
+- **Inyección**: Instancia `TransactionOrchestrator` y lo inyecta al controller.
 
 ### 2. TransactionController (`TransactionController.ts`)
 
 - **Orquestación**: Maneja la ruta maestra `/toProccess`.
-- **Lógica**: Valida `tx`, verifica permisos, ejecuta BOs via `SecurityService`.
+- **Lógica**: Valida `tx` y delega la ejecución al `TransactionOrchestrator`.
 
 ### 3. AuthController (`AuthController.ts`)
 
@@ -65,15 +70,19 @@ X-CSRF-Token: <token>
 ### Flujo Interno
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  1. Validar sesión → obtener profileId                      │
-│  2. Validar body (tx: number, params: object)               │
-│  3. Resolver tx → objectName + methodName                   │
-│  4. Verificar permisos (SecurityService.getPermissions)     │
-│  5. Ejecutar método (SecurityService.executeMethod)         │
-│  6. Registrar auditoría                                     │
-│  7. Responder al cliente                                    │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  1. Validar sesión → obtener profileId                          │
+│  2. Validar body (tx: number, params: object)                   │
+│  3. TransactionOrchestrator.execute()                           │
+│     → Resolver Ruta (Mapper)                                    │
+│     → Validar Regex (Security)                                  │
+│     → AuthorizationService.check()                              │
+│     → TransactionExecutor.execute()                             │
+│       → Validar Path Containment                                │
+│       → Instanciar BO                                           │
+│       → Ejecutar Método                                         │
+│  4. Responder al cliente                                        │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Manejo de Errores

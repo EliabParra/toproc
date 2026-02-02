@@ -203,7 +203,12 @@ function createDeps() {
     // But SecurityService needs DB.
     // I'll factory a real SecurityService.
 
-    return { config, log, i18n, audit, session: sessionService, db, logs }
+    // Mock Validator
+    const validator = {
+        validate: (d) => ({ valid: true, data: d }),
+    }
+
+    return { config, log, i18n, audit, session: sessionService, db, logs, validator }
 }
 
 import { SecurityService } from '../../src/services/SecurityService.js'

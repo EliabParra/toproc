@@ -253,7 +253,7 @@ export interface BODependencies {
     audit: IAuditService
     security: ISecurityService
     session: ISessionService
-    v: IValidator
+    validator: IValidator
     i18n: II18nService
 }
 

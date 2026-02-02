@@ -1,7 +1,7 @@
 # Sistema de Seguridad Unificado (Security System)
 
 La seguridad en ToProccess es el cimiento de la arquitectura.
-Se basa en un modelo **Transaction-Oriented** donde cada acción de negocio tiene un ID único y permisos granulares.
+Se basa en un modelo **Transaction-Oriented** donde cada acción de negocio tiene un ID único, permisos granulares y una ejecución orquestada de forma segura.
 
 ## 1. Concepto: Transaction-Oriented Security
 
@@ -16,48 +16,52 @@ En lugar de exponer recursos CRUD tradicionales (`POST /users`), exponemos Inten
 
 ---
 
-## 2. Componentes Clave
+## 2. Nueva Arquitectura (Core Refactor)
 
-### A. Matriz de Permisos (DB -> RAM)
+Hemos separado las responsabilidades en componentes especializados para cumplir con **SOLID** y mejorar la seguridad:
 
-Toda la autorización se basa en la tabla `security.permissions`.
+### A. Matriz de Permisos (`security.permissions`)
+
+Toda la autorización se basa en la base de datos, cargada en memoria RAM (`PermissionGuard`) para velocidad O(1).
 
 | transaction_id (`tx`) | profile_id | descripcion          |
 | :-------------------- | :--------- | :------------------- |
 | 1001 (Register)       | 2 (Public) | Permitido a anónimos |
 | 1002 (Admin Panel)    | 1 (Admin)  | Solo admins          |
 
-**PermissionGuard (`PermissionGuard.ts`)**:
-Carga esta tabla completa en memoria RAM al iniciar el servidor (Map de búsqueda O(1)).
+### B. Componentes del Core (`src/core/*`)
 
-- **Velocidad**: Verificar permiso toma nanosegundos.
-- **Consistencia**: No hay SQL queries por cada petición para verificar auth.
+1.  **TransactionOrchestrator** (El Director):
+    - Recibe la petición del controlador.
+    - Coordina: Resolución -> Validación Ruta -> AuthZ -> Ejecución -> Auditoría.
+    - **Seguridad**: Valida nombres de métodos contra whitelist (Regex) para prevenir ejecución arbitraria.
 
-### B. Transaction Mapper (`TransactionMapper.ts`)
+2.  **AuthorizationService** (El Guardián):
+    - Responsable único de decir SI/NO.
+    - Consulta `PermissionGuard`.
+    - Loguea intentos de acceso denegado.
 
-Es el diccionario que traduce números a código.
+3.  **TransactionExecutor** (El Ejecutor):
+    - Carga dinámicamente el Business Object (BO).
+    - **Seguridad Crítica**: Implementa **Path Containment**. Verifica que el archivo a cargar esté realmente dentro de `/BO` y no sea un path traversal (`../../etc/passwd`).
+    - Inyecta dependencias (DB, Log, Validator, I18n).
 
-```json
-// security.transactions
-{
-    "1001": { "object": "Auth", "method": "register" },
-    "1002": { "object": "Dashboard", "method": "getData" }
-}
-```
-
-### C. SecurityService (El Guardián)
-
-Es el servicio que orquesta todo.
-
-1. Recibe `tx: 1001`.
-2. Llama a Mapper -> `Auth.register`.
-3. Llama a Guard -> `¿Perfil X tiene permiso para Auth.register?`.
-4. Si SI -> Ejecuta el BO.
-5. Si NO -> Loguea incidente y devuelve 403.
+4.  **TransactionMapper** (El Mapa):
+    - Traduce `tx: 1001` -> `{ object: "Auth", method: "register" }`.
 
 ---
 
-## 3. Perfiles Especiales
+## 3. Flujo Seguro
+
+1. **Resolución**: `TransactionMapper` encuentra la ruta.
+2. **Validación de Ruta (Anti-Traversal)**: `TransactionOrchestrator` verifica caracteres ilegales.
+3. **Autorización**: `AuthorizationService` verifica matriz de permisos.
+4. **Ejecución Segura**: `TransactionExecutor` resuelve path absoluto, verifica contención en root y ejecuta.
+5. **Auditoría**: Se registra éxito o error.
+
+---
+
+## 4. Perfiles Especiales
 
 - **Perfil Público (ID Configurable)**:
     - Se usa automáticamente cuando un usuario no tiene sesión (cookie).
@@ -68,11 +72,9 @@ Es el servicio que orquesta todo.
 
 ---
 
-## 4. Capas Adicionales
+## 5. Capas Adicionales
 
 1.  **CSRF (Cross-Site Request Forgery)**:
     - Token sincronizado en cookie y header.
-    - Previene que otros sitios ejecuten `tx` en nombre del usuario.
 2.  **Rate Limiting**:
-    - `LoginRateLimiter`: 5 intentos/minuto (Estricto).
-    - `AppRateLimiter`: 100 peticiones/minuto (Laxo).
+    - Estrategias estrictas para endpoints sensibles (`/login`).

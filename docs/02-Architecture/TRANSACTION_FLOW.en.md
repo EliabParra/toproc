@@ -1,98 +1,79 @@
-# The Journey of a Request (Transaction Flow)
+# The Request Journey (Transaction Flow)
 
-Let's do a microscopic analysis of what happens when you `POST /toProccess`.
+Let's analyze microscopically what happens when you `POST /toProccess`.
 
-## Full Sequence Diagram
+## Complete Sequence Diagram
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant Client
     participant Express as Express (Middleware Chain)
-    participant RateLimit
     participant TxCtrl as TransactionController
-    participant Security as SecurityService
-    participant Audit
+    participant Orch as TransactionOrchestrator
+    participant AuthZ as AuthorizationService
+    participant Exec as TransactionExecutor
     participant BO as BusinessObject
+    participant Audit
 
-    Note over Client,Express: 1. TCP Connection Handling
+    Note over Client,Express: 1. TCP & Middleware
     Client->>Express: POST /toProccess { tx: 101, ... }
-
-    Note over Express: Helmet (Secure Headers)<br>RequestId (Unique UUID)<br>BodyParser (JSON Parse)
-
-    Express->>RateLimit: Check IP Limits
-    alt Limit Exceeded
-        RateLimit-->>Client: 429 Too Many Requests
-    end
-
     Express->>TxCtrl: handle(req, res)
 
-    TxCtrl->>TxCtrl: Validate JSON Structure (Simple Check)
+    Note over TxCtrl,Orch: 2. Orchestration
+    TxCtrl->>Orch: execute(tx, context, params)
 
-    Note over TxCtrl,Security: 2. Core Orchestration
-    TxCtrl->>Security: isReady?
-    TxCtrl->>Security: getDataTx(101) -> resolve mapped BO
+    Orch->>Orch: Resolve TX -> Route (Mapper)
+    Orch->>Orch: Validate Route (Regex)
 
-    TxCtrl->>Security: getPermissions({ profile: 2, tx: 101 })
+    Orch->>AuthZ: isAuthorized(profileId, object, method)
     alt Access Denied
-        Security-->>TxCtrl: false
-        TxCtrl->>Audit: Log "tx_denied"
-        TxCtrl-->>Client: 403 Forbidden
+        AuthZ-->>Orch: false
+        Orch->>Audit: Log "ACCESS_DENIED"
+        Orch-->>Client: 403 Forbidden
     end
 
-    Note over TxCtrl,BO: 3. Business Execution
-    TxCtrl->>Security: executeMethod(101)
-    Security->>BO: Lazy Load & Instantiate(Container)
+    Note over Orch,Exec: 3. Secure Execution
+    Orch->>Exec: execute(object, method, params)
 
-    BO->>BO: Validate Params (Zod Schema)
-    alt Invalid Params
-        BO-->>Security: Validation Error
-        Security-->>TxCtrl: Error Response
-        TxCtrl-->>Client: 400 Bad Request
-    end
+    Exec->>Exec: Path Containment Check (Security)
+    Exec->>BO: Dynamic Import & Instantiate
 
-    BO->>BO: Run Business Logic (Service/Repo)
+    BO->>BO: Validate Params (Zod)
 
-    BO-->>Security: Success Result { data: ... }
-    Security-->>TxCtrl: Pass Result
+    BO->>BO: Business Logic
 
-    TxCtrl->>Audit: Log "tx_exec" (Success)
-    TxCtrl-->>Client: 200 OK { ok: true, data: ... }
+    BO-->>Exec: Result
+    Exec-->>Orch: Result
+
+    Orch->>Audit: Log "EXECUTE_SUCCESS"
+    Orch-->>Client: 200 OK
 ```
 
 ## Step-by-Step Analysis
 
-### 1. The Middleware Chain (The Filter)
+### 1. Middlewares & Controller
 
-Before our "smart" code touches the request, Express goes through several filters:
+As always: Helmet, RateLimit, CSRF. The `TransactionController` receives the request, extracts the session, and immediately delegates to `TransactionOrchestrator`.
 
-- **Helmet**: Adds anti-hacker headers (X-XSS-Protection, etc).
-- **Request ID**: Assigns a unique ID (e.g. `req-12345`) to the request for log tracing.
-- **Request Logger**: Writes "INCOMING POST /toProccess" to the console.
-- **Rate Limit**: If that IP has made 100 requests in 1 minute, it's blocked here.
+### 2. TransactionOrchestrator (The Brain)
 
-### 2. The TransactionController (The Orchestrator)
+1.  **Resolution**: Converts `tx: 101` to `Auth.login`.
+2.  **Route Validation**: Checks that `Auth` and `login` are secure names (alphanumeric), preventing command injection.
+3.  **Authorization**: Asks `AuthorizationService` if the current user can execute that route.
 
-Only when the request has survived the filters, it reaches the `TransactionController.handle` method.
+### 3. AuthorizationService (The Law)
 
-- **Structural Validation**: Checks that the JSON has `{ tx: number, params: object }`. Garbage is rejected before bothering the database.
-- **Active Wait**: If the system is booting (`security.isReady == false`), it waits a few milliseconds before failing.
+Consults the in-memory permission matrix (RAM). If it says NO, everything stops and a security alert is logged.
 
-### 3. Security and Audit
+### 4. TransactionExecutor (The Muscle)
 
-- **Resolution**: Converts `tx: 101` to `AuthBO.login`.
-- **Permissions**: Consults the in-memory matrix (loaded at startup). It is extremely fast (nanoseconds).
-- **Audit**: If you fail, it's recorded in `audit_log` with your IP, user, and rejection reason.
+If everything is legal:
 
-### 4. Business Execution
+1.  **Path Security**: Verifies that the Business Object file is physically located within the allowed `BO/` folder. Blocks any attempt to escape the directory (`../`).
+2.  **Instantiation**: Loads the BO and injects dependencies (`db`, `logger`, `validator`).
+3.  **Execution**: Calls the requested method.
 
-The BO is instantiated on demand (Lazy Load) via `SecurityService`.
+### 5. Audit
 
-- Receives the `Container` with the DB connection already open.
-- Semantically validates data (e.g. "Is the email format valid?").
-- Executes the task.
-
-### 5. Response
-
-The `TransactionController` captures the result, wraps it, and sends it.
-Finally, "OUTGOING 200 OK" and the duration (e.g. `45ms`) are logged.
+The orchestrator logs the final result (success or error) in the audit service, guaranteeing complete traceability.

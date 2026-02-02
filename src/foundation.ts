@@ -98,6 +98,7 @@ const appServer = new AppServer({
     i18n,
     audit,
     db,
+    validator,
 })
 
 // Exportar servicios

@@ -1,10 +1,10 @@
 # Business Objects (BO): Business Anatomy
 
-The Business Object (BO) is the core class in our architecture. It's where your code "does things".
+The Business Object (BO) is the supreme class in our architecture. It is where your code "does things".
 
 ## Anatomy of a BO
 
-Every BO inherits from `BaseBO`. This gives it superpowers (access to DB, Logger, Config, etc.) and standardized execution methods.
+Every BO must inherit from `BaseBO`. This gives it superpowers (access to DB, Logger, Config, Validator, etc.) and standardized execution methods.
 
 ```typescript
 import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
@@ -22,7 +22,7 @@ export class UserBO extends BaseBO {
         this.service = new UserService(repo, this.log, this.config, this.db)
     }
 
-    // Typed i18n accessor
+    // Typed accessor for i18n messages
     private get m() {
         return this.i18n.use(UserMessages)
     }
@@ -41,48 +41,49 @@ export class UserBO extends BaseBO {
 
 Instead of writing repetitive `try/catch` and `validate` blocks, use `this.exec()`.
 
-**It handles**:
+**Handles for you**:
 
-1. **Validation**: Checks `params` against the Zod schema. Returns 400 if invalid.
+1. **Validation**: verifies `params` against Zod schema. Returns 400 if invalid.
 2. **Execution**: Runs your callback function.
-3. **Error Handling**: Catches errors, checks if they are `BOError`, and returns appropriate 4xx/500 codes.
+3. **Error Handling**: Captures errors, checks if they are `BOError` and returns appropriate 4xx/500 codes.
 
 ## Injected Tools
 
 Inside a BO, you have access to:
 
-| Property      | Type           | Description                    |
-| :------------ | :------------- | :----------------------------- |
-| `this.db`     | `IDatabase`    | Direct Postgres access.        |
-| `this.log`    | `ILogger`      | Structured logger.             |
-| `this.config` | `IConfig`      | Typed environment variables.   |
-| `this.i18n`   | `II18nService` | Internationalization service.  |
-| `this.m`      | (getter)       | Typed messages for current BO. |
+| Property         | Type           | Description                    |
+| :--------------- | :------------- | :----------------------------- |
+| `this.db`        | `IDatabase`    | Direct access to Postgres.     |
+| `this.log`       | `ILogger`      | Structured logger.             |
+| `this.config`    | `IConfig`      | Typed environment variables.   |
+| `this.i18n`      | `II18nService` | Internationalization service.  |
+| `this.validator` | `IValidator`   | Validation service (Zod).      |
+| `this.m`         | (getter)       | Typed messages for current BO. |
 
 ## 8-File Structure
 
-Each BO generates **8 files** with the `{Name}.{Type}.ts` naming convention:
+Each BO generates **8 files** with the nomenclature `{Name}.{Type}.ts`:
 
 ```
 BO/User/
 ├── 📦 UserBO.ts            # Business Object (main file)
-├── 🧠 User.Service.ts      # Business logic
-├── 🗄️ User.Repository.ts   # Database access
+├── 🧠 User.Service.ts      # Business Logic
+├── 🗄️ User.Repository.ts   # Database Access
 ├── 🔍 User.Queries.ts      # Colocated SQL
-├── ✅ User.Schemas.ts       # Zod validations
-├── 📘 User.Types.ts         # TypeScript interfaces
-├── 💬 User.Messages.ts      # i18n strings (ES/EN)
-└── ❌ User.Errors.ts        # Custom error classes
+├── ✅ User.Schemas.ts       # Zod Validations
+├── 📘 User.Types.ts         # TypeScript Interfaces
+├── 💬 User.Messages.ts      # I18n strings (ES/EN)
+└── ❌ User.Errors.ts        # Custom Error Classes
 ```
 
-## Services & BOError
+## Services and BOError
 
 To keep code clean:
 
 - **BO**: Orchestrates (HTTP -> BO -> Service).
 - **Service**: Extends `BOService`. Contains pure business logic.
 - **Repository**: Uses `db.query<T>` with types and colocated SQL.
-- **BOError**: Use this for domain errors.
+- **BOError**: Use it for domain errors.
 
 ```typescript
 // Repository

@@ -6,16 +6,17 @@ import {
     II18nService,
     AppRequest,
     AppResponse,
-    LocalizedMessages,
     ILogger,
 } from '../../../types/index.js'
 import { sendInvalidParameters } from '../../../utils/http-responses.js'
+import { TransactionOrchestrator } from '../../../core/transaction/TransactionOrchestrator.js'
 
 /**
  * Dependencias del controlador de transacciones.
  */
 interface TransactionControllerDeps {
-    security: ISecurityService
+    orchestrator: TransactionOrchestrator // [NEW] Use Orchestrator
+    security: ISecurityService // Kept for backward compat or other methods if needed, but primary logic moves
     session: ISessionService
     audit: IAuditService
     config: IConfig
@@ -30,19 +31,18 @@ interface TransactionControllerDeps {
  * de métodos de negocio (BOs) basada en códigos de transacción (TX).
  */
 export class TransactionController {
-    private security: ISecurityService
+    private orchestrator: TransactionOrchestrator
     private session: ISessionService
-    private audit: IAuditService
     private config: IConfig
     private i18n: II18nService
+    private log: ILogger
 
     constructor(deps: TransactionControllerDeps) {
-        this.security = deps.security
+        this.orchestrator = deps.orchestrator
         this.session = deps.session
-        this.audit = deps.audit
         this.config = deps.config
         this.i18n = deps.i18n
-        this.i18n = deps.i18n
+        this.log = deps.log
     }
 
     /**
@@ -111,101 +111,50 @@ export class TransactionController {
                 return
             }
 
-            // 3. Esperar a que SecurityService esté listo
-            if (!this.security.isReady) {
-                try {
-                    await this.security.ready
-                } catch {
-                    res.status(this.i18n.messages.errors.client.serviceUnavailable.code).send(
-                        this.i18n.messages.errors.client.serviceUnavailable
-                    )
-                    return
-                }
+            // 3. Preparar Contexto de Seguridad
+            // cast to any for legacy user object access until proper Session type update
+            const session = req.session as any
+            const userId = session?.user?.id ?? 0 // 0 = Anon/System
+            const username = session?.user?.username ?? 'anonymous'
+
+            // Inyectar metadatos legacy para Auth
+            // (Esto idealmente debería hacerse dentro de AuthBO, pero lo mantenemos por compatibilidad)
+            const effectiveParams: Record<string, unknown> =
+                params && typeof params === 'object' && !Array.isArray(params)
+                    ? { ...params }
+                    : { value: params }
+
+            // NOTA: Para AuthBO old-style que espera params._request
+            // Lo inyectamos aquí o confiamos en que AuthBO se actualice.
+            // Por seguridad, inyectamos en un campo reservado.
+            effectiveParams._request = {
+                ip: req.ip ?? null,
+                userAgent: req.get?.('User-Agent') ?? null,
             }
 
-            // 4. Resolver transacción
-            const txData = this.security.getDataTx(tx)
-            if (!txData) {
-                throw new Error(
-                    this.i18n.messages.errors.server.txNotFound.msg.replace('{tx}', String(tx))
-                )
-            }
-
-            // 5. Preparar parámetros (inyectar metadata para Auth)
-            let effectiveParams = params
-            if (txData.objectName === 'Auth') {
-                const authMethods = [
-                    'register',
-                    'requestEmailVerification',
-                    'verifyEmail',
-                    'requestPasswordReset',
-                    'verifyPasswordReset',
-                    'resetPassword',
-                ]
-                if (authMethods.includes(txData.methodName)) {
-                    const baseParams =
-                        params && typeof params === 'object' && !Array.isArray(params) ? params : {}
-                    effectiveParams = {
-                        ...baseParams,
-                        _request: {
-                            ip: req.ip ?? null,
-                            userAgent: req.get?.('User-Agent') ?? null,
-                        },
-                    }
-                }
-            }
-
-            const data = {
-                profileId: effectiveProfileId!,
-                methodName: txData.methodName,
-                objectName: txData.objectName,
-                params: effectiveParams,
-            }
-
-            // 6. Verificar permisos
-            if (!this.security.getPermissions(data)) {
-                await this.audit.log(req, {
-                    action: 'tx_denied',
-                    objectName: data.objectName,
-                    methodName: data.methodName,
-                    tx,
-                    profile_id: effectiveProfileId,
-                    details: { reason: 'permissionDenied' },
-                })
-
-                res.status(this.i18n.messages.errors.client.permissionDenied.code).send(
-                    this.i18n.messages.errors.client.permissionDenied
-                )
-                return
-            }
-
-            // 7. Ejecutar método
-            const response = await this.security.executeMethod(data)
-
-            // 8. Registrar auditoría
-            await this.audit.log(req, {
-                action: 'tx_exec',
-                objectName: data.objectName,
-                methodName: data.methodName,
+            // 4. Ejecutar vía Orchestrator
+            // Orchestrator maneja: Resolución, Validación Ruta, Autorización, Ejecución, Auditoría.
+            const result = await this.orchestrator.execute(
                 tx,
-                profile_id: effectiveProfileId,
-                details: { responseCode: response?.code },
-            })
+                {
+                    userId,
+                    profileId: effectiveProfileId!,
+                    username,
+                },
+                effectiveParams
+            )
 
-            res.status(response.code).send(response)
+            // Orchestrator retorna estructura de error estándar si falla.
+            // Si es success, retorna lo que el BO retorne.
+
+            // Asumimos que result tiene la forma { code, msg, ... } o data pura
+            // BaseBO suele retornar { code, msg, data }
+            const anyResult = result as any
+            const statusCode =
+                anyResult?.code && Number.isInteger(anyResult.code) ? anyResult.code : 200
+
+            res.status(statusCode).send(result)
         } catch (err: unknown) {
-            // Pasamos info extra al Error Handler global si es posible,
-            // pero next(err) es lo estándar.
-            // Para mantener el log context rico del Dispatcher original,
-            // podríamos adjuntar props al error o req, pero por ahora
-            // confiamos en el `final-error-handler` que ya mejoramos.
-
-            // Replicamos la logica de "profileId" para el error handler
-            // Quizas poniendolo en req.session o req.locals?
-            // El error handler lee req.session.profileId.
-            // Si effectiveProfileId es distinto al de session (public),
-            // el error handler original lo recibía como argumento.
-            // TODO: Mejorar esto. Por ahora next(err).
             next(err)
         }
     }

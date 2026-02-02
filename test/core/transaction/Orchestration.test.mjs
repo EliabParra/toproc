@@ -41,7 +41,7 @@ describe('Security & Orchestration Core', () => {
 
             const res = await orchestrator.execute(100, context, {})
             assert.equal(res.code, 400)
-            assert.equal(res.msg, 'Invalid Transaction Route')
+            assert.equal(res.msg, 'server.serverError')
         })
 
         it('execute() enforces AuthorizationService', async () => {

@@ -11,6 +11,7 @@ import {
     AppRequest,
     AppResponse,
     LocalizedMessages,
+    IValidator, // [NEW] Import IValidator
 } from '../types/index.js'
 import { registerFrontendHosting } from '../frontend-adapters/index.js'
 
@@ -35,6 +36,12 @@ import {
     ClientErrors,
 } from './http/rate-limit/index.js'
 
+import { PermissionGuard } from '../core/security/PermissionGuard.js'
+import { AuthorizationService } from '../core/security/AuthorizationService.js'
+import { TransactionMapper } from '../core/transaction/TransactionMapper.js'
+import { TransactionExecutor } from '../core/transaction/TransactionExecutor.js'
+import { TransactionOrchestrator } from '../core/transaction/TransactionOrchestrator.js'
+
 // Handlers
 import { AuthController } from './http/controllers/AuthController.js'
 import { TransactionController } from './http/controllers/TransactionController.js'
@@ -46,11 +53,12 @@ import { ProbeController } from './http/controllers/ProbeController.js'
 interface AppServerDependencies {
     config: IConfig
     log: ILogger
-    security: ISecurityService
+    security: ISecurityService // Mantener por ahora para probeController
     session: ISessionService
     i18n: II18nService
     audit: IAuditService
     db: IDatabase
+    validator: IValidator // [NEW] Required for BOs
 }
 
 /**
@@ -82,6 +90,11 @@ export class AppServer {
     private readonly i18n: II18nService
     private readonly audit: IAuditService
     private readonly db: IDatabase
+    private readonly validator: IValidator
+
+    // Servicios Core (Nuevos)
+    private authorization!: AuthorizationService
+    private orchestrator!: TransactionOrchestrator
 
     // Controladores
     private authController!: AuthController
@@ -103,6 +116,7 @@ export class AppServer {
         this.i18n = deps.i18n
         this.audit = deps.audit
         this.db = deps.db
+        this.validator = deps.validator
 
         this.app = express()
         this.server = null
@@ -115,9 +129,7 @@ export class AppServer {
         this.csrfTokenHandler = createCsrfTokenHandler(this.i18n)
         this.csrfProtection = createCsrfProtection(this.i18n)
 
-        this.loginRateLimiter = createLoginRateLimiter(
-            this.i18n.messages.errors.client
-        )
+        this.loginRateLimiter = createLoginRateLimiter(this.i18n.messages.errors.client)
         this.authPasswordResetRateLimiter = createAuthPasswordResetRateLimiter(
             this.i18n.messages.errors.client,
             this.security
@@ -153,6 +165,38 @@ export class AppServer {
      * Inicializa el servidor, controladores y rutas.
      */
     async init(): Promise<void> {
+        // 0. Inicializar Core Services (New Architecture)
+        const permissionGuard = new PermissionGuard(this.db, this.log)
+        await permissionGuard.load()
+
+        this.authorization = new AuthorizationService(permissionGuard, this.log)
+
+        const transactionMapper = new TransactionMapper(this.db, this.log)
+        await transactionMapper.load()
+
+        // BO Dependencies para Executor
+        const boDeps = {
+            db: this.db,
+            log: this.log,
+            config: this.config,
+            audit: this.audit,
+            session: this.session,
+            validator: this.validator,
+            security: this.security, // Legacy support
+            i18n: this.i18n,
+        }
+
+        const transactionExecutor = new TransactionExecutor(boDeps)
+
+        this.orchestrator = new TransactionOrchestrator(
+            transactionMapper,
+            this.authorization,
+            transactionExecutor,
+            this.log,
+            this.audit,
+            this.i18n
+        )
+
         // 1. Instanciar Controladores
         this.authController = new AuthController({
             session: this.session,
@@ -162,6 +206,7 @@ export class AppServer {
         })
 
         this.txController = new TransactionController({
+            orchestrator: this.orchestrator,
             security: this.security,
             session: this.session,
             audit: this.audit,
@@ -173,7 +218,8 @@ export class AppServer {
         this.probeController = new ProbeController(this.security, this.config.app.name)
 
         // 2. Session Middleware
-        const { applySessionMiddleware } = await import('./http/session/apply-session-middleware.js')
+        const { applySessionMiddleware } =
+            await import('./http/session/apply-session-middleware.js')
         applySessionMiddleware(this.app, {
             config: this.config,
             log: this.log,

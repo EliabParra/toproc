@@ -9,90 +9,71 @@ sequenceDiagram
     autonumber
     participant Client
     participant Express as Express (Middleware Chain)
-    participant RateLimit
     participant TxCtrl as TransactionController
-    participant Security as SecurityService
-    participant Audit
+    participant Orch as TransactionOrchestrator
+    participant AuthZ as AuthorizationService
+    participant Exec as TransactionExecutor
     participant BO as BusinessObject
+    participant Audit
 
-    Note over Client,Express: 1. TCP Connection Handling
+    Note over Client,Express: 1. TCP & Middleware
     Client->>Express: POST /toProccess { tx: 101, ... }
-
-    Note over Express: Helmet (Headers seguros)<br>RequestId (UUID único)<br>BodyParser (JSON Parse)
-
-    Express->>RateLimit: Check IP Limits
-    alt Limit Exceeded
-        RateLimit-->>Client: 429 Too Many Requests
-    end
-
     Express->>TxCtrl: handle(req, res)
 
-    TxCtrl->>TxCtrl: Validate JSON Structure (Simple Check)
+    Note over TxCtrl,Orch: 2. Orquestación
+    TxCtrl->>Orch: execute(tx, context, params)
 
-    Note over TxCtrl,Security: 2. Core Orchestration
-    TxCtrl->>Security: isReady?
-    TxCtrl->>Security: getDataTx(101) -> resolve mapped BO
+    Orch->>Orch: Resolver TX -> Route (Mapper)
+    Orch->>Orch: Validar Ruta (Regex)
 
-    TxCtrl->>Security: getPermissions({ profile: 2, tx: 101 })
+    Orch->>AuthZ: isAuthorized(profileId, object, method)
     alt Access Denied
-        Security-->>TxCtrl: false
-        TxCtrl->>Audit: Log "tx_denied"
-        TxCtrl-->>Client: 403 Forbidden
+        AuthZ-->>Orch: false
+        Orch->>Audit: Log "ACCESS_DENIED"
+        Orch-->>Client: 403 Forbidden
     end
 
-    Note over TxCtrl,BO: 3. Business Execution
-    TxCtrl->>Security: executeMethod(101)
-    Security->>BO: Lazy Load & Instantiate(Container)
+    Note over Orch,Exec: 3. Ejecución Segura
+    Orch->>Exec: execute(object, method, params)
 
-    BO->>BO: Validate Params (Zod Schema)
-    alt Invalid Params
-        BO-->>Security: Validation Error
-        Security-->>TxCtrl: Error Response
-        TxCtrl-->>Client: 400 Bad Request
-    end
+    Exec->>Exec: Path Containment Check (Security)
+    Exec->>BO: Dynamic Import & Instantiate
 
-    BO->>BO: Run Business Logic (Service/Repo)
+    BO->>BO: Validate Params (Zod)
 
-    BO-->>Security: Success Result { data: ... }
-    Security-->>TxCtrl: Pass Result
+    BO->>BO: Business Logic
 
-    TxCtrl->>Audit: Log "tx_exec" (Success)
-    TxCtrl-->>Client: 200 OK { ok: true, data: ... }
+    BO-->>Exec: Result
+    Exec-->>Orch: Result
+
+    Orch->>Audit: Log "EXECUTE_SUCCESS"
+    Orch-->>Client: 200 OK
 ```
 
 ## Análisis Paso a Paso
 
-### 1. La Cadena de Middlewares (El Filtro)
+### 1. Middlewares y Controller
 
-Antes de que nuestro código "inteligente" toque la petición, Express (configurado por `AppServer`) pasa por varios filtros:
+Igual que siempre: Helmet, RateLimit, CSRF. El `TransactionController` recibe la petición, extrae la sesión y delega inmediatamente al `TransactionOrchestrator`.
 
-- **Helmet**: Añade headers anti-hacker (X-XSS-Protection, etc).
-- **Request ID**: Asigna un ID único (e.g. `req-12345`) a la petición para poder rastrearla en los logs.
-- **Request Logger**: Escribe "INCOMING POST /toProccess" en la consola.
-- **Rate Limit**: Si esa IP ha hecho 100 peticiones en 1 minuto, la bloquea aquí.
+### 2. TransactionOrchestrator (El Cerebro)
 
-### 2. El TransactionController (El Orquestador)
+1.  **Resolución**: Convierte `tx: 101` en `Auth.login`.
+2.  **Validación de Ruta**: Verifica que `Auth` y `login` sean nombres seguros (alfanuméricos), evitando inyección de comandos.
+3.  **Autorización**: Pregunta al `AuthorizationService` si el usuario actual puede ejecutar esa ruta.
 
-Solo cuando la petición ha sobrevivido a los filtros, llega al método `handle` del `TransactionController`.
+### 3. AuthorizationService (La Ley)
 
-- **Validación Estructural**: Revisa que el JSON tenga `{ tx: number, params: object }`. Si envías basura, te rechaza antes de molestar a la base de datos.
-- **Espera Activa**: Si el sistema está arrancando (`security.isReady == false`), espera unos milisegundos antes de fallar.
+Consulta la matriz de permisos en memoria (RAM). Si dice NO, se detiene todo y se registra una alerta de seguridad.
 
-### 3. Seguridad y Auditoría
+### 4. TransactionExecutor (El Músculo)
 
-- **Resolución**: Convierte `tx: 101` en `AuthBO.login`.
-- **Permisos**: Consulta la matriz en memoria (cargada al inicio). Es extremadamente rápido (nanosegundos).
-- **Audit**: Si fallas, queda registrado en `audit_log` con tu IP, usuario, y razón del rechazo.
+Si todo es legal:
 
-### 4. Ejecución del Negocio
+1.  **Path Security**: Verifica que el archivo del Business Object esté físicamente dentro de la carpeta `BO/` permitida. Bloquea cualquier intento de salir del directorio (`../`).
+2.  **Instanciación**: Carga el BO e inyecta dependencias (`db`, `logger`, `validator`).
+3.  **Ejecución**: Llama al método solicitado.
 
-El BO se instancia al momento (Lazy Load) a través del `SecurityService`.
+### 5. Auditoría
 
-- Recibe el `Container` con la conexión DB ya abierta.
-- Valida semánticamente los datos (e.g., "El email tiene formato válido?").
-- Ejecuta la tarea.
-
-### 5. Respuesta
-
-El `TransactionController` captura el resultado, lo envuelve y lo envía.
-Finalmente, registra "OUTGOING 200 OK" y el tiempo que tomó (e.g. `45ms`).
+El orquestador registra el resultado final (éxito o error) en el servicio de auditoría, garantizando trazabilidad completa.
