@@ -45,7 +45,7 @@ export class AuthBO extends BaseBO {
 
     constructor(deps: BODependencies) {
         super(deps)
-        this.service = new AuthService(deps.log, deps.config, deps.db)
+        this.service = new AuthService(deps.log, deps.config, deps.db, deps.i18n)
     }
 
     private get authMessages() {
@@ -119,11 +119,12 @@ export class AuthBO extends BaseBO {
     service: () => `import { createHash, randomBytes } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { BOService } from '../../src/core/business-objects/BOService.js'
-import type { IConfig, IDatabase } from '../../src/types/core.js'
+import type { IConfig, IDatabase, II18nService } from '../../src/types/core.js'
 import { EmailService } from '../../src/services/EmailService.js'
 import { AuthRepository } from './AuthRepository.js'
 import type { User, RegisterData, UserRow } from './AuthTypes.js'
 import { AuthEmailExistsError, AuthTokenInvalidError } from './AuthErrors.js'
+import { AuthMessages } from './AuthMessages.js'
 
 function sha256Hex(value: string): string {
     return createHash('sha256').update(value, 'utf8').digest('hex')
@@ -132,11 +133,17 @@ function sha256Hex(value: string): string {
 export class AuthService extends BOService {
     private emailService: EmailService
     private repo: AuthRepository
+    private i18n: II18nService
 
-    constructor(log: any, config: IConfig, db: IDatabase) {
+    constructor(log: any, config: IConfig, db: IDatabase, i18n: II18nService) {
         super(log, config, db)
         this.emailService = new EmailService({ log: this.log, config: this.config })
         this.repo = new AuthRepository(db)
+        this.i18n = i18n
+    }
+
+    private get messages() {
+        return this.i18n.use(AuthMessages)
     }
 
     async register(data: RegisterData): Promise<User> {
@@ -144,7 +151,7 @@ export class AuthService extends BOService {
 
         const exists = await this.repo.getUserBaseByEmail(data.email)
         if (exists) {
-            throw new AuthEmailExistsError(data.email)
+            throw new AuthEmailExistsError(this.messages.emailAlreadyExists, data.email)
         }
 
         const hash = await bcrypt.hash(data.password, 10)
@@ -192,7 +199,7 @@ export class AuthService extends BOService {
             tokenHash,
         })
 
-        if (!otp) throw new AuthTokenInvalidError()
+        if (!otp) throw new AuthTokenInvalidError(this.messages.tokenInvalid)
 
         await this.repo.setUserEmailVerified(otp.user_id)
         await this.repo.consumeOneTimeCode(otp.code_id)
@@ -233,7 +240,7 @@ export class AuthService extends BOService {
         const tokenHash = sha256Hex(token)
         const reset = await this.repo.getPasswordResetByTokenHash(tokenHash)
 
-        if (!reset || reset.used_at) throw new AuthTokenInvalidError()
+        if (!reset || reset.used_at) throw new AuthTokenInvalidError(this.messages.tokenInvalid)
 
         const hash = await bcrypt.hash(newPassword, 10)
         await this.repo.updateUserPassword({ userId: reset.user_id, passwordHash: hash })
@@ -243,7 +250,7 @@ export class AuthService extends BOService {
     async verifyPasswordResetToken(token: string): Promise<void> {
         const tokenHash = sha256Hex(token)
         const reset = await this.repo.getPasswordResetByTokenHash(tokenHash)
-        if (!reset || reset.used_at) throw new AuthTokenInvalidError()
+        if (!reset || reset.used_at) throw new AuthTokenInvalidError(this.messages.tokenInvalid)
     }
 
     private async sendVerificationEmail(userId: number, emailAddr: string) {
@@ -747,11 +754,15 @@ export interface RegisterResult {
 }
 `,
 
-    errors: () => `import { BOError } from '../../src/core/business-objects/BOError.js'
+    errors: () => `import type { TxKey } from '../../src/types/core.js'
+import { BOError } from '../../src/core/business-objects/BOError.js'
+import { AuthMessages } from './AuthMessages.js'
+
+const defaultMessages = AuthMessages.es
 
 export class AuthError extends BOError {
     constructor(
-        message: string,
+        message: TxKey | (string & {}),
         tag: string,
         code: number = 500,
         details?: Record<string, unknown>
@@ -762,50 +773,50 @@ export class AuthError extends BOError {
 }
 
 export class AuthNotFoundError extends AuthError {
-    constructor() {
-        super('bo.auth.userNotFound', 'AUTH_USER_NOT_FOUND', 404)
+    constructor(message?: string) {
+        super(message ?? defaultMessages.userNotFound, 'AUTH_USER_NOT_FOUND', 404)
         this.name = 'AuthNotFoundError'
     }
 }
 
 export class AuthInvalidCredentialsError extends AuthError {
-    constructor() {
-        super('bo.auth.invalidCredentials', 'AUTH_INVALID_CREDENTIALS', 401)
+    constructor(message?: string) {
+        super(message ?? defaultMessages.invalidCredentials, 'AUTH_INVALID_CREDENTIALS', 401)
         this.name = 'AuthInvalidCredentialsError'
     }
 }
 
 export class AuthEmailNotVerifiedError extends AuthError {
-    constructor() {
-        super('bo.auth.emailNotVerified', 'AUTH_EMAIL_NOT_VERIFIED', 403)
+    constructor(message?: string) {
+        super(message ?? defaultMessages.emailNotVerified, 'AUTH_EMAIL_NOT_VERIFIED', 403)
         this.name = 'AuthEmailNotVerifiedError'
     }
 }
 
 export class AuthSessionExpiredError extends AuthError {
-    constructor() {
-        super('bo.auth.sessionExpired', 'AUTH_SESSION_EXPIRED', 401)
+    constructor(message?: string) {
+        super(message ?? defaultMessages.sessionExpired, 'AUTH_SESSION_EXPIRED', 401)
         this.name = 'AuthSessionExpiredError'
     }
 }
 
 export class AuthTokenInvalidError extends AuthError {
-    constructor() {
-        super('bo.auth.tokenInvalid', 'AUTH_TOKEN_INVALID', 400)
+    constructor(message?: string) {
+        super(message ?? defaultMessages.tokenInvalid, 'AUTH_TOKEN_INVALID', 400)
         this.name = 'AuthTokenInvalidError'
     }
 }
 
 export class AuthEmailExistsError extends AuthError {
-    constructor(email?: string) {
-        super('bo.auth.emailAlreadyExists', 'AUTH_EMAIL_EXISTS', 409, { email })
+    constructor(message?: string, email?: string) {
+        super(message ?? defaultMessages.emailAlreadyExists, 'AUTH_EMAIL_EXISTS', 409, { email })
         this.name = 'AuthEmailExistsError'
     }
 }
 
 export class AuthAccountDisabledError extends AuthError {
-    constructor() {
-        super('bo.auth.accountDisabled', 'AUTH_ACCOUNT_DISABLED', 403)
+    constructor(message?: string) {
+        super(message ?? defaultMessages.accountDisabled, 'AUTH_ACCOUNT_DISABLED', 403)
         this.name = 'AuthAccountDisabledError'
     }
 }
@@ -815,9 +826,11 @@ export function handleAuthError(error: unknown): AuthError {
         return error
     }
     if (error instanceof Error) {
-        return new AuthError(error.message, 'AUTH_UNKNOWN_ERROR', 500)
+        return new AuthError('errors.server.serverError', 'AUTH_UNKNOWN_ERROR', 500, {
+            message: error.message,
+        })
     }
-    return new AuthError('Error desconocido en Auth', 'AUTH_UNKNOWN_ERROR', 500)
+    return new AuthError('errors.server.serverError', 'AUTH_UNKNOWN_ERROR', 500)
 }
 
 export function isAuthError(error: unknown): error is AuthError {
