@@ -48,28 +48,28 @@ const validator = new ValidatorService(i18n)
 container.register('validator', validator)
 
 // 5. Logger
-const appLogger = new AppLogger({ config })
-container.register('log', appLogger)
+const log = new AppLogger({ config })
+container.register('log', log)
 
 // 6. Base de Datos
 import { DatabaseService } from './services/DatabaseService.js'
-const db = new DatabaseService({ config, i18n, log: appLogger })
+const db = new DatabaseService({ config, i18n, log: log })
 container.register('db', db)
 
 // 7. Capa de Servicios
 
 // Auditoría
-const audit = new AuditService({ db, log: appLogger })
+const audit = new AuditService({ db, log: log })
 container.register('audit', audit)
 
 // Servicio de Email
-const email = new EmailService({ config, log: appLogger })
+const email = new EmailService({ config, log: log })
 container.register('email', email)
 
 // Gestor de Sesiones
 const session = new SessionManager({
     db,
-    log: appLogger,
+    log,
     config,
     i18n,
     audit,
@@ -80,7 +80,7 @@ container.register('session', session)
 // Servicio de Seguridad
 const security = new SecurityService({
     db,
-    log: appLogger,
+    log,
     config,
     i18n,
     audit,
@@ -92,7 +92,7 @@ container.register('security', security)
 // AppServer (Punto de entrada HTTP)
 const appServer = new AppServer({
     config,
-    log: appLogger,
+    log,
     security,
     session,
     i18n,
@@ -102,4 +102,4 @@ const appServer = new AppServer({
 })
 
 // Exportar servicios
-export { container, appServer, appLogger as log, db, config, validator, session, security, i18n }
+export { container, appServer, log, db, config, validator, session, security, i18n }
