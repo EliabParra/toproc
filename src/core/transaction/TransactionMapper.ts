@@ -1,4 +1,4 @@
-import { IDatabase, ILogger } from '../../types/core.js'
+import { IDatabase, ILogger, ITransactionMapper, TransactionRoute } from '../../types/core.js'
 
 const TxQueries = {
     loadDataTx: `
@@ -13,16 +13,7 @@ interface TxRow {
     tx: number | string
     object_name: string
     method_name: string
-}
-
-/**
- * Define la ruta de ejecución para una transacción.
- */
-export type TransactionRoute = {
-    /** Nombre del Business Object */
-    objectName: string
-    /** Nombre del método a ejecutar */
-    methodName: string
+    [key: string]: unknown
 }
 
 /**
@@ -32,14 +23,10 @@ export type TransactionRoute = {
  * Se encarga de cargar y mantener la relación entre `tx` (código de transacción)
  * y el par `{ objectName, methodName }` que lo maneja.
  *
- * @example
- * ```typescript
- * const mapper = new TransactionMapper(db, log)
- * await mapper.load()
- * const route = mapper.resolve(100) // { objectName: 'Auth', methodName: 'login' }
- * ```
+ * @class TransactionMapper
+ * @implements {ITransactionMapper}
  */
-export class TransactionMapper {
+export class TransactionMapper implements ITransactionMapper {
     private txMap: Map<number, TransactionRoute> = new Map()
 
     /**
@@ -55,28 +42,26 @@ export class TransactionMapper {
 
     /**
      * Carga el mapa de transacciones desde la base de datos.
-     * Ejecuta `security.loadDataTx` y puebla el caché en memoria.
+     * Ejecuta `TxQueries.loadDataTx` y puebla el caché en memoria.
      *
      * @returns {Promise<void>}
      * @throws {Error} Si hay un error de conexión o base de datos
      */
     async load(): Promise<void> {
         try {
-            // Accessing raw db result rows from IDatabase simplified interface
-            // Expected query: security.loadDataTx
-            const result = await this.db.query(TxQueries.loadDataTx)
+            const result = await this.db.query<TxRow>(TxQueries.loadDataTx)
 
             if (!result || !result.rows) {
                 this.log.show({
                     type: this.log.TYPE_ERROR,
-                    msg: 'TransactionMapper: loadDataTx returned no rows structure',
+                    msg: 'TransactionMapper: loadDataTx no retornó filas',
                 })
                 return
             }
 
             this.txMap.clear()
 
-            for (const row of result.rows as unknown as TxRow[]) {
+            for (const row of result.rows) {
                 const tx = typeof row.tx === 'number' ? row.tx : Number(row.tx)
 
                 if (Number.isFinite(tx) && row.object_name && row.method_name) {
@@ -91,10 +76,11 @@ export class TransactionMapper {
                 type: this.log.TYPE_INFO,
                 msg: `TransactionMapper: Carga exitosa de ${this.txMap.size} transacciones`,
             })
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err)
             this.log.show({
                 type: this.log.TYPE_ERROR,
-                msg: `TransactionMapper.load error: ${err.message || err}`,
+                msg: `TransactionMapper.load error: ${msg}`,
             })
             throw err
         }
@@ -111,15 +97,5 @@ export class TransactionMapper {
         if (!Number.isFinite(key)) return null
 
         return this.txMap.get(key) || null
-    }
-
-    /**
-     * Agrega manualmente una ruta al mapa (útil para testing o plugins).
-     *
-     * @param tx - Código de transacción
-     * @param route - Ruta de ejecución
-     */
-    addRoute(tx: number, route: TransactionRoute) {
-        this.txMap.set(tx, route)
     }
 }

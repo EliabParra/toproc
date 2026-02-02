@@ -1,79 +1,33 @@
-import { BODependencies } from '../../types/core.js'
+import { BODependencies, ITransactionExecutor } from '../../types/index.js'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 /**
  * Ejecutor de transacciones que carga e instancia dinámicamente Business Objects.
  *
- * Se encarga de:
- * 1. Resolver la ruta del archivo BO
- * 2. Cargar el módulo (soporte ESM/TS)
- * 3. Instanciar el BO
- * 4. Ejecutar el método solicitado
- * 5. Cachear instancias para optimizar rendimiento
+ * Implementa medidas de seguridad estrictas:
+ * 1. Verificación de "Path Containment" para evitar Path Traversal.
+ * 2. Validación de módulos y clases existentes.
+ * 3. Inyección automática de dependencias (DI).
  *
- *
- * @example
- * ```typescript
- * const executor = new TransactionExecutor(deps)
- * const result = await executor.execute('User', 'get', { id: 1 })
- * ```
+ * @class TransactionExecutor
+ * @implements {ITransactionExecutor}
  */
-export class TransactionExecutor {
+export class TransactionExecutor implements ITransactionExecutor {
     private instances: Map<string, Record<string, unknown>> = new Map()
+    private readonly boBasePath: string
 
     /**
      * Crea una instancia de TransactionExecutor.
      *
      * @param deps - Dependencias de negocio (BODependencies)
      */
-    constructor(private deps: BODependencies) {}
-
-    private instanceKey(object: string, method: string) {
-        return `${object}_${method}`
-    }
-
-    private isModuleNotFound(err: unknown): boolean {
-        const code =
-            err && typeof err === 'object' && 'code' in err
-                ? (err as { code?: unknown }).code
-                : undefined
-        if (code === 'ERR_MODULE_NOT_FOUND') return true
-        const msg =
-            err && typeof err === 'object' && 'message' in err
-                ? String((err as { message?: unknown }).message ?? '')
-                : ''
-        return msg.includes('Cannot find module') || msg.includes('ERR_MODULE_NOT_FOUND')
-    }
-
-    private async importBoModule(
-        modulePathJs: string,
-        modulePathTs: string
-    ): Promise<Record<string, unknown>> {
-        try {
-            return (await import(modulePathJs)) as Record<string, unknown>
-        } catch (err: unknown) {
-            if (!this.isModuleNotFound(err)) throw err
-            return (await import(modulePathTs)) as Record<string, unknown>
-        }
-    }
-
-    /**
-     * Resuelve la ruta base absoluta para un Business Object.
-     * Usa config.bo.path relativo al CWD.
-     * @param objectName - Nombre del objeto (e.g. "User")
-     * @returns {string} Ruta absoluta sin extensión
-     */
-    private resolveBOPath(objectName: string): string {
-        const boConfigPath = this.deps.config.bo.path || '../../BO/'
-        let relativePath = boConfigPath
-
-        // Normalize 'BO' folder detection
-        if (relativePath.includes('BO')) {
-            relativePath = 'BO/'
-        }
-
-        return path.resolve(process.cwd(), relativePath, objectName, `${objectName}BO`)
+    constructor(private deps: BODependencies) {
+        // Resolver ruta base una sola vez y asegurar que es absoluta
+        const configPath = this.deps.config.bo.path || '../../BO/'
+        // Si el usuario configuró 'BO', lo normalizamos a 'BO/'
+        const cleanPath = configPath.includes('BO') ? 'BO/' : configPath
+        this.boBasePath = path.resolve(process.cwd(), cleanPath)
     }
 
     /**
@@ -82,8 +36,8 @@ export class TransactionExecutor {
      * @param objectName - Nombre del Business Object (e.g. "User")
      * @param methodName - Nombre del método a ejecutar (e.g. "get")
      * @param params - Parámetros para el método
-     * @returns {Promise<any>} Resultado de la ejecución del método
-     * @throws {Error} Si no encuentra el módulo, clase o método
+     * @returns {Promise<unknown>} Resultado de la ejecución del método
+     * @throws {Error} Si no encuentra el módulo, clase, método o detecta violación de seguridad
      */
     async execute(
         objectName: string,
@@ -98,35 +52,93 @@ export class TransactionExecutor {
                 throw new Error(`Método de BO no encontrado: ${objectName}.${methodName}`)
             }
             return await (instance as any)[methodName](params)
-        } else {
-            const basePath = this.resolveBOPath(objectName)
-
-            // Convert file path to URL for ESM import compatibility on Windows
-            const baseUrl = pathToFileURL(basePath).href
-            const modulePathJs = `${baseUrl}.js`
-            const modulePathTs = `${baseUrl}.ts`
-
-            try {
-                const mod = await this.importBoModule(modulePathJs, modulePathTs)
-                const ctor = mod[`${objectName}BO`]
-                if (typeof ctor !== 'function') {
-                    throw new Error(`Clase de BO no encontrada: ${objectName}BO`)
-                }
-                // Inyección automática de dependencias (Phase 4)
-                const instance = new (ctor as new (
-                    deps: BODependencies
-                ) => Record<string, unknown>)(this.deps)
-
-                this.instances.set(key, instance)
-                return await (instance as any)[methodName](params)
-            } catch (err: any) {
-                this.deps.log.show({
-                    type: this.deps.log.TYPE_ERROR,
-                    msg: `Fallo en ejecución de TransactionExecutor: ${err.message}`,
-                    ctx: { objectName, methodName, path: basePath },
-                })
-                throw err
-            }
         }
+
+        const { instance } = await this.loadBO(objectName)
+        this.instances.set(key, instance)
+
+        if (typeof instance[methodName] !== 'function') {
+            throw new Error(`Método de BO no encontrado: ${objectName}.${methodName}`)
+        }
+
+        return await (instance as any)[methodName](params)
+    }
+
+    private instanceKey(object: string, method: string) {
+        return `${object}_${method}`
+    }
+
+    /**
+     * Carga e instancia un Business Object de forma segura.
+     */
+    private async loadBO(objectName: string): Promise<{ instance: Record<string, unknown> }> {
+        // 🛡️ SECURITY: Path Containment Check
+        // 1. Construir ruta absoluta esperada
+        const expectedPath = path.resolve(this.boBasePath, objectName, `${objectName}BO`)
+
+        // 2. Verificar que la ruta resultante sigue estando dentro de boBasePath
+        // Previene ataques tipo "param: ../../etc/passwd" aunque validación previa fallase
+        if (!expectedPath.startsWith(this.boBasePath)) {
+            this.deps.log.show({
+                type: this.deps.log.TYPE_ERROR,
+                msg: `SECURITY: Path Traversal attempt detected. ObjectName: ${objectName}`,
+            })
+            throw new Error('Access Denied: Invalid Object Path')
+        }
+
+        // Convert file path to URL for ESM import compatibility on Windows (file://...)
+        const baseUrl = pathToFileURL(expectedPath).href
+        const modulePathJs = `${baseUrl}.js`
+        const modulePathTs = `${baseUrl}.ts`
+
+        try {
+            const mod = await this.importBoModule(modulePathJs, modulePathTs)
+            const ctorName = `${objectName}BO`
+            const ctor = mod[ctorName]
+
+            if (typeof ctor !== 'function') {
+                throw new Error(`Clase de BO no encontrada: ${ctorName} en ${expectedPath}`)
+            }
+
+            // Inyección automática de dependencias
+            const instance = new (ctor as new (deps: BODependencies) => Record<string, unknown>)(
+                this.deps
+            )
+            return { instance }
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err)
+            this.deps.log.show({
+                type: this.deps.log.TYPE_ERROR,
+                msg: `Fallo en carga de BO ${objectName}: ${msg}`,
+                ctx: { objectName, path: expectedPath },
+            })
+            throw err
+        }
+    }
+
+    private async importBoModule(
+        modulePathJs: string,
+        modulePathTs: string
+    ): Promise<Record<string, unknown>> {
+        try {
+            return (await import(modulePathJs)) as Record<string, unknown>
+        } catch (err: unknown) {
+            if (!this.isModuleNotFound(err)) throw err
+            // Fallback for dev environment (ts-node/tsx)
+            return (await import(modulePathTs)) as Record<string, unknown>
+        }
+    }
+
+    private isModuleNotFound(err: unknown): boolean {
+        const code =
+            err && typeof err === 'object' && 'code' in err
+                ? (err as { code?: unknown }).code
+                : undefined
+        if (code === 'ERR_MODULE_NOT_FOUND') return true
+        const msg =
+            err && typeof err === 'object' && 'message' in err
+                ? String((err as { message?: unknown }).message ?? '')
+                : ''
+        return msg.includes('Cannot find module') || msg.includes('ERR_MODULE_NOT_FOUND')
     }
 }

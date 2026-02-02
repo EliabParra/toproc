@@ -57,4 +57,9 @@ export type {
     SessionResult,
     TxKey,
     AppMessages,
+    ITransactionMapper,
+    ITransactionExecutor,
+    TransactionRoute,
+    IPermissionProvider,
+    ISecurityContext,
 } from './core.js'

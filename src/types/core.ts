@@ -273,3 +273,42 @@ export interface IPermissionProvider {
      */
     check(profileId: number, objectName: string, methodName: string): boolean
 }
+
+/**
+ * Ruta de ejecución de una transacción.
+ */
+export type TransactionRoute = {
+    objectName: string
+    methodName: string
+}
+
+/**
+ * Mapeador de transacciones.
+ * Traduce códigos de transacción a rutas de ejecución.
+ */
+export interface ITransactionMapper {
+    load(): Promise<void>
+    resolve(tx: unknown): TransactionRoute | null
+}
+
+/**
+ * Ejecutor de transacciones.
+ * Carga e invoca dinámicamente lógica de negocio.
+ */
+export interface ITransactionExecutor {
+    execute(
+        objectName: string,
+        methodName: string,
+        params: Record<string, unknown> | null | undefined
+    ): Promise<unknown>
+}
+
+/**
+ * Contexto de Seguridad Inmutable.
+ * Transporta la identidad del usuario a través de la transacción.
+ */
+export interface ISecurityContext {
+    readonly userId: number
+    readonly profileId: number
+    readonly username: string
+}
