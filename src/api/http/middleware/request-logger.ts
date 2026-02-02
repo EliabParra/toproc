@@ -1,5 +1,6 @@
 import { ILogger, AppRequest, AppResponse } from '../../../types/index.js'
 import { Express, NextFunction } from 'express'
+import { redactSecrets } from '../../../utils/sanitize.js'
 
 /**
  * Middleware para logging de peticiones HTTP.
@@ -36,6 +37,7 @@ export function applyRequestLogger(app: Express, log: ILogger) {
                     durationMs,
                     user_id: req.session?.userId,
                     profile_id: req.session?.profileId,
+                    body: req.body ? redactSecrets(req.body) : undefined,
                 }
 
                 if (status >= 400) {

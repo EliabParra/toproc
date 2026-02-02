@@ -9,12 +9,17 @@ import { AppRequest, AppResponse } from '../../../types/index.js'
  * Adjunta el ID al objeto `req` y al header de respuesta.
  *
  */
+import { loggerContext } from '../../../services/LoggerService.js'
+
 export function applyRequestId(app: Express) {
     app.use((req: AppRequest, res: AppResponse, next: NextFunction) => {
         const id = (req.headers?.['x-request-id'] as string) || randomUUID()
         req.requestId = id
         req.requestStartMs = Date.now()
         res.setHeader('X-Request-Id', id)
-        next()
+
+        loggerContext.run({ requestId: id }, () => {
+            next()
+        })
     })
 }

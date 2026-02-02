@@ -1,5 +1,8 @@
 import 'colors'
 import { ILogger, IConfig, LogLevel } from '../types/core.js'
+import { AsyncLocalStorage } from 'node:async_hooks'
+
+export const loggerContext = new AsyncLocalStorage<object>()
 
 type LogEvent = {
     type: unknown
@@ -91,8 +94,16 @@ export class AppLogger implements ILogger {
     private log(level: LogLevel, msg: string, ctx?: object | Error): void {
         let minLevel = this.minLevel
 
+        // Merge ALS context
+        const store = loggerContext.getStore() || {}
+        const mergedCtx = {
+            ...this.context,
+            ...store,
+            ...(ctx instanceof Error ? { error: ctx } : ctx),
+        }
+
         // Check for category override
-        const category = (this.context as any).category || (ctx as any)?.category
+        const category = (mergedCtx as any).category
         if (category && this.categories[category] !== undefined) {
             minLevel = this.categories[category]
         }
@@ -100,7 +111,6 @@ export class AppLogger implements ILogger {
         if (level < minLevel) return
 
         const timestamp = new Date().toISOString()
-        const mergedCtx = { ...this.context, ...(ctx instanceof Error ? { error: ctx } : ctx) }
         const hasCtx = Object.keys(mergedCtx).length > 0
 
         if (this.format === 'json') {
