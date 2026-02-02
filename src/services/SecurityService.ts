@@ -10,7 +10,7 @@ import type {
     IValidator,
 } from '../types/index.js'
 import { TransactionMapper } from '../core/transaction/TransactionMapper.js'
-import { PermissionGuard } from './PermissionGuard.js'
+import { PermissionGuard } from '../core/security/PermissionGuard.js'
 import { TransactionExecutor } from '../core/transaction/TransactionExecutor.js'
 
 /**

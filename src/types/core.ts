@@ -256,3 +256,20 @@ export interface BODependencies {
     v: IValidator
     i18n: II18nService
 }
+
+/**
+ * Proveedor de verificación de permisos.
+ */
+export interface IPermissionProvider {
+    /**
+     * Carga los permisos desde la fuente de datos.
+     */
+    load(): Promise<void>
+    /**
+     * Verifica si un perfil tiene acceso a un método de un objeto.
+     * @param profileId - ID del perfil
+     * @param objectName - Nombre del objeto
+     * @param methodName - Nombre del método
+     */
+    check(profileId: number, objectName: string, methodName: string): boolean
+}
