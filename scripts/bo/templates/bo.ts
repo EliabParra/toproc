@@ -228,7 +228,7 @@ export class ${pascalName}Service extends BOService implements Types.I${pascalNa
      * Crea nuevo ${pascalName.toLowerCase()}
      */
     async create(data: Partial<Types.${pascalName}>): Promise<Types.${pascalName} | null> {
-        this.log.info(`Creando ${pascalName.toLowerCase()}`)
+        this.log.info('Creando ${pascalName.toLowerCase()}')
         return this.repo.create(data)
     }
 
@@ -253,8 +253,10 @@ export class ${pascalName}Service extends BOService implements Types.I${pascalNa
         if (!deleted) {
             throw new Errors.${pascalName}NotFoundError(id)
         }
-        this.log.info(`Eliminado ${pascalName.toLowerCase()} ${id}`)
+        this.log.info('Eliminado ${pascalName.toLowerCase()} ' + id)
     }
+}
+`
 }
 
 /**

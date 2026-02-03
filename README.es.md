@@ -101,7 +101,7 @@ pnpm run dev
 ### 🏛️ 02. Arquitectura
 
 - [Sistema de Seguridad y Permisos](docs/02-Architecture/SECURITY_SYSTEM.es.md)
-- [El Dispatcher (Core)](docs/02-Architecture/DISPATCHER_CORE.es.md)
+- [El AppServer (Core)](docs/02-Architecture/APPSERVER_CORE.es.md)
 - [Inyección de Dependencias](docs/02-Architecture/DEPENDENCY_INJECTION.es.md)
 - [Gestión de Sesiones](docs/02-Architecture/SESSIONS.es.md)
 

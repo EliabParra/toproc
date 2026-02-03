@@ -27,7 +27,7 @@ const SCHEMAS: Record<string, ZodObject> = {
     'auth.register': AuthSchemas.register,
     'auth.login': AuthSchemas.login,
     'auth.verifyEmail': AuthSchemas.verifyEmail,
-    'auth.resetPassword': AuthSchemas.resetPassword,
+    'auth.resetPasswordConfirm': AuthSchemas.resetPasswordConfirm,
     'auth.changePassword': AuthSchemas.changePassword,
 }
 
