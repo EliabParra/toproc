@@ -138,7 +138,7 @@ export class ${pascalName}Repository implements Types.I${pascalName}Repository {
     /**
      * Crea nuevo ${pascalName.toLowerCase()}
      */
-        async create(data: Partial<Types.${pascalName}>): Promise<Types.${pascalName} | null> {
+    async create(data: Partial<Types.${pascalName}>): Promise<Types.${pascalName} | null> {
         const result = await this.db.query<Types.${pascalName}>(${pascalName}Queries.create, [
             // TODO: Mapear campos de data a parámetros del query
         ])
@@ -185,8 +185,8 @@ export function templateService(objectName: string) {
     const cleanName = objectName.replace(/BO$/, '')
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
 
-    return `import { BOService } from '../../src/core/business-objects/index.js'
-import type { ILogger, IConfig, IDatabase } from '../../src/types/core.js'
+    return `import { BOService, IConfig, IDatabase } from '../../src/core/business-objects/index.js'
+import type { ILogger } from '../../src/types/core.js'
 import { ${pascalName}Repository, Errors, Types } from './${pascalName}Module.js'
 
 /**
@@ -194,7 +194,7 @@ import { ${pascalName}Repository, Errors, Types } from './${pascalName}Module.js
  *
  * Contiene lógica de negocio pura, libre de concerns HTTP.
  * Lanza errores específicos del dominio desde ./${pascalName}Errors.js
-    async create(data: Partial<Types.${pascalName}>): Promise<Types.${pascalName} | null> {
+ */
 export class ${pascalName}Service extends BOService implements Types.I${pascalName}Service {
     constructor(
         private readonly repo: ${pascalName}Repository,
@@ -227,8 +227,8 @@ export class ${pascalName}Service extends BOService implements Types.I${pascalNa
     /**
      * Crea nuevo ${pascalName.toLowerCase()}
      */
-    async create(data: Partial<${pascalName}>): Promise<${pascalName} | null> {
-        this.log.info(\`Creando ${pascalName.toLowerCase()}\`)
+    async create(data: Partial<Types.${pascalName}>): Promise<Types.${pascalName} | null> {
+        this.log.info(`Creando ${pascalName.toLowerCase()}`)
         return this.repo.create(data)
     }
 
@@ -251,9 +251,9 @@ export class ${pascalName}Service extends BOService implements Types.I${pascalNa
     async delete(id: number): Promise<void> {
         const deleted = await this.repo.delete(id)
         if (!deleted) {
-              throw new Errors.${pascalName}NotFoundError(id)
+            throw new Errors.${pascalName}NotFoundError(id)
         }
-        this.log.info(\`Eliminado ${pascalName.toLowerCase()} \${id}\`)
+        this.log.info(`Eliminado ${pascalName.toLowerCase()} ${id}`)
     }
 }
 
@@ -267,7 +267,7 @@ export function templateModule(objectName: string) {
     const cleanName = objectName.replace(/BO$/, '')
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
 
-    return export { ${pascalName}Service } from './${pascalName}Service.js'
+    return `export { ${pascalName}Service } from './${pascalName}Service.js'
 export { ${pascalName}Repository } from './${pascalName}Repository.js'
 export { ${pascalName}Messages } from './${pascalName}Messages.js'
 export { ${pascalName}Schemas, create${pascalName}Schemas } from './${pascalName}Schemas.js'
@@ -346,8 +346,7 @@ export function templateBO(className: string, methods: string[]) {
         })
         .join('\n\n')
 
-    return `import { BaseBO } from '../../src/core/business-objects/index.js'
-import type { BODependencies, ApiResponse } from '../../src/core/business-objects/index.js'
+    return `import { BaseBO, BODependencies, ApiResponse } from '../../src/core/business-objects/index.js'
 import { ${pascalName}Repository, ${pascalName}Service, ${pascalName}Messages, create${pascalName}Schemas, Schemas } from './${pascalName}Module.js'
 import type { Types } from './${pascalName}Module.js'
 
