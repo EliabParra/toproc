@@ -5,6 +5,7 @@ import {
     templateService,
     templateSchemas,
     templateQueries,
+    templateModule,
 } from '../templates/bo.js'
 
 import { templateTypes } from '../templates/types.js'
@@ -27,7 +28,7 @@ type Preset = 'Default (CRUD)' | 'ReadOnly' | 'Minimal' | 'Custom'
 /**
  * Comando para crear nuevos Business Objects
  *
- * Genera la estructura de 8 archivos con la nomenclatura:
+ * Genera la estructura de 9 archivos con la nomenclatura:
  * - {Nombre}BO.ts (archivo principal)
  * - {Nombre}Service.ts
  * - {Nombre}Repository.ts
@@ -36,6 +37,7 @@ type Preset = 'Default (CRUD)' | 'ReadOnly' | 'Minimal' | 'Custom'
  * - {Nombre}Messages.ts
  * - {Nombre}Errors.ts
  * - {Nombre}Queries.ts
+ * - {Nombre}Module.ts
  */
 export class NewCommand {
     private ui: Interactor
@@ -109,6 +111,7 @@ export class NewCommand {
             const localesContent = templateLocales(cleanName, methods)
             const errorsContent = templateErrors(cleanName, methods)
             const queriesContent = templateQueries(cleanName)
+            const moduleContent = templateModule(cleanName)
 
             const dir = path.join(this.ctx.config.rootDir, 'BO', pascalName)
             const localesDir = path.join(dir, 'locales')
@@ -148,6 +151,13 @@ export class NewCommand {
                     name: `${pascalName}Schemas.ts`,
                     icon: '📜',
                     desc: 'Validation',
+                },
+                {
+                    path: path.join(dir, `${pascalName}Module.ts`),
+                    content: moduleContent,
+                    name: `${pascalName}Module.ts`,
+                    icon: '🧩',
+                    desc: 'Module Barrel',
                 },
             ]
 

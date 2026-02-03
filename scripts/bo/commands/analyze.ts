@@ -28,6 +28,7 @@ const EXPECTED_FILES = [
     { pattern: '{Name}Types.ts', required: false },
     { pattern: '{Name}Messages.ts', required: false },
     { pattern: '{Name}Errors.ts', required: false },
+    { pattern: '{Name}Module.ts', required: false },
 ]
 
 /**
@@ -88,7 +89,7 @@ export class AnalyzeCommand {
             const methodCount = result.methods.length
 
             console.log(
-                `${icon} ${result.name.padEnd(20)} ${fileCount}/8 files  ${methodCount} methods`
+                `${icon} ${result.name.padEnd(20)} ${fileCount}/9 files  ${methodCount} methods`
             )
 
             if (result.status === 'ok') okCount++

@@ -1,6 +1,5 @@
-import type { TxKey } from '../../src/types/core.js'
-import { BOError } from '../../src/core/business-objects/BOError.js'
-import { AuthMessages } from './AuthMessages.js'
+import { BOError, TxKey } from '../../src/core/business-objects/index.js'
+import { AuthMessages } from './AuthModule.js'
 
 const defaultMessages = AuthMessages.es
 

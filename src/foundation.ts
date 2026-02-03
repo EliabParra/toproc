@@ -63,7 +63,7 @@ const audit = new AuditService({ db, log: log })
 container.register('audit', audit)
 
 // Servicio de Email
-const email = new EmailService({ config, log: log })
+const email = new EmailService({ config, log })
 container.register('email', email)
 
 // Gestor de Sesiones
@@ -86,6 +86,7 @@ const security = new SecurityService({
     audit,
     session,
     validator,
+    email,
 })
 container.register('security', security)
 
@@ -99,7 +100,8 @@ const appServer = new AppServer({
     audit,
     db,
     validator,
+    email,
 })
 
 // Exportar servicios
-export { container, appServer, log, db, config, validator, session, security, i18n }
+export { container, appServer, log, db, config, validator, session, security, i18n, email, audit }

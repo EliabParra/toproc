@@ -3,6 +3,7 @@ import type {
     IAuditService,
     IConfig,
     IDatabase,
+    IEmailService,
     II18nService,
     ILogger,
     ISecurityService,
@@ -62,6 +63,7 @@ export class SecurityService implements ISecurityService {
         audit: IAuditService
         session: ISessionService
         validator: IValidator
+        email: IEmailService
     }) {
         this.log = deps.log.child({ category: 'Security' })
         this.config = deps.config
@@ -81,6 +83,7 @@ export class SecurityService implements ISecurityService {
             validator: deps.validator,
             security: this,
             i18n: deps.i18n,
+            email: deps.email,
         }
         this.executor = new TransactionExecutor(boDeps)
     }

@@ -19,7 +19,7 @@ ${'Usage:'.bold}
   pnpm run bo                      # Interactive menu
 
 ${'Commands:'.bold}
-    new <name>     Create a new Business Object (8 files)
+    new <name>     Create a new Business Object (9 files)
   list           List all registered BOs
   sync [name]    Sync BO methods to database
   perms [name]   Manage permissions for a BO
@@ -43,7 +43,7 @@ ${'Examples:'.bold}
   pnpm run bo perms Product
   pnpm run bo new Order --dry
 
-${'Generated Files:'.bold} (8 files per BO)
+${'Generated Files:'.bold} (9 files per BO)
     📦 {Name}BO.ts             Main Business Object
     🧠 {Name}Service.ts        Business logic layer
     🗄️ {Name}Repository.ts     Database access layer
@@ -52,6 +52,7 @@ ${'Generated Files:'.bold} (8 files per BO)
     📘 {Name}Types.ts           TypeScript interfaces
     💬 {Name}Messages.ts        Messages for i18n
     ❌ {Name}Errors.ts          Custom error classes
+    📦 {Name}Module.ts          Module barrel exports
 `
 
 const MENU_OPTIONS = [

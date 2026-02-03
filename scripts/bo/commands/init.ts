@@ -96,7 +96,7 @@ export class InitCommand {
                 console.log(`   BO/${name}/`)
                 console.log(`   • ${name}BO.ts`)
                 console.log(`   • ${name}Service.ts`)
-                console.log(`   • ... (7 files total)`)
+                console.log(`   • ... (9 files total)`)
             } else {
                 // Import and run new command
                 const { NewCommand } = await import('./new.js')

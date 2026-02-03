@@ -23,7 +23,7 @@ test('bo CLI --help muestra ayuda con todos los comandos', () => {
     assert.match(r.stdout, /auth/)
     assert.match(r.stdout, /analyze/)
     assert.match(r.stdout, /init/)
-    assert.match(r.stdout, /8 files/)
+    assert.match(r.stdout, /9 files/)
 })
 
 test('bo CLI help no conecta a la DB', () => {

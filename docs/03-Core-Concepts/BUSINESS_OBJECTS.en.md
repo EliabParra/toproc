@@ -7,11 +7,9 @@ The Business Object (BO) is the supreme class in our architecture. It is where y
 Every BO must inherit from `BaseBO`. This gives it superpowers (access to DB, Logger, Config, Validator, etc.) and standardized execution methods.
 
 ```typescript
-import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
-import { UserRepository } from './UserRepository.js'
-import { UserService } from './UserService.js'
-import { UserSchemas, CreateInput } from './UserSchemas.js'
-import { UserMessages } from './UserMessages.js'
+import { BaseBO, BODependencies } from '../../src/core/business-objects/index.js'
+import { UserRepository, UserService, UserMessages, createUserSchemas } from './UserModule.js'
+import type { CreateUserInput } from './UserModule.js'
 
 export class UserBO extends BaseBO {
     private service: UserService
@@ -27,9 +25,13 @@ export class UserBO extends BaseBO {
         return this.i18n.use(UserMessages)
     }
 
+    private get schemas() {
+        return createUserSchemas(this.m)
+    }
+
     // Standard Method
-    async create(params: CreateInput): Promise<ApiResponse> {
-        return this.exec<CreateInput, void>(params, UserSchemas.create, async (data) => {
+    async create(params: CreateUserInput): Promise<ApiResponse> {
+        return this.exec<CreateUserInput, void>(params, this.schemas.create, async (data) => {
             await this.service.create(data)
             return this.created(null, this.m.createSuccess) // ← Typed message
         })
@@ -60,9 +62,9 @@ Inside a BO, you have access to:
 | `this.validator` | `IValidator`   | Validation service (Zod).      |
 | `this.m`         | (getter)       | Typed messages for current BO. |
 
-## 8-File Structure
+## 9-File Structure
 
-Each BO generates **8 files** with the nomenclature `{Name}{Type}.ts`:
+Each BO generates **9 files** with the nomenclature `{Name}{Type}.ts`:
 
 ```
 BO/User/
@@ -73,7 +75,8 @@ BO/User/
 ├── ✅ UserSchemas.ts        # Zod Validations
 ├── 📘 UserTypes.ts          # TypeScript Interfaces
 ├── 💬 UserMessages.ts       # I18n strings (ES/EN)
-└── ❌ UserErrors.ts         # Custom Error Classes
+├── ❌ UserErrors.ts         # Custom Error Classes
+└── 📦 UserModule.ts         # Module barrel exports
 ```
 
 ## Services and BOError

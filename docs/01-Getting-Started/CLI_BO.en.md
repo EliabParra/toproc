@@ -1,7 +1,7 @@
 # CLI Deep Dive: Business Object Generator (`pnpm run bo`)
 
 The Business Object generator is your best friend for avoiding boilerplate code.
-It creates the standard **8-file structure** in seconds.
+It creates the standard **9-file structure** in seconds.
 
 ## Main Command
 
@@ -34,7 +34,7 @@ Running just `pnpm run bo` shows an interactive menu:
 
 | Command                      | Description                            |
 | ---------------------------- | -------------------------------------- |
-| `pnpm run bo new <Name>`     | Create a new Business Object (8 files) |
+| `pnpm run bo new <Name>`     | Create a new Business Object (9 files) |
 | `pnpm run bo list`           | List all registered BOs                |
 | `pnpm run bo sync [name]`    | Sync methods with database             |
 | `pnpm run bo perms [name]`   | Manage permissions for a BO            |
@@ -46,7 +46,7 @@ Running just `pnpm run bo` shows an interactive menu:
 
 ## `pnpm run bo new <Name>`
 
-Creates a new Business Object with the 8-file structure.
+Creates a new Business Object with the 9-file structure.
 
 ### Options
 
@@ -82,7 +82,8 @@ BO/Product/
 ├── ✅ ProductSchemas.ts        # Zod validations
 ├── 📘 ProductTypes.ts          # TypeScript interfaces
 ├── 💬 ProductMessages.ts       # i18n strings (ES/EN)
-└── ❌ ProductErrors.ts         # Custom error classes
+├── ❌ ProductErrors.ts         # Custom error classes
+└── 📦 ProductModule.ts         # Module barrel exports
 ```
 
 > [!NOTE]
@@ -148,7 +149,7 @@ Shows a permission matrix:
 
 ## `pnpm run bo auth`
 
-Generates the complete authentication module with the 8-file structure.
+Generates the complete authentication module with the 9-file structure.
 
 ```bash
 pnpm run bo auth
@@ -264,7 +265,7 @@ The script asks if you want to overwrite with `--yes` or in interactive mode.
 
 Yes! Templates live in `scripts/bo/templates/`.
 
-### Why 8 files?
+### Why 9 files?
 
 The separation promotes:
 
@@ -274,3 +275,4 @@ The separation promotes:
 4. **Typing**: Centralized types avoid duplication
 5. **i18n**: Messages.ts facilitates bilingual internationalization
 6. **SQL**: Queries.ts keeps SQL colocated and typed
+7. **DX**: Module.ts reduces imports with a single barrel

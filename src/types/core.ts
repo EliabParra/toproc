@@ -280,6 +280,7 @@ export interface BODependencies {
     session: ISessionService
     validator: IValidator
     i18n: II18nService
+    email: IEmailService
 }
 
 /**

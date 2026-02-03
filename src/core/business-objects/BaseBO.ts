@@ -15,9 +15,10 @@ import type {
     ValidationError,
     AppMessages,
     AppRequest,
+    IEmailService
 } from '../../types/index.js'
 
-export type { BODependencies }
+export type { BODependencies, ApiResponse, TxKey, IDatabase, IConfig, II18nService, IEmailService }
 
 /**
  * Clase base para todos los Business Objects (BOs) en el framework ToProccess.
@@ -75,6 +76,9 @@ export abstract class BaseBO {
     /** Servicio de auditoría (opcional) */
     protected readonly audit?: IAuditService
 
+    /** Servicio de correo electrónico (opcional) */
+    protected readonly email?: IEmailService
+
     /** Acceso tipado a mensajes de aplicación */
     protected get appMessages(): AppMessages {
         return this.i18n.messages
@@ -98,6 +102,7 @@ export abstract class BaseBO {
         this.security = deps.security
         this.session = deps.session
         this.audit = deps.audit
+        this.email = deps.email
     }
 
     /**

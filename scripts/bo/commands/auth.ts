@@ -27,6 +27,8 @@ const AUTH_FEATURES = [
  * - AuthTypes.ts
  * - AuthMessages.ts
  * - AuthErrors.ts
+ * - AuthQueries.ts
+ * - AuthModule.ts
  * - AuthSocialAuth.ts (placeholder)
  */
 export class AuthCommand {
@@ -94,6 +96,7 @@ export class AuthCommand {
             console.log('      ├── 🌎 AuthMessages.ts')
             console.log('      ├── ❌ AuthErrors.ts')
             console.log('      ├── 🔍 AuthQueries.ts')
+            console.log('      ├── 📦 AuthModule.ts')
             console.log('      └── 🔜 AuthSocialAuth.ts (Coming Soon)')
             this.interactor.close()
             return
@@ -144,6 +147,12 @@ export class AuthCommand {
                 icon: '🔍',
                 desc: 'SQL Queries',
             },
+            {
+                path: path.join(authDir, 'AuthModule.ts'),
+                content: AuthPreset.module(),
+                icon: '📦',
+                desc: 'Module Barrel',
+            },
         ]
 
         for (const f of files) {
@@ -158,7 +167,7 @@ export class AuthCommand {
         console.log(`   └── 🔜 AuthSocialAuth.ts ........ ${'Coming Soon'.yellow}`)
 
         console.log('')
-        console.log('🎉 Auth module created with 8 files!'.green.bold)
+        console.log('🎉 Auth module created with 9 files!'.green.bold)
         console.log('')
         console.log('💡 Next steps:'.cyan)
         console.log(`   1. Edit ${'AuthTypes.ts'.bold} to define user interfaces`)

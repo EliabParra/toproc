@@ -25,7 +25,10 @@ export function templateErrors(objectName: string, _methods: string[]) {
  * - Depuración más fácil
  */
 
-import { BOError } from '../../src/core/business-objects/BOError.js'
+import { BOError, TxKey } from '../../src/core/business-objects/index.js'
+import { ${pascalName}Messages } from './${pascalName}Module.js'
+
+const defaultMessages = ${pascalName}Messages.es
 
 // ============================================================
 // Clase Base de Error
@@ -37,7 +40,7 @@ import { BOError } from '../../src/core/business-objects/BOError.js'
  */
 export class ${pascalName}Error extends BOError {
     constructor(
-        message: string,
+        message: TxKey | (string & {}),
         tag: string,
         code: number = 500,
         details?: Record<string, unknown>
@@ -56,7 +59,7 @@ export class ${pascalName}Error extends BOError {
  */
 export class ${pascalName}NotFoundError extends ${pascalName}Error {
     constructor(id?: number) {
-        super('bo.${lowerName}.notFound', '${upperName}_NOT_FOUND', 404, id ? { id } : undefined)
+        super(defaultMessages.notFound, '${upperName}_NOT_FOUND', 404, id ? { id } : undefined)
         this.name = '${pascalName}NotFoundError'
     }
 }
@@ -66,7 +69,7 @@ export class ${pascalName}NotFoundError extends ${pascalName}Error {
  */
 export class ${pascalName}AlreadyExistsError extends ${pascalName}Error {
     constructor(field?: string, value?: string) {
-        super('bo.${lowerName}.alreadyExists', '${upperName}_ALREADY_EXISTS', 409, { field, value })
+        super(defaultMessages.alreadyExists, '${upperName}_ALREADY_EXISTS', 409, { field, value })
         this.name = '${pascalName}AlreadyExistsError'
     }
 }
@@ -78,7 +81,7 @@ export class ${pascalName}ValidationError extends ${pascalName}Error {
     readonly validationErrors: string[]
 
     constructor(errors: string[]) {
-        super('bo.${lowerName}.invalidData', '${upperName}_VALIDATION_ERROR', 400, { errors })
+        super(defaultMessages.invalidData, '${upperName}_VALIDATION_ERROR', 400, { errors })
         this.name = '${pascalName}ValidationError'
         this.validationErrors = errors
     }
@@ -90,7 +93,7 @@ export class ${pascalName}ValidationError extends ${pascalName}Error {
 export class ${pascalName}CannotDeleteError extends ${pascalName}Error {
     constructor(reason?: string) {
         super(
-            'bo.${lowerName}.cannotDelete',
+            defaultMessages.cannotDelete,
             '${upperName}_CANNOT_DELETE',
             409,
             { reason }
@@ -105,7 +108,7 @@ export class ${pascalName}CannotDeleteError extends ${pascalName}Error {
 export class ${pascalName}PermissionError extends ${pascalName}Error {
     constructor(action?: string) {
         super(
-            'bo.${lowerName}.permissionDenied',
+            defaultMessages.permissionDenied,
             '${upperName}_PERMISSION_DENIED',
             403,
             { action }
@@ -138,16 +141,16 @@ export function handle${pascalName}Error(error: unknown): ${pascalName}Error {
     // Error estándar, envolverlo
     if (error instanceof Error) {
         return new ${pascalName}Error(
-            error.message,
+            defaultMessages.invalidData,
             '${upperName}_UNKNOWN_ERROR',
             500,
-            { originalError: error.name }
+            { originalError: error.name, message: error.message }
         )
     }
 
     // Tipo desconocido, crear error genérico
     return new ${pascalName}Error(
-        'Error desconocido en ${pascalName}',
+        defaultMessages.invalidData,
         '${upperName}_UNKNOWN_ERROR',
         500
     )

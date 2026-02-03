@@ -10,6 +10,7 @@
  * - {Nombre}Types.ts
  * - {Nombre}Messages.ts
  * - {Nombre}Errors.ts
+ * - {Nombre}Module.ts
  */
 
 export * from './types.js'
@@ -57,7 +58,7 @@ export function templateSchemas(objectName: string, methods: string[]) {
                     lower.includes('findbyid')) &&
                 !lower.includes('getall')
 
-            let content = `        // TODO: Definir validación. Usa keys tipo 'bo.${lowerName}.validation.xxx'`
+            let content = `        // TODO: Definir validación. Usa messages.validation.xxx`
 
             if (isStandardWithId) {
                 content = `        id: z.coerce.number(),`
@@ -72,16 +73,24 @@ ${content}
         .join('\n')
 
     return `import { z } from 'zod'
+import { ${pascalName}Messages } from './${pascalName}Messages.js'
 
 /**
  * Schemas Zod para métodos de ${pascalName}BO
  *
- * Los mensajes de validación se traducen automáticamente si
- * coinciden con keys en locales/es.json.
+ * Los mensajes de validación se derivan del set de mensajes del BO.
  */
-export const ${pascalName}Schemas = {
+export type ${pascalName}MessagesSet = typeof ${pascalName}Messages.es
+
+export const create${pascalName}Schemas = (messages: ${pascalName}MessagesSet = ${pascalName}Messages.es) => {
+    const validation = messages.validation ?? ${pascalName}Messages.es.validation
+
+    return {
 ${methodSchemas}
+    }
 }
+
+export const ${pascalName}Schemas = create${pascalName}Schemas(${pascalName}Messages.es)
 
 // Exporta schemas individuales para inferencia de tipos
 ${methods.map((m) => `export type ${m.charAt(0).toUpperCase() + m.slice(1)}Input = z.infer<typeof ${pascalName}Schemas.${m}>`).join('\n')}
@@ -98,9 +107,8 @@ export function templateRepository(objectName: string) {
     const cleanName = objectName.replace(/BO$/, '')
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
 
-    return `import { IDatabase } from '../../src/types/core.js'
-import type { Exists${pascalName}, ${pascalName}, ${pascalName}Summary, RowCount${pascalName} } from './${pascalName}Types.js'
-import { ${pascalName}Queries } from './${pascalName}Queries.js'
+    return `import { IDatabase } from '../../src/core/business-objects/index.js'
+import { ${pascalName}Queries, Types } from './${pascalName}Module.js'
 
 /**
  * Repositorio para operaciones de base de datos de ${pascalName}BO.
@@ -108,30 +116,30 @@ import { ${pascalName}Queries } from './${pascalName}Queries.js'
  * Todas las consultas a la base de datos se encapsulan aquí.
  * Los nombres de queries deben coincidir con entradas en src/config/queries.json
  */
-export class ${pascalName}Repository {
+export class ${pascalName}Repository implements Types.I${pascalName}Repository {
     constructor(private readonly db: IDatabase) {}
 
     /**
      * Busca todos los ${pascalName.toLowerCase()}s
      */
-    async findAll(): Promise<${pascalName}Summary[]> {
-        const result = await this.db.query<${pascalName}Summary>(${pascalName}Queries.findAll, [])
+    async findAll(): Promise<Types.${pascalName}Summary[]> {
+        const result = await this.db.query<Types.${pascalName}Summary>(${pascalName}Queries.findAll, [])
         return result.rows
     }
 
     /**
      * Busca ${pascalName.toLowerCase()} por ID
      */
-    async findById(id: number): Promise<${pascalName} | null> {
-        const result = await this.db.query<${pascalName}>(${pascalName}Queries.findById, [id])
+    async findById(id: number): Promise<Types.${pascalName} | null> {
+        const result = await this.db.query<Types.${pascalName}>(${pascalName}Queries.findById, [id])
         return result.rows[0]
     }
 
     /**
      * Crea nuevo ${pascalName.toLowerCase()}
      */
-    async create(data: Partial<${pascalName}>): Promise<${pascalName} | null> {
-        const result = await this.db.query<${pascalName}>(${pascalName}Queries.create, [
+        async create(data: Partial<Types.${pascalName}>): Promise<Types.${pascalName} | null> {
+        const result = await this.db.query<Types.${pascalName}>(${pascalName}Queries.create, [
             // TODO: Mapear campos de data a parámetros del query
         ])
         return result.rows[0]
@@ -140,8 +148,8 @@ export class ${pascalName}Repository {
     /**
      * Actualiza ${pascalName.toLowerCase()}
      */
-    async update(id: number, data: Partial<${pascalName}>): Promise<${pascalName} | null> {
-        const result = await this.db.query<${pascalName}>(${pascalName}Queries.update, [
+    async update(id: number, data: Partial<Types.${pascalName}>): Promise<Types.${pascalName} | null> {
+        const result = await this.db.query<Types.${pascalName}>(${pascalName}Queries.update, [
             id,
             // TODO: Mapear campos de data a parámetros del query
         ])
@@ -152,7 +160,7 @@ export class ${pascalName}Repository {
      * Elimina ${pascalName.toLowerCase()}
      */
     async delete(id: number): Promise<boolean> {
-        const result = await this.db.query<RowCount${pascalName}>(${pascalName}Queries.delete, [id])
+        const result = await this.db.query<Types.RowCount${pascalName}>(${pascalName}Queries.delete, [id])
         return result.rowCount !== null && result.rowCount > 0
     }
 
@@ -160,7 +168,7 @@ export class ${pascalName}Repository {
      * Verifica si ${pascalName.toLowerCase()} existe
      */
     async exists(id: number): Promise<boolean> {
-        const result = await this.db.query<Exists${pascalName}>(${pascalName}Queries.exists, [id])
+        const result = await this.db.query<Types.Exists${pascalName}>(${pascalName}Queries.exists, [id])
         return result.rows[0].exists
     }
 }
@@ -177,19 +185,17 @@ export function templateService(objectName: string) {
     const cleanName = objectName.replace(/BO$/, '')
     const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
 
-    return `import { BOService } from '../../src/core/business-objects/BOService.js'
-import { ILogger, IConfig, IDatabase } from '../../src/types/core.js'
-import { ${pascalName}Repository } from './${pascalName}Repository.js'
-import type { ${pascalName}, ${pascalName}Summary } from './${pascalName}Types.js'
-import { ${pascalName}NotFoundError } from './${pascalName}Errors.js'
+    return `import { BOService } from '../../src/core/business-objects/index.js'
+import type { ILogger, IConfig, IDatabase } from '../../src/types/core.js'
+import { ${pascalName}Repository, Errors, Types } from './${pascalName}Module.js'
 
 /**
  * Capa de servicio para lógica de negocio de ${pascalName}.
  *
  * Contiene lógica de negocio pura, libre de concerns HTTP.
  * Lanza errores específicos del dominio desde ./${pascalName}Errors.js
- */
-export class ${pascalName}Service extends BOService {
+    async create(data: Partial<Types.${pascalName}>): Promise<Types.${pascalName} | null> {
+export class ${pascalName}Service extends BOService implements Types.I${pascalName}Service {
     constructor(
         private readonly repo: ${pascalName}Repository,
         log: ILogger,
@@ -202,7 +208,7 @@ export class ${pascalName}Service extends BOService {
     /**
      * Obtiene todos los ${pascalName.toLowerCase()}s
      */
-    async getAll(): Promise<${pascalName}Summary[]> {
+    async getAll(): Promise<Types.${pascalName}Summary[]> {
         return this.repo.findAll()
     }
 
@@ -210,10 +216,10 @@ export class ${pascalName}Service extends BOService {
      * Obtiene ${pascalName.toLowerCase()} por ID
      * @throws ${pascalName}NotFoundError si no se encuentra
      */
-    async getById(id: number): Promise<${pascalName}> {
+    async getById(id: number): Promise<Types.${pascalName}> {
         const entity = await this.repo.findById(id)
         if (!entity) {
-            throw new ${pascalName}NotFoundError(id)
+            throw new Errors.${pascalName}NotFoundError(id)
         }
         return entity
     }
@@ -230,10 +236,10 @@ export class ${pascalName}Service extends BOService {
      * Actualiza ${pascalName.toLowerCase()}
      * @throws ${pascalName}NotFoundError si no se encuentra
      */
-    async update(id: number, data: Partial<${pascalName}>): Promise<${pascalName}> {
+    async update(id: number, data: Partial<Types.${pascalName}>): Promise<Types.${pascalName}> {
         const updated = await this.repo.update(id, data)
         if (!updated) {
-            throw new ${pascalName}NotFoundError(id)
+            throw new Errors.${pascalName}NotFoundError(id)
         }
         return updated
     }
@@ -245,11 +251,31 @@ export class ${pascalName}Service extends BOService {
     async delete(id: number): Promise<void> {
         const deleted = await this.repo.delete(id)
         if (!deleted) {
-            throw new ${pascalName}NotFoundError(id)
+              throw new Errors.${pascalName}NotFoundError(id)
         }
         this.log.info(\`Eliminado ${pascalName.toLowerCase()} \${id}\`)
     }
 }
+
+/**
+ * Genera el contenido del archivo Module (Module.ts)
+ *
+ * @param objectName - Nombre del objeto
+ * @returns Contenido del archivo Module.ts
+ */
+export function templateModule(objectName: string) {
+    const cleanName = objectName.replace(/BO$/, '')
+    const pascalName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
+
+    return export { ${pascalName}Service } from './${pascalName}Service.js'
+export { ${pascalName}Repository } from './${pascalName}Repository.js'
+export { ${pascalName}Messages } from './${pascalName}Messages.js'
+export { ${pascalName}Schemas, create${pascalName}Schemas } from './${pascalName}Schemas.js'
+export { ${pascalName}Queries } from './${pascalName}Queries.js'
+export type * as Schemas from './${pascalName}Schemas.js'
+export type * as Types from './${pascalName}Types.js'
+export * as Errors from './${pascalName}Errors.js'
+export * as Queries from './${pascalName}Queries.js'
 `
 }
 
@@ -266,11 +292,6 @@ export function templateBO(className: string, methods: string[]) {
     const lowerName = cleanName.toLowerCase()
     const boClassName = `${pascalName}BO`
 
-    // Build Schema Imports
-    const inputTypes = methods
-        .map((m) => `${m.charAt(0).toUpperCase() + m.slice(1)}Input`)
-        .join(', ')
-
     const methodStubs = methods
         .map((m) => {
             const isCreate =
@@ -280,16 +301,16 @@ export function templateBO(className: string, methods: string[]) {
             const isGet = m.toLowerCase().includes('get') || m.toLowerCase().includes('find')
 
             const methodPascal = m.charAt(0).toUpperCase() + m.slice(1)
-            const inputType = `${methodPascal}Input`
+            const inputType = `Schemas.${methodPascal}Input`
 
             // Infer return type and service call
             let returnType = 'any'
             let serviceCall = `await this.service.${m}(data)`
 
             if (m.toLowerCase().includes('getall')) {
-                returnType = `Array<${pascalName}Summary>`
+                returnType = `Array<Types.${pascalName}Summary>`
             } else if (isGet || isCreate || m.toLowerCase().includes('update')) {
-                returnType = pascalName
+                returnType = `Types.${pascalName}`
             } else if (isDelete) {
                 returnType = 'void'
             }
@@ -305,8 +326,6 @@ export function templateBO(className: string, methods: string[]) {
                 serviceCall = `await this.service.getAll()`
             }
 
-            const messageKey = `bo.${lowerName}.${m}`
-
             return `    /**
      * Operación ${methodPascal}
      *
@@ -316,24 +335,21 @@ export function templateBO(className: string, methods: string[]) {
     async ${m}(params: ${inputType}): Promise<ApiResponse> {
         return this.exec<${inputType}, ${returnType}>(
             params,
-            ${pascalName}Schemas.${m},
+            this.${lowerName}Schemas.${m},
             async (data) => {
                 const result: ${returnType} = ${serviceCall}
 
-                return this.${isCreate ? 'created' : 'success'}(${isDelete ? 'null' : 'result'}, this.translate('${messageKey}'))
+                return this.${isCreate ? 'created' : 'success'}(${isDelete ? 'null' : 'result'}, this.${lowerName}Messages.${m})
             }
         )
     }`
         })
         .join('\n\n')
 
-    return `import { BaseBO } from '../../src/core/business-objects/BaseBO.js'
-import type { BODependencies } from '../../src/core/business-objects/BaseBO.js'
-import { ${pascalName}Repository } from './${pascalName}Repository.js'
-import { ${pascalName}Service } from './${pascalName}Service.js'
-import { ${pascalName}Schemas, ${inputTypes} } from './${pascalName}Schemas.js'
-import { ${pascalName}, ${pascalName}Summary } from './${pascalName}Types.js'
-import { ${pascalName}Messages } from './${pascalName}Messages.js'
+    return `import { BaseBO } from '../../src/core/business-objects/index.js'
+import type { BODependencies, ApiResponse } from '../../src/core/business-objects/index.js'
+import { ${pascalName}Repository, ${pascalName}Service, ${pascalName}Messages, create${pascalName}Schemas, Schemas } from './${pascalName}Module.js'
+import type { Types } from './${pascalName}Module.js'
 
 /**
  * Business Object para el dominio ${pascalName}.
@@ -354,6 +370,10 @@ export class ${boClassName} extends BaseBO {
      */
     private get ${lowerName}Messages() {
         return this.i18n.use(${pascalName}Messages)
+    }
+
+    private get ${lowerName}Schemas() {
+        return create${pascalName}Schemas(this.${lowerName}Messages)
     }
 
 ${methodStubs}

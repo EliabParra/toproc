@@ -11,6 +11,7 @@ import {
     AppRequest,
     AppResponse,
     IValidator,
+    IEmailService,
 } from '../types/index.js'
 import { registerFrontendHosting } from '../frontend-adapters/index.js'
 
@@ -57,6 +58,7 @@ interface AppServerDependencies {
     audit: IAuditService
     db: IDatabase
     validator: IValidator // [NEW] Required for BOs
+    email: IEmailService
 }
 
 /**
@@ -89,6 +91,7 @@ export class AppServer {
     private readonly audit: IAuditService
     private readonly db: IDatabase
     private readonly validator: IValidator
+    private readonly email: IEmailService
 
     // Servicios Core (Nuevos)
     private authorization!: AuthorizationService
@@ -115,6 +118,7 @@ export class AppServer {
         this.audit = deps.audit
         this.db = deps.db
         this.validator = deps.validator
+        this.email = deps.email
 
         this.app = express()
         this.server = null
@@ -182,6 +186,7 @@ export class AppServer {
             validator: this.validator,
             security: this.security, // Legacy support
             i18n: this.i18n,
+            email: this.email
         }
 
         const transactionExecutor = new TransactionExecutor(boDeps)

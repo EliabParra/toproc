@@ -7,11 +7,9 @@ El Business Object (BO) es la clase suprema en nuestra arquitectura. Es donde tu
 Todo BO debe heredar de `BaseBO`. Esto le da superpoderes (acceso a DB, Logger, Config, Validator, etc.) y métodos de ejecución estandarizados.
 
 ```typescript
-import { BaseBO, BODependencies } from '../../src/core/business-objects/BaseBO.js'
-import { UserRepository } from './UserRepository.js'
-import { UserService } from './UserService.js'
-import { UserSchemas, CreateInput } from './UserSchemas.js'
-import { UserMessages } from './UserMessages.js'
+import { BaseBO, BODependencies } from '../../src/core/business-objects/index.js'
+import { UserRepository, UserService, UserMessages, createUserSchemas } from './UserModule.js'
+import type { CreateUserInput } from './UserModule.js'
 
 export class UserBO extends BaseBO {
     private service: UserService
@@ -27,9 +25,13 @@ export class UserBO extends BaseBO {
         return this.i18n.use(UserMessages)
     }
 
+    private get schemas() {
+        return createUserSchemas(this.m)
+    }
+
     // Método Estándar
-    async create(params: CreateInput): Promise<ApiResponse> {
-        return this.exec<CreateInput, void>(params, UserSchemas.create, async (data) => {
+    async create(params: CreateUserInput): Promise<ApiResponse> {
+        return this.exec<CreateUserInput, void>(params, this.schemas.create, async (data) => {
             await this.service.create(data)
             return this.created(null, this.m.createSuccess) // ← Mensaje tipado
         })
@@ -60,9 +62,9 @@ Dentro de un BO, tienes acceso a:
 | `this.validator` | `IValidator`   | Servicio de validación (Zod).     |
 | `this.m`         | (getter)       | Mensajes tipados del BO actual.   |
 
-## Estructura de 8 Archivos
+## Estructura de 9 Archivos
 
-Cada BO genera **8 archivos** con la nomenclatura `{Nombre}{Tipo}.ts`:
+Cada BO genera **9 archivos** con la nomenclatura `{Nombre}{Tipo}.ts`:
 
 ```
 BO/User/
@@ -73,7 +75,8 @@ BO/User/
 ├── ✅ UserSchemas.ts        # Validaciones Zod
 ├── 📘 UserTypes.ts          # Interfaces TypeScript
 ├── 💬 UserMessages.ts       # Strings i18n (ES/EN)
-└── ❌ UserErrors.ts         # Clases de error personalizadas
+├── ❌ UserErrors.ts         # Clases de error personalizadas
+└── 📦 UserModule.ts         # Barril de exportaciones
 ```
 
 ## Servicios y BOError

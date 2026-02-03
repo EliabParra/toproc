@@ -1,7 +1,5 @@
 export const AuthQueries = {
     // --- Users
-    // --- Users
-    // --- Users
     getUserByEmail: `
         SELECT u.id, u.username, u.email, u.email_verified_at, u.password_hash, p.profile_id
         FROM security.users u

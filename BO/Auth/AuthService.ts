@@ -1,40 +1,34 @@
+import { BOService, IConfig, IDatabase, II18nService, IEmailService } from '../../src/core/business-objects/index.js'
+import { AuthRepository, AuthMessages, Errors, Types } from './AuthModule.js'
 import { createHash, randomBytes } from 'node:crypto'
 import bcrypt from 'bcryptjs'
-import { BOService } from '../../src/core/business-objects/BOService.js'
-import type { IConfig, IDatabase, II18nService } from '../../src/types/core.js'
-import { EmailService } from '../../src/services/EmailService.js'
-import { AuthRepository } from './AuthRepository.js'
-import { UserRow } from './AuthTypes.js'
-import type { User, RegisterData } from './AuthTypes.js'
-import { AuthEmailExistsError, AuthTokenInvalidError } from './AuthErrors.js'
-import { AuthMessages } from './AuthMessages.js'
 
 function sha256Hex(value: string): string {
     return createHash('sha256').update(value, 'utf8').digest('hex')
 }
 
-export class AuthService extends BOService {
-    private emailService: EmailService
+export class AuthService extends BOService implements Types.IAuthService {
     private repo: AuthRepository
     private i18n: II18nService
+    private email: IEmailService
 
-    constructor(log: any, config: IConfig, db: IDatabase, i18n: II18nService) {
+    constructor(log: any, config: IConfig, db: IDatabase, i18n: II18nService, email: IEmailService) {
         super(log, config, db)
-        this.emailService = new EmailService({ log: this.log, config: this.config })
         this.repo = new AuthRepository(db)
         this.i18n = i18n
+        this.email = email
     }
 
     private get messages() {
         return this.i18n.use(AuthMessages)
     }
 
-    async register(data: RegisterData): Promise<User> {
+    async register(data: Types.RegisterData): Promise<Types.User> {
         this.log.info('Creating new user: ' + data.email)
 
         const exists = await this.repo.getUserBaseByEmail(data.email)
         if (exists) {
-            throw new AuthEmailExistsError(this.messages.emailAlreadyExists, data.email)
+            throw new Errors.AuthEmailExistsError(this.messages.emailAlreadyExists, data.email)
         }
 
         const hash = await bcrypt.hash(data.password, 10)
@@ -67,7 +61,7 @@ export class AuthService extends BOService {
     }
 
     async requestEmailVerification(identifier: string): Promise<void> {
-        let user: UserRow | null = null
+        let user: Types.UserRow | null = null
         if (identifier.includes('@')) {
             user = await this.repo.getUserByEmail(identifier)
         } else {
@@ -88,7 +82,7 @@ export class AuthService extends BOService {
             tokenHash,
         })
 
-        if (!otp) throw new AuthTokenInvalidError(this.messages.tokenInvalid)
+        if (!otp) throw new Errors.AuthTokenInvalidError(this.messages.tokenInvalid)
 
         await this.repo.setUserEmailVerified(otp.user_id)
         await this.repo.consumeOneTimeCode(otp.id)
@@ -113,7 +107,7 @@ export class AuthService extends BOService {
             expiresSeconds,
         })
 
-        await this.emailService.sendTemplate({
+        await this.email.sendTemplate({
             to: user.email,
             subject: `${this.config.app.name}: Password Reset`,
             templatePath: 'auth/password-reset.html',
@@ -129,7 +123,7 @@ export class AuthService extends BOService {
         const tokenHash = sha256Hex(token)
         const reset = await this.repo.getPasswordResetByTokenHash(tokenHash)
 
-        if (!reset || reset.used_at) throw new AuthTokenInvalidError(this.messages.tokenInvalid)
+        if (!reset || reset.used_at) throw new Errors.AuthTokenInvalidError(this.messages.tokenInvalid)
 
         const hash = await bcrypt.hash(newPassword, 10)
         await this.repo.updateUserPassword({ userId: reset.user_id, passwordHash: hash })
@@ -139,7 +133,7 @@ export class AuthService extends BOService {
     async verifyPasswordResetToken(token: string): Promise<void> {
         const tokenHash = sha256Hex(token)
         const reset = await this.repo.getPasswordResetByTokenHash(tokenHash)
-        if (!reset || reset.used_at) throw new AuthTokenInvalidError(this.messages.tokenInvalid)
+        if (!reset || reset.used_at) throw new Errors.AuthTokenInvalidError(this.messages.tokenInvalid)
     }
 
     private async sendVerificationEmail(userId: number, emailAddr: string) {
@@ -157,7 +151,7 @@ export class AuthService extends BOService {
             meta: { tokenHash },
         })
 
-        await this.emailService.sendTemplate({
+        await this.email.sendTemplate({
             to: emailAddr,
             subject: `${this.config.app.name}: Verify your email`,
             templatePath: 'auth/email-verification.html',
@@ -169,7 +163,7 @@ export class AuthService extends BOService {
         })
     }
 
-    private mapUser(row: UserRow): User {
+    private mapUser(row: Types.UserRow): Types.User {
         return {
             userId: row.id,
             email: row.email!,

@@ -1,54 +1,63 @@
 import { z } from 'zod'
+import { AuthMessages } from './AuthMessages.js'
 
-export const AuthSchemas = {
-    login: z.object({
-        identifier: z.string().min(1, 'bo.auth.validation.loginIdRequired'),
-        password: z.string().min(1, 'bo.auth.validation.passwordRequired'),
-    }),
+export type AuthMessagesSet = typeof AuthMessages.es
 
-    register: z.object({
-        email: z.string().email('bo.auth.validation.emailInvalid'),
-        password: z.string().min(8, 'bo.auth.validation.passwordTooShort'),
-        name: z.string().optional(),
-    }),
+export const createAuthSchemas = (messages: AuthMessagesSet = AuthMessages.es) => {
+    const validation = messages.validation ?? AuthMessages.es.validation
 
-    logout: z.object({
-        sessionId: z.string().optional(),
-    }),
+    return {
+        login: z.object({
+            identifier: z.string().min(1, validation.loginIdRequired),
+            password: z.string().min(1, validation.passwordRequired),
+        }),
 
-    verifyEmail: z.object({
-        token: z.string().min(1, 'bo.auth.validation.tokenRequired'),
-    }),
+        register: z.object({
+            email: z.email(validation.emailInvalid),
+            password: z.string().min(8, validation.passwordTooShort),
+            name: z.string().optional(),
+        }),
 
-    requestEmailVerification: z.object({
-        identifier: z.string().min(1, 'bo.auth.validation.emailRequired'),
-    }),
+        logout: z.object({
+            sessionId: z.string().optional(),
+        }),
 
-    resetPassword: z.object({
-        email: z.string().email('bo.auth.validation.emailInvalid'),
-    }),
+        verifyEmail: z.object({
+            token: z.string().min(1, validation.tokenRequired),
+        }),
 
-    verifyPasswordReset: z.object({
-        token: z.string().min(1, 'bo.auth.validation.tokenRequired'),
-    }),
+        requestEmailVerification: z.object({
+            identifier: z.string().min(1, validation.emailRequired),
+        }),
 
-    resetPasswordConfirm: z.object({
-        token: z.string().min(1, 'bo.auth.validation.tokenRequired'),
-        newPassword: z.string().min(8, 'bo.auth.validation.passwordTooShort'),
-    }),
+        requestResetPassword: z.object({
+            email: z.email(validation.emailInvalid),
+        }),
 
-    changePassword: z.object({
-        currentPassword: z.string().min(1, 'bo.auth.validation.passwordRequired'),
-        newPassword: z.string().min(8, 'bo.auth.validation.passwordTooShort'),
-    }),
+        verifyPasswordReset: z.object({
+            token: z.string().min(1, validation.tokenRequired),
+        }),
+
+        resetPasswordConfirm: z.object({
+            token: z.string().min(1, validation.tokenRequired),
+            newPassword: z.string().min(8, validation.passwordTooShort),
+        }),
+
+        changePassword: z.object({
+            currentPassword: z.string().min(1, validation.passwordRequired),
+            newPassword: z.string().min(8, validation.passwordTooShort),
+        }),
+    }
 }
+
+export const AuthSchemas = createAuthSchemas(AuthMessages.es)
 
 export type LoginInput = z.infer<typeof AuthSchemas.login>
 export type RegisterInput = z.infer<typeof AuthSchemas.register>
 export type LogoutInput = z.infer<typeof AuthSchemas.logout>
 export type VerifyEmailInput = z.infer<typeof AuthSchemas.verifyEmail>
 export type RequestEmailVerificationInput = z.infer<typeof AuthSchemas.requestEmailVerification>
-export type ResetPasswordInput = z.infer<typeof AuthSchemas.resetPassword>
+export type RequestPasswordResetInput = z.infer<typeof AuthSchemas.requestResetPassword>
 export type VerifyPasswordResetInput = z.infer<typeof AuthSchemas.verifyPasswordReset>
 export type ResetPasswordConfirmInput = z.infer<typeof AuthSchemas.resetPasswordConfirm>
 export type ChangePasswordInput = z.infer<typeof AuthSchemas.changePassword>

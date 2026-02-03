@@ -1,7 +1,7 @@
 # CLI Deep Dive: Business Object Generator (`pnpm run bo`)
 
 El generador de Business Objects es tu mejor amigo para no escribir "boilerplate" (código repetitivo).
-Se encarga de crear la estructura estándar de **8 archivos** en segundos.
+Se encarga de crear la estructura estándar de **9 archivos** en segundos.
 
 ## Comando Principal
 
@@ -34,7 +34,7 @@ Si ejecutas solo `pnpm run bo`, verás un menú interactivo:
 
 | Comando                        | Descripción                                |
 | ------------------------------ | ------------------------------------------ |
-| `pnpm run bo new <Nombre>`     | Crea un nuevo Business Object (8 archivos) |
+| `pnpm run bo new <Nombre>`     | Crea un nuevo Business Object (9 archivos) |
 | `pnpm run bo list`             | Lista todos los BOs registrados            |
 | `pnpm run bo sync [nombre]`    | Sincroniza métodos con la base de datos    |
 | `pnpm run bo perms [nombre]`   | Gestiona permisos para un BO               |
@@ -46,7 +46,7 @@ Si ejecutas solo `pnpm run bo`, verás un menú interactivo:
 
 ## `pnpm run bo new <Nombre>`
 
-Crea un nuevo Business Object con la estructura de 8 archivos.
+Crea un nuevo Business Object con la estructura de 9 archivos.
 
 ### Opciones
 
@@ -82,7 +82,8 @@ BO/Product/
 ├── ✅ ProductSchemas.ts        # Validaciones Zod
 ├── 📘 ProductTypes.ts          # Interfaces TypeScript
 ├── 💬 ProductMessages.ts       # Strings i18n (ES/EN)
-└── ❌ ProductErrors.ts         # Clases de error personalizadas
+├── ❌ ProductErrors.ts         # Clases de error personalizadas
+└── 📦 ProductModule.ts         # Barril de exportaciones
 ```
 
 > [!NOTE]
@@ -148,7 +149,7 @@ Muestra una matriz de permisos:
 
 ## `pnpm run bo auth`
 
-Genera el módulo de autenticación completo con la estructura de 7 archivos.
+Genera el módulo de autenticación completo con la estructura de 9 archivos.
 
 ```bash
 pnpm run bo auth
@@ -264,7 +265,7 @@ El script pregunta si quieres sobrescribir con `--yes` o en modo interactivo.
 
 ¡Sí! Las plantillas viven en `scripts/bo/templates/`.
 
-### ¿Por qué 7 archivos?
+### ¿Por qué 9 archivos?
 
 La separación promueve:
 
@@ -274,3 +275,4 @@ La separación promueve:
 4. **Tipado**: Types centralizados evitan duplicación
 5. **i18n**: Messages.ts facilita internacionalización bilingüe
 6. **SQL**: Queries.ts mantiene SQL colocalizado y tipado
+7. **DX**: Module.ts reduce imports con un barril único
