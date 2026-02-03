@@ -23,7 +23,12 @@ describe('Coupons Logic', () => {
             findByCode: mock.fn(),
             create: mock.fn(),
         }
-        service = new CouponsService(mockRepo)
+
+        const mockLog = { info: () => {} }
+        const mockConfig = {}
+        const mockDb = {}
+
+        service = new CouponsService(mockRepo, mockLog as any, mockConfig as any, mockDb as any)
     })
 
     it('should reject duplicate coupons', async () => {

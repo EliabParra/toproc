@@ -23,25 +23,40 @@ Esto crea:
 - `BO/Coupons/CouponsMessages.ts`
 - `BO/Coupons/CouponsErrors.ts`
 - `BO/Coupons/CouponsQueries.ts`
+- `BO/Coupons/CouponsModule.ts`
 
 ---
 
 ## Paso 2: El Contrato (Schemas)
 
-Primero definimos los datos. Abre `BO/Coupons/CouponsSchemas.ts`.
+Primero definimos datos y mensajes de validación. Abre `BO/Coupons/CouponsSchemas.ts`.
 
 ```typescript
 import { z } from 'zod'
+import { CouponsMessages } from './CouponsMessages.js'
 
-export const CreateCouponSchema = z.object({
-    code: z.string().min(3).uppercase(), // "SUMMER2024"
-    discount: z.number().min(1).max(100), // % de descuento
-    expires_at: z.string().datetime(), // ISO Date
-})
+export type CouponsMessagesSet = typeof CouponsMessages.es
 
-export const ValidateCouponSchema = z.object({
-    code: z.string(),
-})
+export const createCouponsSchemas = (messages: CouponsMessagesSet = CouponsMessages.es) => {
+    const validation = messages.validation ?? CouponsMessages.es.validation
+
+    return {
+        create: z.object({
+            code: z.string().min(3, validation.codeRequired).toUpperCase(),
+            discount: z.number().min(1, validation.discountMin).max(100, validation.discountMax),
+            expiresAt: z.string().datetime(validation.expiresAtInvalid),
+        }),
+
+        validate: z.object({
+            code: z.string().min(1, validation.codeRequired),
+        }),
+    }
+}
+
+export const CouponsSchemas = createCouponsSchemas(CouponsMessages.es)
+
+export type CreateInput = z.infer<typeof CouponsSchemas.create>
+export type ValidateInput = z.infer<typeof CouponsSchemas.validate>
 ```
 
 ---
@@ -51,16 +66,24 @@ export const ValidateCouponSchema = z.object({
 ¿Cómo guardamos esto? Abre `CouponsRepository.ts`.
 
 ```typescript
-export class CouponsRepository {
+import { IDatabase } from '../../src/core/business-objects/index.js'
+import { CouponsQueries, Types } from './CouponsModule.js'
+
+export class CouponsRepository implements Types.ICouponsRepository {
     constructor(private db: IDatabase) {}
 
-    async create(data: any) {
-        return this.db.exeNamed('coupons', 'insert', data, ['code', 'discount', 'expires_at'])
+    async create(data: Partial<Types.Coupon>): Promise<Types.Coupon | null> {
+        const result = await this.db.query<Types.Coupon>(CouponsQueries.create, [
+            data.code,
+            data.discount,
+            data.expiresAt,
+        ])
+        return result.rows[0] ?? null
     }
 
-    async findByCode(code: string) {
-        const res = await this.db.exeRaw('SELECT * FROM coupons WHERE code = $1', [code])
-        return res.rows[0] || null
+    async findByCode(code: string): Promise<Types.Coupon | null> {
+        const result = await this.db.query<Types.Coupon>(CouponsQueries.findByCode, [code])
+        return result.rows[0] ?? null
     }
 }
 ```
@@ -72,23 +95,36 @@ export class CouponsRepository {
 Aquí vive la inteligencia. Abre `CouponsService.ts`.
 
 ```typescript
-export class CouponsService {
-    constructor(private repo: CouponsRepository) {}
+import { BOService, IConfig, IDatabase } from '../../src/core/business-objects/index.js'
+import type { ILogger } from '../../src/types/core.js'
+import { CouponsRepository, Errors, Types } from './CouponsModule.js'
 
-    async create(data: any) {
-        // Regla: No duplicados
-        const exists = await this.repo.findByCode(data.code)
-        if (exists) throw new Error('El cupón ya existe')
-
-        return this.repo.create(data)
+export class CouponsService extends BOService implements Types.ICouponsService {
+    constructor(
+        private repo: CouponsRepository,
+        log: ILogger,
+        config: IConfig,
+        db: IDatabase
+    ) {
+        super(log, config, db)
     }
 
-    async validate(code: string) {
-        const coupon = await this.repo.findByCode(code)
-        if (!coupon) throw new Error('Cupón inválido')
+    async create(data: Types.CreateCouponData): Promise<Types.Coupon> {
+        // Regla: No duplicados
+        const exists = await this.repo.findByCode(data.code)
+        if (exists) throw new Errors.CouponAlreadyExistsError(data.code)
 
-        if (new Date() > new Date(coupon.expires_at)) {
-            throw new Error('Cupón expirado')
+        const created = await this.repo.create(data)
+        if (!created) throw new Errors.CouponCreateError()
+        return created
+    }
+
+    async validate(code: string): Promise<Types.Coupon> {
+        const coupon = await this.repo.findByCode(code)
+        if (!coupon) throw new Errors.CouponNotFoundError(code)
+
+        if (new Date() > new Date(coupon.expiresAt)) {
+            throw new Errors.CouponExpiredError(code)
         }
         return coupon
     }
@@ -102,23 +138,42 @@ export class CouponsService {
 Conecta todo. Abre `CouponsBO.ts`.
 
 ```typescript
+import { BaseBO, BODependencies, ApiResponse } from '../../src/core/business-objects/index.js'
+import {
+    CouponsRepository,
+    CouponsService,
+    CouponsMessages,
+    createCouponsSchemas,
+    Schemas,
+} from './CouponsModule.js'
+import type { Types } from './CouponsModule.js'
+
 export class CouponsBO extends BaseBO {
-    // ... constructor ...
+    private service: CouponsService
 
-    async create(params: unknown) {
-        // 1. Validar Entrada
-        const input = this.validate(params, CreateCouponSchema)
-        if (!input.ok) return this.validationError(input.alerts)
+    constructor(deps: BODependencies) {
+        super(deps)
+        const repo = new CouponsRepository(this.db)
+        this.service = new CouponsService(repo, this.log, this.config, this.db)
+    }
 
-        try {
-            // 2. Ejecutar Lógica
-            const result = await this.service.create(input.data)
-            // 3. Responder
-            return this.created(result)
-        } catch (e: any) {
-            // 4. Manejar Error "Esperado"
-            return this.error(e.message, 409) // Conflict
-        }
+    private get couponsMessages() {
+        return this.i18n.use(CouponsMessages)
+    }
+
+    private get couponsSchemas() {
+        return createCouponsSchemas(this.couponsMessages)
+    }
+
+    async create(params: Schemas.CreateInput): Promise<ApiResponse> {
+        return this.exec<Schemas.CreateInput, Types.Coupon>(
+            params,
+            this.couponsSchemas.create,
+            async (data) => {
+                const result = await this.service.create(data)
+                return this.created(result, this.couponsMessages.createSuccess)
+            }
+        )
     }
 }
 ```
@@ -133,4 +188,4 @@ Ahora mismo, nadie puede ejecutar esto. Necesitas darle un ID (tx).
 3.  Inserta en `security.permissions`:
     - `tx: 1001`, `profile_id: 1` (Admin)
 
-¡Listo! Haz `POST /toProccess` con `{ tx: 1001, data: { ... } }`.
+¡Listo! Haz `POST /toProccess` con `{ tx: 1001, params: { ... } }`.

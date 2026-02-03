@@ -10,7 +10,9 @@ Sigue la arquitectura de 4 capas:
 1.  **AuthBO (`AuthBO.ts`)**: Controlador. Valida entradas con Zod.
 2.  **AuthService (`AuthService.ts`)**: Lógica de negocio (Hashing, OTPs).
 3.  **AuthRepository (`AuthRepository.ts`)**: SQL Queries.
-4.  **AuthSchemas (`schemas.ts`)**: Definiciones de validación.
+4.  **AuthSchemas (`AuthSchemas.ts`)**: Definiciones de validación.
+
+> Nota: El login/sesión vive en la capa de Session. Auth solo cubre flujos de identidad.
 
 ---
 
@@ -18,72 +20,61 @@ Sigue la arquitectura de 4 capas:
 
 ### 1. Registro (`register`)
 
-- **Input**: `username`, `email`, `password`.
+- **Input**: `name`, `email`, `password`.
 - **Proceso**:
     1.  Verifica si email o username ya existen (Fail Fast).
-    2.  Hashea password con `bcrypt` (Salt automático, costo 10).
-    3.  Crea usuario en tabla `users`.
-    4.  Crea perfil en tabla `profiles` (Rol inicial configurable).
-    5.  Si `REQUIRE_EMAIL_VERIFICATION=true`, genera OTP y token.
+    2.  Hashea password con `bcryptjs` (Salt automático, costo 10).
+    3.  Crea usuario en `security.users`.
+    4.  Crea perfil en `security.user_profiles` (Rol inicial configurable).
+    5.  Si `AUTH_REQUIRE_EMAIL_VERIFICATION=true`, envía email de verificación con token.
 - **Output**: 201 Created.
 
-### 2. Login (`createSession`)
+### 2. Verificar Email (`verifyEmail`)
 
-**Refactorizado (Clean Architecture)**:
-En versiones recientes, el `SessionService` ya no manipula la respuesta HTTP (`res`).
+- **Mecanismo**: Solo token URL.
+- **Seguridad**: El token se guarda hasheado y expira (por defecto actual: 900 segundos).
+- **Resultado**: Marca `email_verified_at` y consume el token.
 
-- **Input**: `AppRequest` (para obtener body y sesión).
+### 3. Solicitar Verificación de Email (`requestEmailVerification`)
+
+- **Input**: `identifier` (email o username).
 - **Proceso**:
-    1. Valida credenciales (`SessionService`).
-    2. Retorna un objeto `SessionResult` (Success, Error, ValidationError).
-    3. **AuthController**: Recibe el resultado y determina la respuesta HTTP.
-- **Output**: JSON con usuario y mensaje.
+    1.  Busca el usuario por identificador.
+    2.  Si existe, envía un nuevo email de verificación.
 
-### 3. Transacciones (`TransactionController`)
-
-El antiguo `Dispatcher` "Dios" ha sido dividido. Ahora `TransactionController` maneja la orquestación de llamadas BO via `/toProccess`.
-
-- **Delegación**: Valida permisos, resuelve el `tx` a un par `Object.Method` y ejecuta via `SecurityService`.
-- **AppServer**: Se encarga únicamente del setup de Express y routing.
-
-### 3. Verificar Email (`verifyEmail`)
-
-- **Mecanismo**: Doble factor (Token URL + Código OTP de 6 dígitos).
-- **Seguridad**:
-    - Protección contra fuerza bruta (`emailVerificationMaxAttempts`).
-    - Expiración de token (`emailVerificationExpiresSeconds`).
-- **Resultado**: Marca `email_verified = true` en DB.
-
-### 3. Recuperar Contraseña (`requestPasswordReset`)
+### 4. Recuperar Contraseña (`requestPasswordReset`)
 
 - **Diseño Seguro**:
     - Si el email no existe, **responde OK igualmente** (Silent Success).
-    - Esto previene "Enumeración de Usuarios" (que un atacante sepa quién está registrado).
+    - Previene enumeración de usuarios.
     - Invalida cualquier token de reset anterior activo.
 - **Proceso**:
-    1.  Genera Token criptográfico (32 bytes hex) y Código OTP (6 dígitos).
-    2.  Guarda hash del token en DB (nunca el token plano).
-    3.  Envía email con Token y Código.
+    1.  Genera un token criptográfico (32 bytes hex).
+    2.  Guarda el hash del token en DB (nunca el token plano).
+    3.  Envía email con el token de reset.
 
-### 4. Resetear Contraseña (`resetPassword`)
+### 5. Verificar Token de Reset (`verifyPasswordReset`)
 
-- **Input**: `token`, `code`, `newPassword`.
+- **Input**: `token`.
+- **Resultado**: Confirma que el token existe y no está usado (sin cambios de estado).
+
+### 6. Resetear Contraseña (`resetPassword`)
+
+- **Input**: `token`, `newPassword`.
 - **Proceso**:
-    1.  Valida Token y OTP.
+    1.  Valida el token.
     2.  Hashea nueva password.
-    3.  Actualiza `users`.
-    4.  **Invalida todas las sesiones activas** del usuario (Logout forzado de otros dispositivos).
-    5.  Consume el OTP y marca el reset como "usado".
+    3.  Actualiza `security.users`.
+    4.  Marca el reset como "usado".
 
 ---
 
 ## Configuración (.env)
 
-| Variable                          | Descripción                           | Default                       |
-| :-------------------------------- | :------------------------------------ | :---------------------------- |
-| `AUTH_LOGIN_ID`                   | Usar `email` o `username` para login. | `email`                       |
-| `AUTH_REQUIRE_EMAIL_VERIFICATION` | Bloquear login hasta verificar email. | `false`                       |
-| `AUTH_SESSION_PROFILE_ID`         | Perfil ID asignado al registrarse.    | `1` (pero debería ser 2/User) |
+| Variable                          | Descripción                                | Default                       |
+| :-------------------------------- | :----------------------------------------- | :---------------------------- |
+| `AUTH_REQUIRE_EMAIL_VERIFICATION` | Bloquear login hasta verificar email.      | `false`                       |
+| `AUTH_SESSION_PROFILE_ID`         | Perfil ID asignado al registrarse.         | `1` (pero debería ser 2/User) |
 
 ## Tablas Involucradas
 

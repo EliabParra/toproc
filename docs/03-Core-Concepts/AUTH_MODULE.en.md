@@ -10,7 +10,9 @@ Follows the 4-layer architecture:
 1.  **AuthBO (`AuthBO.ts`)**: Controller. Validates inputs with Zod.
 2.  **AuthService (`AuthService.ts`)**: Business logic (Hashing, OTPs).
 3.  **AuthRepository (`AuthRepository.ts`)**: SQL Queries.
-4.  **AuthSchemas (`schemas.ts`)**: Validation definitions.
+4.  **AuthSchemas (`AuthSchemas.ts`)**: Validation definitions.
+
+> Note: Login/session handling lives in the Session layer (see Session docs). Auth only provides identity flows.
 
 ---
 
@@ -18,53 +20,61 @@ Follows the 4-layer architecture:
 
 ### 1. Registration (`register`)
 
-- **Input**: `username`, `email`, `password`.
+- **Input**: `name`, `email`, `password`.
 - **Process**:
     1.  Checks if email or username already exists (Fail Fast).
-    2.  Hashes password with `bcrypt` (Auto salt, cost 10).
-    3.  Creates user in `users` table.
-    4.  Creates profile in `profiles` table (Configurable initial role).
-    5.  If `REQUIRE_EMAIL_VERIFICATION=true`, generates OTP and token.
+    2.  Hashes password with `bcryptjs` (auto salt, cost 10).
+    3.  Creates user in `security.users`.
+    4.  Creates profile in `security.user_profiles` (configurable initial role).
+    5.  If `AUTH_REQUIRE_EMAIL_VERIFICATION=true`, sends a verification email with a token.
 - **Output**: 201 Created.
 
 ### 2. Verify Email (`verifyEmail`)
 
-- **Mechanism**: Double factor (URL Token + 6-digit OTP Code).
-- **Security**:
-    - Brute force protection (`emailVerificationMaxAttempts`).
-    - Token expiration (`emailVerificationExpiresSeconds`).
-- **Result**: Sets `email_verified = true` in DB.
+- **Mechanism**: URL token only.
+- **Security**: The token is stored hashed and expires (current default: 900 seconds).
+- **Result**: Sets `email_verified_at` in DB and consumes the token.
 
-### 3. Password Recovery (`requestPasswordReset`)
+### 3. Request Email Verification (`requestEmailVerification`)
+
+- **Input**: `identifier` (email or username).
+- **Process**:
+    1.  Looks up the user by identifier.
+    2.  If found, sends a fresh verification email.
+
+### 4. Password Recovery (`requestPasswordReset`)
 
 - **Secure Design**:
-    - If email allows not exist, **responds OK anyway** (Silent Success).
-    - This prevents "User Enumeration" (attacker knowing who is registered).
+    - If email does not exist, **responds OK anyway** (Silent Success).
+    - This prevents user enumeration.
     - Invalidates any previous active reset tokens.
 - **Process**:
-    1.  Generates Cryptographic Token (32 hex bytes) and OTP Code (6 digits).
-    2.  Saves token hash in DB (never plain token).
-    3.  Sends email with Token and Code.
+    1.  Generates a cryptographic token (32 hex bytes).
+    2.  Stores only the token hash in DB (never the plain token).
+    3.  Sends an email with the reset token.
 
-### 4. Reset Password (`resetPassword`)
+### 5. Verify Reset Token (`verifyPasswordReset`)
 
-- **Input**: `token`, `code`, `newPassword`.
+- **Input**: `token`.
+- **Result**: Confirms the token exists and is unused (no state change).
+
+### 6. Reset Password (`resetPassword`)
+
+- **Input**: `token`, `newPassword`.
 - **Process**:
-    1.  Validates Token and OTP.
+    1.  Validates token.
     2.  Hashes new password.
-    3.  Updates `users`.
-    4.  **Invalidates all active sessions** for the user (Forced logout from other devices).
-    5.  Consumes OTP and marks reset as "used".
+    3.  Updates `security.users`.
+    4.  Marks the reset record as "used".
 
 ---
 
 ## Configuration (.env)
 
-| Variable                          | Description                          | Default                |
-| :-------------------------------- | :----------------------------------- | :--------------------- |
-| `AUTH_LOGIN_ID`                   | Use `email` or `username` for login. | `email`                |
-| `AUTH_REQUIRE_EMAIL_VERIFICATION` | Block login until email verified.    | `false`                |
-| `AUTH_SESSION_PROFILE_ID`         | Profile ID assigned on register.     | `1` (should be 2/User) |
+| Variable                          | Description                               | Default                |
+| :-------------------------------- | :---------------------------------------- | :--------------------- |
+| `AUTH_REQUIRE_EMAIL_VERIFICATION` | Block login until email verified.         | `false`                |
+| `AUTH_SESSION_PROFILE_ID`         | Profile ID assigned on register.          | `1` (should be 2/User) |
 
 ## Involved Tables
 

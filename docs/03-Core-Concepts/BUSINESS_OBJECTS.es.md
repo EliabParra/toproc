@@ -7,9 +7,15 @@ El Business Object (BO) es la clase suprema en nuestra arquitectura. Es donde tu
 Todo BO debe heredar de `BaseBO`. Esto le da superpoderes (acceso a DB, Logger, Config, Validator, etc.) y métodos de ejecución estandarizados.
 
 ```typescript
-import { BaseBO, BODependencies } from '../../src/core/business-objects/index.js'
-import { UserRepository, UserService, UserMessages, createUserSchemas } from './UserModule.js'
-import type { CreateUserInput } from './UserModule.js'
+import { BaseBO, BODependencies, ApiResponse } from '../../src/core/business-objects/index.js'
+import {
+    UserRepository,
+    UserService,
+    UserMessages,
+    createUserSchemas,
+    Schemas,
+} from './UserModule.js'
+import type { Types } from './UserModule.js'
 
 export class UserBO extends BaseBO {
     private service: UserService
@@ -20,21 +26,25 @@ export class UserBO extends BaseBO {
         this.service = new UserService(repo, this.log, this.config, this.db)
     }
 
-    // Accessor tipado para mensajes i18n
-    private get m() {
+    // Accessors tipados para i18n y validación
+    private get userMessages() {
         return this.i18n.use(UserMessages)
     }
 
-    private get schemas() {
-        return createUserSchemas(this.m)
+    private get userSchemas() {
+        return createUserSchemas(this.userMessages)
     }
 
     // Método Estándar
-    async create(params: CreateUserInput): Promise<ApiResponse> {
-        return this.exec<CreateUserInput, void>(params, this.schemas.create, async (data) => {
-            await this.service.create(data)
-            return this.created(null, this.m.createSuccess) // ← Mensaje tipado
-        })
+    async create(params: Schemas.CreateInput): Promise<ApiResponse> {
+        return this.exec<Schemas.CreateInput, Types.User>(
+            params,
+            this.userSchemas.create,
+            async (data) => {
+                const user = await this.service.create(data)
+                return this.created(user, this.userMessages.createSuccess) // ← Mensaje tipado
+            }
+        )
     }
 }
 ```
@@ -53,14 +63,14 @@ En lugar de escribir bloques repetitivos `try/catch` y `validate`, usa `this.exe
 
 Dentro de un BO, tienes acceso a:
 
-| Propiedad        | Tipo           | Descripción                       |
-| :--------------- | :------------- | :-------------------------------- |
-| `this.db`        | `IDatabase`    | Acceso directo a Postgres.        |
-| `this.log`       | `ILogger`      | Logger estructurado.              |
-| `this.config`    | `IConfig`      | Variables de entorno tipadas.     |
-| `this.i18n`      | `II18nService` | Servicio de internacionalización. |
-| `this.validator` | `IValidator`   | Servicio de validación (Zod).     |
-| `this.m`         | (getter)       | Mensajes tipados del BO actual.   |
+| Propiedad           | Tipo           | Descripción                       |
+| :------------------ | :------------- | :-------------------------------- |
+| `this.db`           | `IDatabase`    | Acceso directo a Postgres.        |
+| `this.log`          | `ILogger`      | Logger estructurado.              |
+| `this.config`       | `IConfig`      | Variables de entorno tipadas.     |
+| `this.i18n`         | `II18nService` | Servicio de internacionalización. |
+| `this.validator`    | `IValidator`   | Servicio de validación (Zod).     |
+| `this.userMessages` | (getter)       | Mensajes tipados del BO actual.   |
 
 ## Estructura de 9 Archivos
 
@@ -90,15 +100,14 @@ Para mantener el código limpio:
 
 ```typescript
 // Repository
-import { IDatabase } from '../../src/types/core.js'
-import { UserQueries } from './UserQueries.js'
-import { User } from './UserTypes.js'
+import { IDatabase } from '../../src/core/business-objects/index.js'
+import { UserQueries, Types } from './UserModule.js'
 
-export class UserRepository {
+export class UserRepository implements Types.IUserRepository {
     constructor(private db: IDatabase) {}
 
-    async findById(id: number): Promise<User | null> {
-        const result = await this.db.query<User>(UserQueries.findById, [id])
+    async findById(id: number): Promise<Types.User | null> {
+        const result = await this.db.query<Types.User>(UserQueries.findById, [id])
         return result.rows[0] ?? null
     }
 }
@@ -106,12 +115,23 @@ export class UserRepository {
 
 ```typescript
 // Service
-import { BOService } from '../../src/core/business-objects/BOService.js'
+import { BOService, IConfig, IDatabase } from '../../src/core/business-objects/index.js'
+import type { ILogger } from '../../src/types/core.js'
+import { Errors, Types, UserRepository } from './UserModule.js'
 
-export class UserService extends BOService {
-    async create(data: UserData) {
+export class UserService extends BOService implements Types.IUserService {
+    constructor(
+        private repo: UserRepository,
+        log: ILogger,
+        config: IConfig,
+        db: IDatabase
+    ) {
+        super(log, config, db)
+    }
+
+    async create(data: Types.CreateUserData) {
         if (await this.repo.exists(data.email)) {
-            throw new UserAlreadyExistsError() // Extiende BOError
+            throw new Errors.UserAlreadyExistsError(data.email) // Extiende BOError
         }
         // ...
     }
