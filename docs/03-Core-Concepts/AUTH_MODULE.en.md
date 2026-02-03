@@ -5,12 +5,27 @@ It implements secure flows for Registration, Email Verification, and Password Re
 
 ## Internal Architecture
 
-Follows the 4-layer architecture:
+Follows the 4-layer architecture and ships **8 files** today (a 9th module file will be added in future updates):
 
 1.  **AuthBO (`AuthBO.ts`)**: Controller. Validates inputs with Zod.
 2.  **AuthService (`AuthService.ts`)**: Business logic (Hashing, OTPs).
 3.  **AuthRepository (`AuthRepository.ts`)**: SQL Queries.
 4.  **AuthSchemas (`AuthSchemas.ts`)**: Validation definitions.
+
+**Current files (8):**
+
+- `AuthBO.ts`
+- `AuthService.ts`
+- `AuthRepository.ts`
+- `AuthSchemas.ts`
+- `AuthTypes.ts`
+- `AuthMessages.ts`
+- `AuthErrors.ts`
+- `AuthQueries.ts`
+
+**Planned file (9th):**
+
+- `AuthModule.ts` (module barrel exports)
 
 > Note: Login/session handling lives in the Session layer (see Session docs). Auth only provides identity flows.
 
@@ -71,10 +86,10 @@ Follows the 4-layer architecture:
 
 ## Configuration (.env)
 
-| Variable                          | Description                               | Default                |
-| :-------------------------------- | :---------------------------------------- | :--------------------- |
-| `AUTH_REQUIRE_EMAIL_VERIFICATION` | Block login until email verified.         | `false`                |
-| `AUTH_SESSION_PROFILE_ID`         | Profile ID assigned on register.          | `1` (should be 2/User) |
+| Variable                          | Description                       | Default                |
+| :-------------------------------- | :-------------------------------- | :--------------------- |
+| `AUTH_REQUIRE_EMAIL_VERIFICATION` | Block login until email verified. | `false`                |
+| `AUTH_SESSION_PROFILE_ID`         | Profile ID assigned on register.  | `1` (should be 2/User) |
 
 ## Involved Tables
 

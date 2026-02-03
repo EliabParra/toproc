@@ -5,12 +5,27 @@ Implementa flujos seguros de Registro, Verificación de Email, y Recuperación d
 
 ## Arquitectura Interna
 
-Sigue la arquitectura de 4 capas:
+Sigue la arquitectura de 4 capas y hoy incluye **8 archivos** (el 9no archivo de módulo llegará en próximas actualizaciones):
 
 1.  **AuthBO (`AuthBO.ts`)**: Controlador. Valida entradas con Zod.
 2.  **AuthService (`AuthService.ts`)**: Lógica de negocio (Hashing, OTPs).
 3.  **AuthRepository (`AuthRepository.ts`)**: SQL Queries.
 4.  **AuthSchemas (`AuthSchemas.ts`)**: Definiciones de validación.
+
+**Archivos actuales (8):**
+
+- `AuthBO.ts`
+- `AuthService.ts`
+- `AuthRepository.ts`
+- `AuthSchemas.ts`
+- `AuthTypes.ts`
+- `AuthMessages.ts`
+- `AuthErrors.ts`
+- `AuthQueries.ts`
+
+**Archivo planificado (9no):**
+
+- `AuthModule.ts` (barril de exportaciones)
 
 > Nota: El login/sesión vive en la capa de Session. Auth solo cubre flujos de identidad.
 
@@ -71,10 +86,10 @@ Sigue la arquitectura de 4 capas:
 
 ## Configuración (.env)
 
-| Variable                          | Descripción                                | Default                       |
-| :-------------------------------- | :----------------------------------------- | :---------------------------- |
-| `AUTH_REQUIRE_EMAIL_VERIFICATION` | Bloquear login hasta verificar email.      | `false`                       |
-| `AUTH_SESSION_PROFILE_ID`         | Perfil ID asignado al registrarse.         | `1` (pero debería ser 2/User) |
+| Variable                          | Descripción                           | Default                       |
+| :-------------------------------- | :------------------------------------ | :---------------------------- |
+| `AUTH_REQUIRE_EMAIL_VERIFICATION` | Bloquear login hasta verificar email. | `false`                       |
+| `AUTH_SESSION_PROFILE_ID`         | Perfil ID asignado al registrarse.    | `1` (pero debería ser 2/User) |
 
 ## Tablas Involucradas
 
