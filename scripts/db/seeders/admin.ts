@@ -28,17 +28,17 @@ export class AdminSeeder {
 
         // Ensure profile exists
         await this.db.exeRaw(
-            'INSERT INTO security.profiles (profile_id) VALUES ($1) ON CONFLICT (profile_id) DO NOTHING',
+            "INSERT INTO security.profiles (id, name) VALUES ($1, 'admin') ON CONFLICT (id) DO NOTHING",
             [profileId]
         )
 
         // Upsert user
         const result = await this.db.exeRaw(
-            `INSERT INTO security.users (username, password) 
-             VALUES ($1, $2) 
-             ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password 
-             RETURNING user_id`,
-            [username, passwordHash]
+            `INSERT INTO security.users (username, password_hash, profile_id) 
+             VALUES ($1, $2, $3) 
+             ON CONFLICT (username) DO UPDATE SET password_hash = EXCLUDED.password_hash 
+             RETURNING id as user_id`,
+            [username, passwordHash, profileId]
         )
         const userId = result.rows[0]?.user_id
 

@@ -136,19 +136,18 @@ export class BORegistrar {
     }
 
     private async checkProfileExists(profileId: number): Promise<boolean> {
-        const result = await this.db.exeRaw(
-            'SELECT 1 FROM security.profiles WHERE profile_id = $1',
-            [profileId]
-        )
+        const result = await this.db.exeRaw('SELECT 1 FROM security.profiles WHERE id = $1', [
+            profileId,
+        ])
         return (result.rowCount ?? 0) > 0
     }
 
     private async upsertObject(objectName: string): Promise<number> {
         const result = await this.db.exeRaw(
-            `INSERT INTO security.objects (object_name) 
+            `INSERT INTO security.objects (name) 
              VALUES ($1) 
-             ON CONFLICT (object_name) DO UPDATE SET object_name = EXCLUDED.object_name 
-             RETURNING object_id`,
+             ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name 
+             RETURNING id as object_id`,
             [objectName]
         )
         return result.rows[0]?.object_id
@@ -160,10 +159,10 @@ export class BORegistrar {
         tx: number
     ): Promise<{ methodId: number; tx: number }> {
         const result = await this.db.exeRaw(
-            `INSERT INTO security.methods (object_id, method_name, tx) 
+            `INSERT INTO security.methods (object_id, name, tx) 
              VALUES ($1, $2, $3) 
-             ON CONFLICT (object_id, method_name) DO UPDATE SET tx = security.methods.tx 
-             RETURNING method_id, tx`,
+             ON CONFLICT (object_id, name) DO UPDATE SET tx = security.methods.tx 
+             RETURNING id as method_id, tx`,
             [objectId, methodName, tx]
         )
         return {
@@ -272,13 +271,13 @@ export class BORegistrar {
     > {
         const result = await this.db.exeRaw(`
             SELECT 
-                m.method_id, 
-                o.object_name, 
-                m.method_name, 
+                m.id as method_id, 
+                o.name as object_name, 
+                m.name as method_name, 
                 m.tx
             FROM security.methods m
-            JOIN security.objects o ON o.object_id = m.object_id
-            ORDER BY o.object_name, m.method_name
+            JOIN security.objects o ON o.id = m.object_id
+            ORDER BY o.name, m.name
         `)
 
         return result.rows.map((row: any) => ({
@@ -298,6 +297,6 @@ export class BORegistrar {
             methodId,
         ])
         // Then delete the method
-        await this.db.exeRaw('DELETE FROM security.methods WHERE method_id = $1', [methodId])
+        await this.db.exeRaw('DELETE FROM security.methods WHERE id = $1', [methodId])
     }
 }
