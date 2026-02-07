@@ -149,12 +149,13 @@ export class Introspector {
                                 `      📝 Found ${data.length} records in ${table.table_name} (Manual Table)`
                                     .gray
                             )
+                            const priority = this.getTablePriority(table.table_name)
                             const dataContent = this.generateDataFile(
                                 table.table_schema,
                                 table.table_name,
                                 data
                             )
-                            const dataFilename = `90_data_${table.table_schema}_${table.table_name}.ts`
+                            const dataFilename = `90_data_${priority}_${table.table_schema}_${table.table_name}.ts`
                             const dataFilepath = path.join(this.outputDir, dataFilename)
 
                             await fs.writeFile(dataFilepath, dataContent, 'utf-8')
@@ -308,6 +309,31 @@ export const ${constName} = [
 ${parts.join('\n')}
 ]
 `
+    }
+
+    /**
+     * Returns a sort priority for data files based on dependencies.
+     * Lower number = Earlier execution.
+     */
+    private getTablePriority(tableName: string): string {
+        const priorities: Record<string, string> = {
+            // Level 1: Independent
+            profiles: '010',
+            objects: '020',
+
+            // Level 2: Depend on Level 1
+            users: '100', // depends on profiles
+            methods: '110', // depends on objects
+
+            // Level 3: Depend on Level 2
+            user_profiles: '200', // depends on users, profiles
+            user_devices: '210', // depends on users
+            permission_methods: '220', // depends on methods, roles(profiles)
+            sessions: '230', // depends on users
+            audit_logs: '240', // depends on users
+        }
+
+        return priorities[tableName] || '999'
     }
 
     /**
