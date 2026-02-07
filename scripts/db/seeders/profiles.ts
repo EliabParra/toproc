@@ -26,10 +26,10 @@ export class ProfileSeeder {
         // Public profile (for anonymous/unauthenticated users)
         if (publicProfileId) {
             const r = await this.db.exeRaw(
-                `INSERT INTO security.profiles (profile_id, profile_name) 
+                `INSERT INTO security.profiles (id, name) 
                  VALUES ($1, 'public') 
-                 ON CONFLICT (profile_id) DO UPDATE SET profile_name = COALESCE(security.profiles.profile_name, 'public')
-                 RETURNING profile_id`,
+                 ON CONFLICT (id) DO UPDATE SET name = COALESCE(security.profiles.name, 'public')
+                 RETURNING id`,
                 [publicProfileId]
             )
             if (r.rowCount && r.rowCount > 0) created++
@@ -39,10 +39,10 @@ export class ProfileSeeder {
         // Session profile (for logged-in users)
         if (sessionProfileId) {
             const r = await this.db.exeRaw(
-                `INSERT INTO security.profiles (profile_id, profile_name) 
+                `INSERT INTO security.profiles (id, name) 
                  VALUES ($1, 'session') 
-                 ON CONFLICT (profile_id) DO UPDATE SET profile_name = COALESCE(security.profiles.profile_name, 'session')
-                 RETURNING profile_id`,
+                 ON CONFLICT (id) DO UPDATE SET name = COALESCE(security.profiles.name, 'session')
+                 RETURNING id`,
                 [sessionProfileId]
             )
             if (r.rowCount && r.rowCount > 0) created++
@@ -52,10 +52,10 @@ export class ProfileSeeder {
         // Admin profile (optional, for super users)
         if (adminProfileId) {
             const r = await this.db.exeRaw(
-                `INSERT INTO security.profiles (profile_id, profile_name) 
+                `INSERT INTO security.profiles (id, name) 
                  VALUES ($1, 'admin') 
-                 ON CONFLICT (profile_id) DO UPDATE SET profile_name = COALESCE(security.profiles.profile_name, 'admin')
-                 RETURNING profile_id`,
+                 ON CONFLICT (id) DO UPDATE SET name = COALESCE(security.profiles.name, 'admin')
+                 RETURNING id`,
                 [adminProfileId]
             )
             if (r.rowCount && r.rowCount > 0) created++
