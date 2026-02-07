@@ -230,16 +230,49 @@ export class Introspector {
         if (result.rows.length === 0) return []
 
         const columns = Object.keys(result.rows[0])
+        const pk = await this.getPrimaryKey(schema, table)
         const inserts: string[] = []
 
         for (const row of result.rows) {
             const values = columns.map((col) => this.formatValue(row[col]))
-            inserts.push(
-                `INSERT INTO ${schema}.${table} (${columns.join(', ')}) VALUES (${values.join(', ')});`
-            )
+
+            let sql = `INSERT INTO ${schema}.${table} (${columns.join(', ')}) VALUES (${values.join(', ')})`
+
+            // Add ON CONFLICT if we have a PK
+            if (pk.length > 0) {
+                const pkString = pk.join(', ')
+                const updates = columns
+                    .filter((col) => !pk.includes(col))
+                    .map((col) => `${col} = EXCLUDED.${col}`)
+                    .join(', ')
+
+                sql += ` ON CONFLICT (${pkString}) DO UPDATE SET ${updates || `${pk[0]} = EXCLUDED.${pk[0]}`};`
+            } else {
+                sql += ';'
+            }
+
+            inserts.push(sql)
         }
 
         return inserts
+    }
+
+    /**
+     * Gets the primary key column names for a table.
+     */
+    async getPrimaryKey(schema: string, table: string): Promise<string[]> {
+        const result = await this.db.exeRaw(
+            `
+            SELECT a.attname
+            FROM   pg_index i
+            JOIN   pg_attribute a ON a.attrelid = i.indrelid
+                                AND a.attnum = ANY(i.indkey)
+            WHERE  i.indrelid = $1::regclass
+            AND    i.indisprimary
+            `,
+            [`${schema}.${table}`]
+        )
+        return result.rows.map((r) => r.attname)
     }
 
     /**
