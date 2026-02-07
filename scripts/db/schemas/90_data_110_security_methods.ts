@@ -1,6 +1,6 @@
 /**
  * Auto-generated data for security.methods
- * Generated at: 2026-02-07T18:03:04.717Z
+ * Generated at: 2026-02-07T18:11:33.840Z
  */
 export const DATA_METHODS_SCHEMA = [
     `INSERT INTO security.methods (id, object_id, name, tx) VALUES ('1', '1', 'register', 1);`,
