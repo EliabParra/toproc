@@ -50,6 +50,9 @@ export class Container {
     get queries(): unknown {
         return this.resolve<unknown>('queries')
     }
+    get session(): ISessionService {
+        return this.resolve<ISessionService>('session')
+    }
 }
 
 export const container = Container.getInstance()
